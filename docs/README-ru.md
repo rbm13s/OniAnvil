@@ -11,7 +11,7 @@
 [![Rust](https://img.shields.io/badge/Rust-2021_Edition-orange?logo=rust)](https://www.rust-lang.org/)
 [![GUI](https://img.shields.io/badge/GUI-egui_%2F_eframe_0.31-blue)](https://github.com/emilk/egui)
 [![Рендерер](https://img.shields.io/badge/Renderer-wgpu-green)](https://wgpu.rs/)
-[![Языки](https://img.shields.io/badge/Языки-English_%7C_Русский-purple)](#10-35-эргономичных-тем-и-полная-локализация)
+[![Языки](https://img.shields.io/badge/Языки-37_языков-purple)](#10-35-эргономичных-тем-и-полная-локализация)
 [![Платформы](https://img.shields.io/badge/Платформы-Windows_%7C_Linux_%7C_macOS_%7C_Web-0078D6)](#быстрый-старт)
 [![Веб-версия](https://img.shields.io/badge/Онлайн_приложение-В_браузере_(Экспериментально)-yellow?logo=webassembly)](https://rbm13s.github.io/OniAnvil/app/?lang=ru)
 [![Лицензия: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../LICENSE)

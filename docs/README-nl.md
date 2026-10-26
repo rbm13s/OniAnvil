@@ -11,7 +11,7 @@
 [![Rust](https://img.shields.io/badge/Rust-2021_Edition-orange?logo=rust)](https://www.rust-lang.org/)
 [![GUI](https://img.shields.io/badge/GUI-egui_%2F_eframe_0.31-blue)](https://github.com/emilk/egui)
 [![Renderer](https://img.shields.io/badge/Renderer-wgpu-green)](https://wgpu.rs/)
-[![Talen](https://img.shields.io/badge/Talen-English_%7C_Nederlands-purple)](#10-35-ergonomische-themas--tweetalige-lokalisatie)
+[![Talen](https://img.shields.io/badge/Talen-37_talen-purple)](#10-35-ergonomische-themas--volledige-lokalisatie)
 [![Platformen](https://img.shields.io/badge/Platformen-Windows_%7C_Linux_%7C_macOS_%7C_Web-0078D6)](#aan-de-slag)
 [![Web-demo](https://img.shields.io/badge/Online_app-Probeer_in_browser_(Experimenteel)-yellow?logo=webassembly)](https://rbm13s.github.io/OniAnvil/app/?lang=nl)
 [![Licentie: MIT](https://img.shields.io/badge/Licentie-MIT-yellow.svg)](../LICENSE)

@@ -11,7 +11,7 @@
 [![Rust](https://img.shields.io/badge/Rust-2021_Edition-orange?logo=rust)](https://www.rust-lang.org/)
 [![GUI](https://img.shields.io/badge/GUI-egui_%2F_eframe_0.31-blue)](https://github.com/emilk/egui)
 [![Renderer](https://img.shields.io/badge/Renderer-wgpu-green)](https://wgpu.rs/)
-[![Languages](https://img.shields.io/badge/Languages-English_%7C_Русский-purple)](#10-35-ergonomic-themes--dual-language-localization)
+[![Languages](https://img.shields.io/badge/Languages-37_Locales-purple)](#10-35-ergonomic-themes--multilingual-localization)
 [![Platform](https://img.shields.io/badge/Platform-Windows_%7C_Linux_%7C_macOS_%7C_Web-0078D6)](#getting-started)
 [![Web Demo](https://img.shields.io/badge/Online_App-Try_in_Browser_(Experimental)-yellow?logo=webassembly)](https://rbm13s.github.io/OniAnvil/app/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -80,7 +80,7 @@
   - [7. Live FX, Filters & RotSprite](#7-live-fx-filters--rotsprite)
   - [8. Palette Management, Swapping & Character Skins](#8-palette-management-swapping--character-skins)
   - [9. Sheet Slicer, 9-Grid UI & Game Engine Export](#9-sheet-slicer-9-grid-ui--game-engine-export)
-  - [10. 35 Ergonomic Themes & Dual-Language Localization](#10-35-ergonomic-themes--dual-language-localization)
+  - [10. 35 Ergonomic Themes & Multilingual Localization](#10-35-ergonomic-themes--multilingual-localization)
 - [Controls & Keyboard Shortcuts](#controls--keyboard-shortcuts)
 - [Getting Started](#getting-started)
   - [Standalone Binaries](#standalone-binaries)
@@ -347,10 +347,10 @@ All image effects include a real-time **Live Preview** checkbox that previews mo
 - **Animated GIF Export**: Generate optimized animated GIFs with custom loop counts, frame delays, and transparent backgrounds.
 - **Standard Sprite Sheet JSON**: Exports frame slices, tags, durations, and pivot coordinates matching the standard sprite sheet JSON schema used across modern 2D game engines.
 
-### 10. 35 Ergonomic Themes & Dual-Language Localization
+### 10. 35 Ergonomic Themes & Multilingual Localization
 
 - **Curated Themes**: Studio Dark, Studio Light, Pitch Black, Cyberpunk Neon, Synthwave, Nord Frost, Dracula, Tokyo Night, Catppuccin Mocha, Gruvbox Dark, Monokai Pro, Solarized Dark, Solarized Light, Amber CRT, Green CRT, Cyan CRT, Retro Consoles (Game Boy, Game Boy Light, Super Game Boy, NES/Famicom, SNES, Genesis/Mega Drive, PlayStation 1, PlayStation 2, Dreamcast), and Retro Computers (C64, ZX Spectrum, Amiga Workbench, Atari ST, MSX, Apple II, DOS CGA, Mac Classic, Windows 98).
-- **Dual-Language Support**: Seamlessly toggle between **English** and **Русский** (Russian) with 100% dictionary key parity.
+- **37 Languages**: Comprehensive native UI localization across 37 languages with 100% dictionary key parity.
 
 ---
 
