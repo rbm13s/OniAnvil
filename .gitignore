@@ -19,7 +19,6 @@
 # WebAssembly, Trunk & Docs App build artifacts
 /dist/
 /.trunk/
-/docs/app/
 
 # Linux packaging artifacts
 /deb_pkg/

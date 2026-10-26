@@ -284,6 +284,14 @@ jobs:
     steps:
       - name: Checkout repository with full history
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Generate structured changelog
+        run: cargo run --bin generate_changelog -- --repo "rbm13s/OniAnvil" --tag "${{ github.ref_name }}" --output release_notes.md
 
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
@@ -294,7 +302,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          body_path: release_notes.md
           files: |
             release-assets/OniAnvil-linux-x86_64.tar.gz
             release-assets/onianvil_*_amd64.deb
