@@ -1,0 +1,273 @@
+{
+  "format_version": "1.0",
+  "project_name": "cat_walk",
+  "frame_width": 80,
+  "frame_height": 64,
+  "columns": 12,
+  "rows": 1,
+  "frame_count": 12,
+  "target_color_limit": 32,
+  "fps": 10,
+  "frames": [
+    {
+      "hold_multiplier": 1
+    },
+    {
+      "hold_multiplier": 1
+    },
+    {
+      "hold_multiplier": 1
+    },
+    {
+      "hold_multiplier": 1
+    },
+    {
+      "hold_multiplier": 1
+    },
+    {
+      "hold_multiplier": 1
+    },
+    {
+      "hold_multiplier": 1
+    },
+    {
+      "hold_multiplier": 1
+    },
+    {
+      "hold_multiplier": 1
+    },
+    {
+      "hold_multiplier": 1
+    },
+    {
+      "hold_multiplier": 1
+    },
+    {
+      "hold_multiplier": 1
+    }
+  ],
+  "tags": [
+    {
+      "name": "walk",
+      "start_frame": 0,
+      "end_frame": 11,
+      "color": [
+        240,
+        160,
+        40,
+        255
+      ]
+    }
+  ],
+  "palette": {
+    "colors": [
+      [
+        0,
+        105,
+        170,
+        255
+      ],
+      [
+        0,
+        152,
+        220,
+        255
+      ],
+      [
+        137,
+        30,
+        43,
+        255
+      ],
+      [
+        138,
+        72,
+        54,
+        255
+      ],
+      [
+        146,
+        161,
+        185,
+        255
+      ],
+      [
+        191,
+        111,
+        74,
+        255
+      ],
+      [
+        199,
+        207,
+        221,
+        255
+      ],
+      [
+        230,
+        156,
+        105,
+        255
+      ],
+      [
+        245,
+        85,
+        93,
+        255
+      ],
+      [
+        246,
+        129,
+        135,
+        255
+      ],
+      [
+        246,
+        202,
+        159,
+        255
+      ],
+      [
+        255,
+        255,
+        255,
+        255
+      ]
+    ],
+    "swaps": [
+      {
+        "name": "Default",
+        "colors": [
+          [
+            20,
+            18,
+            29,
+            255
+          ],
+          [
+            48,
+            44,
+            66,
+            255
+          ],
+          [
+            87,
+            82,
+            107,
+            255
+          ],
+          [
+            140,
+            135,
+            162,
+            255
+          ],
+          [
+            203,
+            200,
+            218,
+            255
+          ],
+          [
+            245,
+            244,
+            250,
+            255
+          ],
+          [
+            189,
+            55,
+            68,
+            255
+          ],
+          [
+            230,
+            108,
+            76,
+            255
+          ],
+          [
+            245,
+            185,
+            86,
+            255
+          ],
+          [
+            140,
+            199,
+            88,
+            255
+          ],
+          [
+            62,
+            150,
+            108,
+            255
+          ],
+          [
+            52,
+            118,
+            168,
+            255
+          ],
+          [
+            88,
+            166,
+            224,
+            255
+          ],
+          [
+            132,
+            92,
+            179,
+            255
+          ],
+          [
+            196,
+            112,
+            174,
+            255
+          ],
+          [
+            148,
+            95,
+            71,
+            255
+          ]
+        ]
+      }
+    ],
+    "active_swap_index": 0,
+    "global_color_replace": true
+  },
+  "pivot": {
+    "show_gizmos": false,
+    "origin_x": 40,
+    "origin_y": 64,
+    "action_points": []
+  },
+  "sketch": {
+    "relative_path": null,
+    "embedded_base64": null,
+    "embed_in_json": false,
+    "visible": true,
+    "layer_mode": "Underlay",
+    "opacity": 0.45,
+    "offset_x": 0.0,
+    "offset_y": 0.0,
+    "scale": 1.0,
+    "rotation_deg": 0.0,
+    "flip_h": false,
+    "flip_v": false,
+    "snap_sample_to_palette": true,
+    "bilinear_filter": true
+  },
+  "onion_skin": {
+    "enabled": false,
+    "prev_frames": 1,
+    "next_frames": 1,
+    "opacity": 0.35,
+    "color_tint": true,
+    "quick_peek_mode": "PreviousFrame"
+  }
+}

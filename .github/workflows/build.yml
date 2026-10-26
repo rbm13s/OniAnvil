@@ -1,0 +1,302 @@
+name: Build & Release (Linux, macOS, Windows)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ============================================================================
+  # 0. WebAssembly Check (wasm32-unknown-unknown)
+  # ============================================================================
+  check-wasm:
+    name: WebAssembly (wasm32) Check
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain with wasm32 target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check wasm32 target
+        run: cargo check --target wasm32-unknown-unknown
+
+  # ============================================================================
+  # 1. Linux (Debian / Ubuntu x86_64) — Portable .tar.gz + Debian .deb package
+  # ============================================================================
+  build-linux:
+    name: Linux (Debian / Ubuntu x86_64)
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies (X11, Wayland, GTK3, Fonts, ImageMagick)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev \
+            libssl-dev \
+            libgtk-3-dev \
+            libglib2.0-dev \
+            libatk1.0-dev \
+            libgdk-pixbuf-2.0-dev \
+            libcairo2-dev \
+            libpango1.0-dev \
+            libgl1-mesa-dev \
+            imagemagick
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run unit tests
+        run: cargo test --release
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Package portable tar.gz & Debian (.deb) installer
+        run: |
+          VERSION=$(grep '^version' Cargo.toml | head -n1 | cut -d '"' -f2)
+          strip target/release/onianvil
+
+          # 1. Portable archive: OniAnvil-linux-x86_64.tar.gz
+          mkdir -p dist/OniAnvil-linux-x86_64
+          cp target/release/onianvil dist/OniAnvil-linux-x86_64/
+          cp README.md dist/OniAnvil-linux-x86_64/
+          convert assets/icon_2048x2048.jpg -resize 256x256 dist/OniAnvil-linux-x86_64/onianvil.png
+          tar -czvf OniAnvil-linux-x86_64.tar.gz -C dist OniAnvil-linux-x86_64
+
+          # 2. Debian package: onianvil_<version>_amd64.deb
+          DEB_DIR="deb_pkg/onianvil_${VERSION}_amd64"
+          mkdir -p "${DEB_DIR}/DEBIAN"
+          mkdir -p "${DEB_DIR}/usr/bin"
+          mkdir -p "${DEB_DIR}/usr/share/applications"
+          mkdir -p "${DEB_DIR}/usr/share/icons/hicolor/256x256/apps"
+
+          cp target/release/onianvil "${DEB_DIR}/usr/bin/onianvil"
+          chmod 755 "${DEB_DIR}/usr/bin/onianvil"
+          convert assets/icon_2048x2048.jpg -resize 256x256 "${DEB_DIR}/usr/share/icons/hicolor/256x256/apps/onianvil.png"
+
+          cat > "${DEB_DIR}/usr/share/applications/onianvil.desktop" << 'EOF'
+          [Desktop Entry]
+          Name=OniAnvil
+          Comment=Pixel Sprite and Onion-Skin Animation Studio
+          Exec=/usr/bin/onianvil
+          Icon=onianvil
+          Terminal=false
+          Type=Application
+          Categories=Graphics;2DGraphics;RasterGraphics;Animation;
+          StartupWMClass=onianvil
+          EOF
+
+          cat > "${DEB_DIR}/DEBIAN/control" << EOF
+          Package: onianvil
+          Version: ${VERSION}
+          Section: graphics
+          Priority: optional
+          Architecture: amd64
+          Depends: libc6, libgcc-s1, libstdc++6, libgtk-3-0, libxkbcommon0, libxkbcommon-x11-0, libgl1
+          Maintainer: OniAnvil Contributors <https://github.com/rbm13s/OniAnvil>
+          Description: OniAnvil — Pixel Sprite and Onion-Skin Animation Studio
+           Professional pixel art sprite editor and multi-layer timeline animation studio
+           built around game-ready texture atlases and sprite sheets.
+          EOF
+
+          dpkg-deb --build --root-owner-group "${DEB_DIR}" "onianvil_${VERSION}_amd64.deb"
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: OniAnvil-Linux-x86_64
+          path: |
+            OniAnvil-linux-x86_64.tar.gz
+            onianvil_*_amd64.deb
+
+  # ============================================================================
+  # 2. macOS Universal (Apple Silicon M1-M4 + Intel x86_64) — OniAnvil.app .zip
+  # ============================================================================
+  build-macos:
+    name: macOS Universal (Apple Silicon + Intel)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (aarch64 + x86_64)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run unit tests
+        run: cargo test --release
+
+      - name: Build Universal macOS binary (ARM64 + x86_64)
+        run: |
+          cargo build --release --target aarch64-apple-darwin
+          cargo build --release --target x86_64-apple-darwin
+          mkdir -p target/universal-apple-darwin/release
+          lipo -create \
+            target/aarch64-apple-darwin/release/onianvil \
+            target/x86_64-apple-darwin/release/onianvil \
+            -output target/universal-apple-darwin/release/onianvil
+
+      - name: Package macOS Application Bundle (OniAnvil.app)
+        run: |
+          VERSION=$(grep '^version' Cargo.toml | head -n1 | cut -d '"' -f2)
+          APP_DIR="dist/OniAnvil.app"
+          mkdir -p "${APP_DIR}/Contents/MacOS"
+          mkdir -p "${APP_DIR}/Contents/Resources"
+
+          cp target/universal-apple-darwin/release/onianvil "${APP_DIR}/Contents/MacOS/onianvil"
+          chmod +x "${APP_DIR}/Contents/MacOS/onianvil"
+
+          # Generate macOS .icns icon from assets/icon_2048x2048.jpg
+          ICONSET_DIR="AppIcon.iconset"
+          mkdir -p "${ICONSET_DIR}"
+          sips -s format png -z 16 16     assets/icon_2048x2048.jpg --out "${ICONSET_DIR}/icon_16x16.png"
+          sips -s format png -z 32 32     assets/icon_2048x2048.jpg --out "${ICONSET_DIR}/icon_16x16@2x.png"
+          sips -s format png -z 32 32     assets/icon_2048x2048.jpg --out "${ICONSET_DIR}/icon_32x32.png"
+          sips -s format png -z 64 64     assets/icon_2048x2048.jpg --out "${ICONSET_DIR}/icon_32x32@2x.png"
+          sips -s format png -z 128 128   assets/icon_2048x2048.jpg --out "${ICONSET_DIR}/icon_128x128.png"
+          sips -s format png -z 256 256   assets/icon_2048x2048.jpg --out "${ICONSET_DIR}/icon_128x128@2x.png"
+          sips -s format png -z 256 256   assets/icon_2048x2048.jpg --out "${ICONSET_DIR}/icon_256x256.png"
+          sips -s format png -z 512 512   assets/icon_2048x2048.jpg --out "${ICONSET_DIR}/icon_256x256@2x.png"
+          sips -s format png -z 512 512   assets/icon_2048x2048.jpg --out "${ICONSET_DIR}/icon_512x512.png"
+          sips -s format png -z 1024 1024 assets/icon_2048x2048.jpg --out "${ICONSET_DIR}/icon_512x512@2x.png"
+          iconutil -c icns "${ICONSET_DIR}" -o "${APP_DIR}/Contents/Resources/AppIcon.icns"
+
+          cat > "${APP_DIR}/Contents/Info.plist" << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleName</key>
+              <string>OniAnvil</string>
+              <key>CFBundleDisplayName</key>
+              <string>OniAnvil</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.rbm13s.onianvil</string>
+              <key>CFBundleVersion</key>
+              <string>${VERSION}</string>
+              <key>CFBundleShortVersionString</key>
+              <string>${VERSION}</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>CFBundleExecutable</key>
+              <string>onianvil</string>
+              <key>CFBundleIconFile</key>
+              <string>AppIcon</string>
+              <key>NSHighResolutionCapable</key>
+              <true/>
+              <key>LSMinimumSystemVersion</key>
+              <string>11.0</string>
+          </dict>
+          </plist>
+          EOF
+
+          cp README.md dist/
+          cd dist
+          ditto -c -k --sequesterRsrc --keepParent OniAnvil.app ../OniAnvil-macos-universal.zip
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OniAnvil-macOS-Universal
+          path: OniAnvil-macos-universal.zip
+
+  # ============================================================================
+  # 3. Windows (x86_64 MSVC) — Portable .zip with embedded icon
+  # ============================================================================
+  build-windows:
+    name: Windows (x86_64)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run unit tests
+        run: cargo test --release
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Package Windows zip archive
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist/OniAnvil-windows-x86_64 | Out-Null
+          Copy-Item target/release/onianvil.exe dist/OniAnvil-windows-x86_64/OniAnvil.exe
+          Copy-Item README.md dist/OniAnvil-windows-x86_64/README.md
+          Compress-Archive -Path dist/OniAnvil-windows-x86_64/* -DestinationPath OniAnvil-windows-x86_64.zip -Force
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OniAnvil-Windows-x86_64
+          path: OniAnvil-windows-x86_64.zip
+
+  # ============================================================================
+  # 4. Automatic GitHub Release when pushing a version tag (e.g. v0.1.0)
+  # ============================================================================
+  release:
+    name: Publish GitHub Release
+    needs: [check-wasm, build-linux, build-macos, build-windows]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository with full history
+        uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            release-assets/OniAnvil-linux-x86_64.tar.gz
+            release-assets/onianvil_*_amd64.deb
+            release-assets/OniAnvil-macos-universal.zip
+            release-assets/OniAnvil-windows-x86_64.zip

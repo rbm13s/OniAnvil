@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OniAnvil — Студия пиксельной графики и покадровой анимации</title>
+  <meta name="description" content="Быстрый нативный редактор пиксель-арта и многодорожечная студия анимации на Rust с непрерывной синхронизацией спрайтовых атласов.">
+  <link rel="icon" type="image/x-icon" href="assets/icon.ico">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script>
+    function switchTab(idx) {
+      var btns = document.querySelectorAll('.tab-btn');
+      var contents = document.querySelectorAll('.tab-content');
+      for (var i = 0; i < btns.length; i++) {
+        btns[i].classList.remove('active');
+        contents[i].classList.remove('active');
+      }
+      btns[idx].classList.add('active');
+      contents[idx].classList.add('active');
+    }
+  </script>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a href="ru.html" class="brand">
+        <img src="assets/icon.jpg" alt="Логотип OniAnvil">
+        <span>OniAnvil</span>
+        <span class="badge-ver">v1.0.0</span>
+      </a>
+
+      <nav class="main-nav">
+        <a href="#features">Возможности</a>
+        <a href="#tools">Инструменты</a>
+        <a href="#showcase">Скриншоты</a>
+        <a href="#shortcuts">Горячие клавиши</a>
+        <a href="#downloads">Скачать</a>
+        <a href="https://github.com/rbm13s/OniAnvil" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+
+      <div class="header-actions">
+        <div class="lang-selector">
+          <select aria-label="Language" onchange="window.location.href=this.value">
+            <option value="index.html">🇬🇧 English</option>
+            <option value="ru.html" selected>🇷🇺 Русский</option>
+            <option value="uk.html">🇺🇦 Українська</option>
+            <option value="be.html">🇧🇾 Беларуская</option>
+            <option value="kk.html">🇰🇿 Қазақша</option>
+            <option value="ka.html">🇬🇪 ქართული</option>
+            <option value="hy.html">🇦🇲 Հայերեն</option>
+            <option value="az.html">🇦🇿 Azərbaycan</option>
+            <option value="uz.html">🇺🇿 Oʻzbekcha</option>
+            <option value="de.html">🇩🇪 Deutsch</option>
+            <option value="fr.html">🇫🇷 Français</option>
+            <option value="es.html">🇪🇸 Español</option>
+            <option value="it.html">🇮🇹 Italiano</option>
+            <option value="pt.html">🇵🇹 Português</option>
+            <option value="pl.html">🇵🇱 Polski</option>
+            <option value="cs.html">🇨🇿 Čeština</option>
+            <option value="sk.html">🇸🇰 Slovenčina</option>
+            <option value="sl.html">🇸🇮 Slovenščina</option>
+            <option value="bg.html">🇧🇬 Български</option>
+            <option value="sr.html">🇷🇸 Српски</option>
+            <option value="hr.html">🇭🇷 Hrvatski</option>
+            <option value="nl.html">🇳🇱 Nederlands</option>
+            <option value="da.html">🇩🇰 Dansk</option>
+            <option value="no.html">🇳🇴 Norsk</option>
+            <option value="sv.html">🇸🇪 Svenska</option>
+            <option value="fi.html">🇫🇮 Suomi</option>
+            <option value="et.html">🇪🇪 Eesti</option>
+            <option value="lv.html">🇱🇻 Latviešu</option>
+            <option value="lt.html">🇱🇹 Lietuvių</option>
+            <option value="hu.html">🇭🇺 Magyar</option>
+            <option value="ro.html">🇷🇴 Română</option>
+            <option value="tr.html">🇹🇷 Türkçe</option>
+            <option value="el.html">🇬🇷 Ελληνικά</option>
+            <option value="zh-cn.html">🇨🇳 简体中文</option>
+            <option value="zh-tw.html">🇹🇼 繁體中文</option>
+            <option value="ja.html">🇯🇵 日本語</option>
+            <option value="ko.html">🇰🇷 한국어</option>
+          </select>
+        </div>
+        <a href="app/?lang=ru" class="btn btn-primary btn-sm">В браузере</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-pill">
+        <span class="dot"></span>
+        <span>Релиз v1.0.0 • Open Source MIT • Нативные сборки и WebAssembly</span>
+      </div>
+
+      <h1 class="hero-title">
+        Студия пиксельной графики и анимации<br/>На базе игровых текстурных атласов
+      </h1>
+
+      <p class="hero-subtitle">
+        Высокопроизводительная кроссплатформенная рабочая станция для пиксель-арта на Rust. Профессиональный многодорожечный таймлайн, гибкая калька (Onion Skinning), слой эскизов с пипеткой, скины палитр и экспорт для игровых движков.
+      </p>
+
+      <div class="hero-cta">
+        <a href="#downloads" class="btn btn-primary">Скачать бесплатно</a>
+        <a href="app/?lang=ru" class="btn btn-secondary">🚀 В браузере (WASM, Экспериментально)</a>
+        <a href="https://github.com/rbm13s/OniAnvil" target="_blank" rel="noopener" class="btn btn-secondary">⭐ Проект на GitHub</a>
+      </div>
+
+      <div class="hero-preview">
+        <img src="screenshots/main.png" alt="Рабочее пространство OniAnvil">
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Grid -->
+  <section id="features" class="features-section">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Создано для инди-разработчиков и пиксель-артистов</h2>
+        <p class="section-desc">Полный цикл разработки — от наброска на бумаге до готовых спрайтшитов, анимаций и метаданных для игровых движков (Godot, Bevy, Raylib).</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="card">
+          <div class="card-icon">🎬</div>
+          <h3 class="card-title">Многодорожечный таймлайн</h3>
+          <p class="card-body">
+            Многодорожечный таймлайн с независимыми слоями (<code>V1, V2, V3...</code>), переупорядочиванием дорожек, слиянием вниз, множителями длительности кадров, связанными кадрами и зацикливанием по тегам.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">🧅</div>
+          <h3 class="card-title">Настраиваемый Onion Skinning</h3>
+          <p class="card-body">
+            Многокадровые полупрозрачные призраки с раздельной тонировкой предыдущих (красный) и следующих (синий) кадров, кривыми затухания непрозрачности и циклическим переходом через край анимации.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">🗺️</div>
+          <h3 class="card-title">Атлас-центричная архитектура</h3>
+          <p class="card-body">
+            Игровой текстурный атлас — первоисточник данных. Рисуйте в покадровом режиме или свободно переключайтесь в обзор всего атласа: все тайлы синхронизируются мгновенно.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">📐</div>
+          <h3 class="card-title">Слой эскизов и референсов</h3>
+          <p class="card-body">
+            Импорт референсных артов и концептов (PNG, JPEG, WebP) в качестве подложки под холстом. Панорамирование, масштабирование, прозрачность и взятие цветов пипеткой прямо с подложки.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">✏️</div>
+          <h3 class="card-title">Прецизионный пиксельный инструментарий</h3>
+          <p class="card-body">
+            Алгоритмический режим Pixel-Perfect (без паразитных двойных углов), создание кистей-штампов из выделения, кривые Безье по трем точкам, заливка контура лассо и выделение кликом.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">🎨</div>
+          <h3 class="card-title">Скины и замена палитр</h3>
+          <p class="card-body">
+            Создание цветовых вариантов персонажей и окружения (День/Ночь, Команды, Стихии) без перерисовки. Импорт и экспорт форматов GPL, PAL и HEX.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">⚡</div>
+          <h3 class="card-title">Живые фильтры и RotSprite</h3>
+          <p class="card-body">
+            Интерактивная замена цвета с пипеткой, HSV-коррекция, автогенератор пиксельной обводки, матричные фильтры 3x3 и алгоритм чистого поворота RotSprite без размытия.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">✂️</div>
+          <h3 class="card-title">Нарезка листов и 9-Grid UI</h3>
+          <p class="card-body">
+            Автоматическое распознавание границ спрайтов на сырых листах, настройка отступов 9-slice масштабируемого UI для окон и кнопок, упаковка текстур с защитой от артефактов.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">📦</div>
+          <h3 class="card-title">Экспорт для игровых движков</h3>
+          <p class="card-body">
+            Экспорт масштабированных PNG с экструзией краевых пикселей (защита от артефактов фильтрации GPU), сборка анимированных GIF и JSON-манифестов для Godot, Bevy и Raylib.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">📺</div>
+          <h3 class="card-title">35 ретро и современных тем</h3>
+          <p class="card-body">
+            Аутентичные стили классических консолей и компьютеров: CRT Amber, CRT Green, Famicom, Mega Drive, Game Boy, Commodore 64, PSX и эргономичные студийные темы.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">🎯</div>
+          <h3 class="card-title">Точка вращения и слоты действий</h3>
+          <p class="card-body">
+            Установка точки вращения спрайта (Pivot) и расстановка именованных интерактивных точек (дуло оружия, хват руки, источник частиц) для каждого кадра с экспортом координат.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">🌐</div>
+          <h3 class="card-title">Нативный десктоп и WebAssembly</h3>
+          <p class="card-body">
+            Написан на чистом Rust для бескомпромиссной отзывчивости на Windows, Linux и macOS. Также доступна веб-версия через WebAssembly (носит статус экспериментальной, возможны специфичные для браузера баги).
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tools Reference Section -->
+  <section id="tools" class="tools-section">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Подробный справочник инструментов</h2>
+        <p class="section-desc">
+          Левая док-панель содержит 15 специализированных инструментов для создания пиксель-арта и анимации. Переключатель <kbd>«</kbd> / <kbd>»</kbd> позволяет выбирать между компактным 1-колоночным и развернутым 2-колоночным режимом. Быстрая смена основного и дополнительного цвета по клавише <kbd>X</kbd>.
+        </p>
+      </div>
+
+      <div class="tools-table-wrap">
+        <table class="tools-table">
+          <thead>
+            <tr>
+              <th style="width: 220px;">Инструмент</th>
+              <th style="width: 100px;">Клавиша</th>
+              <th style="width: 200px;">Параметры и режимы</th>
+              <th>Назначение и функционал</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-pencil"></i></span>
+                  <div>
+                    <div>Карандаш</div>
+                    <small style="color: var(--text-muted);">Pencil Tool</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>P</kbd></td>
+              <td>
+                <span class="tag-badge">1–64 px</span>
+                <span class="tag-badge">Pixel-Perfect</span>
+              </td>
+              <td>Базовый инструмент рисования с точностью до пикселя. Режим Pixel-Perfect автоматически устраняет паразитные угловые сдвоенные пиксели (L-формы) на диагоналях, формируя идеально чистые контуры.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-eraser"></i></span>
+                  <div>
+                    <div>Ластик</div>
+                    <small style="color: var(--text-muted);">Eraser Tool</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>E</kbd></td>
+              <td>
+                <span class="tag-badge">1–64 px</span>
+                <span class="tag-badge">Очистка альфы</span>
+              </td>
+              <td>Стирает нарисованные пиксели обратно до полной прозрачности на активном слое, не затрагивая соседние видимые слои.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-eye-dropper"></i></span>
+                  <div>
+                    <div>Пипетка</div>
+                    <small style="color: var(--text-muted);">Eyedropper</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>I</kbd> / <kbd>Alt</kbd></td>
+              <td>
+                <span class="tag-badge">Холст / Эскиз</span>
+                <span class="tag-badge">Привязка к палитре</span>
+              </td>
+              <td>Мгновенное считывание цвета с пикселей холста или подложки референсного эскиза. Левый клик задает Основной цвет; Правый клик — Дополнительный цвет. Поддерживает автопривязку к ближайшему цвету палитры.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-fill-drip"></i></span>
+                  <div>
+                    <div>Заливка</div>
+                    <small style="color: var(--text-muted);">Paint Bucket</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>G</kbd></td>
+              <td>
+                <span class="tag-badge">Допуск 0–255</span>
+                <span class="tag-badge">Связная / Вся область</span>
+                <span class="tag-badge">4 / 8 направлений</span>
+              </td>
+              <td>Заливает сплошным цветом непрерывную область одинакового оттенка или заменяет совпадающий цвет по всему холсту. Настраиваемый допуск позволяет заливать градиентные или зашумленные области.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-brush"></i></span>
+                  <div>
+                    <div>Градиент</div>
+                    <small style="color: var(--text-muted);">Gradient Tool</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>U</kbd></td>
+              <td>
+                <span class="tag-badge">Линейный / Радиальный</span>
+                <span class="tag-badge">Дизеринг</span>
+              </td>
+              <td>Интерактивная плавная интерполяция между Основным и Дополнительным цветами вдоль нарисованного вектора. Поддерживает наложение ретро-дизеринга по матрице Байера.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-slash"></i></span>
+                  <div>
+                    <div>Линия</div>
+                    <small style="color: var(--text-muted);">Line Tool</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>V</kbd></td>
+              <td>
+                <span class="tag-badge">1–64 px</span>
+                <span class="tag-badge">Привязка угла (Shift)</span>
+              </td>
+              <td>Растеризация прямых отрезков по алгоритму Брезенхэма с живым предварительным просмотром. Удержание <kbd>Shift</kbd> фиксирует угол наклона: строго горизонтально (0°), вертикально (90°) или под 45°.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-bezier-curve"></i></span>
+                  <div>
+                    <div>Кривая Безье</div>
+                    <small style="color: var(--text-muted);">Quadratic Spline</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>C</kbd></td>
+              <td>
+                <span class="tag-badge">1–64 px</span>
+                <span class="tag-badge">3 точки</span>
+              </td>
+              <td>Построение квадратичной кривой Безье по трем точкам: клик задает начало, перетаскивание — конец, а смещение центрального узла выгибает плавный органический изгиб.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-square"></i></span>
+                  <div>
+                    <div>Прямоугольник</div>
+                    <small style="color: var(--text-muted);">Rectangle</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>R</kbd></td>
+              <td>
+                <span class="tag-badge">Контур / Заливка / Оба</span>
+                <span class="tag-badge">Квадрат (Shift)</span>
+              </td>
+              <td>Создание прямоугольных форм и рамок. Переключение между тонким контуром, сплошным заполнением или заливкой с обводкой. Удержание <kbd>Shift</kbd> создает правильный квадрат 1:1.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-circle"></i></span>
+                  <div>
+                    <div>Эллипс</div>
+                    <small style="color: var(--text-muted);">Ellipse / Circle</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>O</kbd></td>
+              <td>
+                <span class="tag-badge">Контур / Заливка / Оба</span>
+                <span class="tag-badge">Круг (Shift)</span>
+              </td>
+              <td>Растеризатор эллипсов и окружностей по методу средней точки. Режимы контура, сплошной заливки или заливки с окантовкой. Удержание <kbd>Shift</kbd> принудительно строит идеальный круг.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-chess-board"></i></span>
+                  <div>
+                    <div>Дизеринг-кисть</div>
+                    <small style="color: var(--text-muted);">Dither Brush</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>D</kbd></td>
+              <td>
+                <span class="tag-badge">Байер 2×2 / 4×4 / 8×8</span>
+                <span class="tag-badge">Шахматка / Диагональ</span>
+              </td>
+              <td>Аутентичная техника затенения эпохи ретро-консолей. Автоматически чередует основной и дополнительный цвет по классическим матрицам, позволяя визуально передавать полутона при жестко ограниченной палитре.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-circle-half-stroke"></i></span>
+                  <div>
+                    <div>Светотень</div>
+                    <small style="color: var(--text-muted);">Shading Ramp</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>H</kbd></td>
+              <td>
+                <span class="tag-badge">Осветление / Затемнение</span>
+                <span class="tag-badge">Цветовые шкалы</span>
+              </td>
+              <td>Сдвигает цвет пикселя на один шаг светлее или темнее вдоль цветовой градации (ramp), заданной в текущей палитре. Идеально для неразрушающей прорисовки бликов и теней.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-vector-square"></i></span>
+                  <div>
+                    <div>Прямоугольное выделение</div>
+                    <small style="color: var(--text-muted);">Rect Select</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>M</kbd></td>
+              <td>
+                <span class="tag-badge">Бегущие муравьи</span>
+                <span class="tag-badge">Буфер обмена</span>
+                <span class="tag-badge">Перетаскивание</span>
+              </td>
+              <td>Выделение прямоугольного участка пикселей с анимированной границей «бегущих муравьев». Поддерживает копирование (<kbd>Ctrl/Cmd+C</kbd>), вырезание (<kbd>Ctrl/Cmd+X</kbd>), вставку на другой кадр (<kbd>Ctrl/Cmd+V</kbd>) и перемещение.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-draw-polygon"></i></span>
+                  <div>
+                    <div>Лассо</div>
+                    <small style="color: var(--text-muted);">Lasso Select</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>L</kbd></td>
+              <td>
+                <span class="tag-badge">Произвольный полигон</span>
+                <span class="tag-badge">Автозамыкание</span>
+              </td>
+              <td>Свободное полигональное выделение контуров любой сложной геометрии. Позволяет точно изолировать силуэт персонажа или детали окружения для трансформации.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                  <div>
+                    <div>Волшебная палочка</div>
+                    <small style="color: var(--text-muted);">Magic Wand</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>W</kbd></td>
+              <td>
+                <span class="tag-badge">Допуск 0–255</span>
+                <span class="tag-badge">Связное / По всему кадру</span>
+              </td>
+              <td>Выделяет соприкасающиеся или разрозненные пиксели одного цветового диапазона на основе заданного порога чувствительности к RGB-разнице.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-crosshairs"></i></span>
+                  <div>
+                    <div>Точка вращения и слоты</div>
+                    <small style="color: var(--text-muted);">Pivot &amp; Sockets</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>Y</kbd></td>
+              <td>
+                <span class="tag-badge">Центр вращения</span>
+                <span class="tag-badge">Именованные слоты</span>
+              </td>
+              <td>Задает локальный центр вращения спрайта (Pivot) и расставляет именованные точки крепления (<code>muzzle</code>, <code>grip</code>, <code>particles</code>, <code>mount</code>) для экспорта в игровые движки.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Showcase Section -->
+  <section id="showcase" class="showcase-section">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Визуальный обзор возможностей</h2>
+        <p class="section-desc">Интерфейс программы и ключевые рабочие модули на реальных скриншотах.</p>
+      </div>
+
+      <div class="tabs-nav">
+        <button class="tab-btn active" onclick="switchTab(0)">1. Рабочее пространство</button>
+        <button class="tab-btn" onclick="switchTab(1)">2. Панели инструментов</button>
+        <button class="tab-btn" onclick="switchTab(2)">3. Таймлайн и слои</button>
+        <button class="tab-btn" onclick="switchTab(3)">4. Живое превью</button>
+        <button class="tab-btn" onclick="switchTab(4)">5. Палитры и замена цвета</button>
+        <button class="tab-btn" onclick="switchTab(5)">6. Точки привязки и слоты</button>
+        <button class="tab-btn" onclick="switchTab(6)">7. Эскиз и калька (Onion Skin)</button>
+        <button class="tab-btn" onclick="switchTab(7)">8. Нарезка листов и 9-Slice UI</button>
+        <button class="tab-btn" onclick="switchTab(8)">9. Живые фильтры и матрица</button>
+        <button class="tab-btn" onclick="switchTab(9)">10. 35 ретро-тем</button>
+        <button class="tab-btn" onclick="switchTab(10)">11. Сетки и фоны холста</button>
+        <button class="tab-btn" onclick="switchTab(11)">12. Меню и создание проекта</button>
+      </div>
+
+      <!-- Tab 0: Workspace -->
+      <div class="tab-content active">
+        <div class="screenshot-showcase">
+          <img src="screenshots/main.png" alt="Основное рабочее пространство OniAnvil">
+          <div class="caption">Основное рабочее пространство OniAnvil: многодорожечный таймлайн, холст с пиксельной сеткой и функциональные доки.</div>
+        </div>
+      </div>
+
+      <!-- Tab 1: Tools & Toolbar -->
+      <div class="tab-content">
+        <div class="screenshot-gallery">
+          <div class="gallery-item">
+            <img src="screenshots/tools.png" alt="Развернутая 2-колоночная панель инструментов">
+            <div class="caption">Развернутая 2-колоночная панель инструментов с иконками, названиями и горячими клавишами.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/toolbar.png" alt="Горизонтальная контекстная панель инструментов">
+            <div class="caption">Верхняя панель: настройки кисти, режим Pixel-Perfect, допуск заливки и режимы отображения.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/tools_compact.png" alt="Компактная 1-колоночная панель">
+            <div class="caption">Компактная 1-колоночная панель для максимального расширения области рисования на экране.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Timeline & Layers -->
+      <div class="tab-content">
+        <div class="screenshot-showcase">
+          <img src="screenshots/timeline.png" alt="Многодорожечный студийный таймлайн">
+          <div class="caption">Многодорожечный таймлайн с независимыми треками слоев (V1, V2...), длительностями кадров, блокировкой и транспортом воспроизведения.</div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Live Preview -->
+      <div class="tab-content">
+        <div class="screenshot-gallery">
+          <div class="gallery-item">
+            <img src="screenshots/live_preview.png" alt="Плавающее окно предпросмотра анимации">
+            <div class="caption">Плавающее окно предпросмотра с реальным FPS, масштабированием и непрерывным воспроизведением.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/live_preview_scroll_test.png" alt="Тест предпросмотра крупного спрайта">
+            <div class="caption">Окно предпросмотра со свободным зумом и скроллом для крупных спрайтов и детализированных сцен.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 4: Palette & Swaps -->
+      <div class="tab-content">
+        <div class="screenshot-gallery">
+          <div class="gallery-item">
+            <img src="screenshots/palette_and_swaps.png" alt="Редактор палитры и замена цветов">
+            <div class="caption">Док палитры с цветовыми кругами, HSV/RGB ползунками, таблицей свопов и поддержкой форматов GPL/HEX.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/remap_to_palette.png" alt="Диалог ремаппинга в палитру">
+            <div class="caption">Глобальный ремаппинг изображения с автоматическим сведением любых произвольных цветов к индексам активной палитры.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 5: Pivot & Action Points -->
+      <div class="tab-content">
+        <div class="screenshot-showcase">
+          <img src="screenshots/pivot_and_action_points.png" alt="Точки привязки и слоты">
+          <div class="caption">Интерактивная установка центра вращения спрайта и расстановка именованных точек привязки (дуло, хват, эффекты).</div>
+        </div>
+      </div>
+
+      <!-- Tab 6: Sketch & Onion Skin -->
+      <div class="tab-content">
+        <div class="screenshot-showcase">
+          <img src="screenshots/sketch_and_onion_skin.png" alt="Эскиз-подложка и калька">
+          <div class="caption">Импорт референсного наброска под холст с регулировкой прозрачности в сочетании с многокадровой цветной калькой (Onion Skinning).</div>
+        </div>
+      </div>
+
+      <!-- Tab 7: Slicer & 9-Slice UI -->
+      <div class="tab-content">
+        <div class="screenshot-gallery">
+          <div class="gallery-item">
+            <img src="screenshots/slicer.png" alt="Инструмент нарезки листов">
+            <div class="caption">Автоматический поиск непрозрачных островов и интерактивная нарезка спрайт-листов на кадры.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/3x3.png" alt="Редактор 9-Slice UI отступов">
+            <div class="caption">Интерактивный редактор отступов 9-Slice (3×3) для масштабируемых интерфейсных плашек, окон и кнопок в играх.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 8: Live FX & Filters -->
+      <div class="tab-content">
+        <div class="screenshot-gallery">
+          <div class="gallery-item">
+            <img src="screenshots/outline_generator.png" alt="Генератор контура">
+            <div class="caption">Генератор автоматической пиксельной обводки силуэта с настройкой толщины и режима диагональных пикселей.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/replace_color.png" alt="Замена цвета">
+            <div class="caption">Диалог выборочной замены цветов с интерактивной пипеткой и мгновенным предварительным просмотром.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/hue_saturation_contrast.png" alt="Коррекция HSV и контраста">
+            <div class="caption">Коррекция тона (Hue), насыщенности (Saturation) и контраста (Contrast) для слоя или всего кадра.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/matrix_filter.png" alt="Матричные фильтры 3x3">
+            <div class="caption">Сверточные матричные фильтры 3×3: пресеты резкости, размытия, тиснения (emboss) и выделения контуров.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 9: 35 Retro Themes -->
+      <div class="tab-content">
+        <div class="screenshot-gallery">
+          <div class="gallery-item">
+            <img src="screenshots/themes.png" alt="Меню выбора тем оформления">
+            <div class="caption">Меню выбора из 35 встроенных тем ретро-консолей и современных студийных палитр.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/crt_orange_theme.png" alt="Янтарная CRT-тема">
+            <div class="caption">Аутентичная ретро-тема оранжево-янтарного монохромного ЭЛТ-монитора (CRT Amber).</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/psx_theme.png" alt="Тема консоли PSX">
+            <div class="caption">Ретро-тема в стилистике оригинальной 32-битной консоли PlayStation 1990-х годов.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 10: Viewports & Backgrounds -->
+      <div class="tab-content">
+        <div class="screenshot-gallery">
+          <div class="gallery-item">
+            <img src="screenshots/grid_and_dark_checkerboard.png" alt="Темная шахматка с сеткой">
+            <div class="caption">Контрастная пиксельная сетка поверх темной шахматки для темных и ярких спрайтов.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/no_grid_light_checkerboard.png" alt="Светлая шахматка без сетки">
+            <div class="caption">Чистый холст без сетки поверх светлой шахматки для оценки целостности силуэта.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/custom_solid_background.png" alt="Пользовательский сплошной фон">
+            <div class="caption">Сплошной цветной фон холста для тестирования контраста спрайта на фоне будущих игровых уровней.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 11: Menus & Dialogs -->
+      <div class="tab-content">
+        <div class="screenshot-gallery">
+          <div class="gallery-item">
+            <img src="screenshots/file_menu.png" alt="Меню Файл">
+            <div class="caption">Меню Файл: управление проектами, импорт спрайтов и экспорт для игровых движков.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/edit_menu.png" alt="Меню Правка">
+            <div class="caption">Меню Правка: операции буфера обмена, история отмены/повтора и цветовые фильтры.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/select_menu.png" alt="Меню Выделение">
+            <div class="caption">Меню Выделение: инвертирование, сброс, сжатие и расширение границ выделения.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/view_menu.png" alt="Меню Вид">
+            <div class="caption">Меню Вид: линейки, направляющие, фоны шахматки и пресеты масштабирования.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/project_menu.png" alt="Меню Проект">
+            <div class="caption">Меню Проект: изменение размера холста, обрезка пустых полей и параметры атласа.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/new_project.png" alt="Окно создания проекта">
+            <div class="caption">Создание нового проекта с популярными пресетами разрешений ретро и инди-игр.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/new_project_palettes.png" alt="Встроенные палитры нового проекта">
+            <div class="caption">Выбор встроенных исторических палитр при создании проекта (PICO-8, Game Boy, NES, C64).</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/help.png" alt="Окно справки и горячих клавиш">
+            <div class="caption">Интерактивное окно помощи с полным списком клавиатурных сокращений и документацией.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Shortcuts Section -->
+  <section id="shortcuts" class="shortcuts-section">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Справочник горячих клавиш</h2>
+        <p class="section-desc">Оптимизировано для быстрой работы одной рукой без отрыва от холста.</p>
+      </div>
+
+      <table class="shortcuts-table">
+        <thead>
+          <tr>
+            <th>Клавиша</th>
+            <th>Инструмент / Действие</th>
+            <th>Описание</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><kbd>P</kbd></td>
+            <td>Карандаш</td>
+            <td>Рисование с точностью 1px и режимом Pixel-Perfect</td>
+          </tr>
+          <tr>
+            <td><kbd>E</kbd></td>
+            <td>Ластик</td>
+            <td>Стирание пикселей до прозрачности на активном слое</td>
+          </tr>
+          <tr>
+            <td><kbd>I</kbd> / <kbd>Alt</kbd></td>
+            <td>Пипетка</td>
+            <td>Считывание цвета с холста или слоя эскиза-референса</td>
+          </tr>
+          <tr>
+            <td><kbd>G</kbd></td>
+            <td>Заливка</td>
+            <td>Заливка связной или глобальной цветовой области с допуском</td>
+          </tr>
+          <tr>
+            <td><kbd>U</kbd></td>
+            <td>Градиент</td>
+            <td>Линейные и радиальные переходы с поддержкой дизеринга</td>
+          </tr>
+          <tr>
+            <td><kbd>V</kbd></td>
+            <td>Линия</td>
+            <td>Прямые линии с ограничением угла наклона по <kbd>Shift</kbd></td>
+          </tr>
+          <tr>
+            <td><kbd>C</kbd></td>
+            <td>Кривая Безье</td>
+            <td>Плавные квадратичные кривые по трем опорным точкам</td>
+          </tr>
+          <tr>
+            <td><kbd>R</kbd></td>
+            <td>Прямоугольник</td>
+            <td>Рамки и залитые прямоугольники (<kbd>Shift</kbd> для квадрата)</td>
+          </tr>
+          <tr>
+            <td><kbd>O</kbd></td>
+            <td>Эллипс</td>
+            <td>Окружности и эллипсы (<kbd>Shift</kbd> для правильного круга)</td>
+          </tr>
+          <tr>
+            <td><kbd>D</kbd></td>
+            <td>Дизеринг-кисть</td>
+            <td>Рисование полутоновыми паттернами Байера и шахматки</td>
+          </tr>
+          <tr>
+            <td><kbd>H</kbd></td>
+            <td>Светотень</td>
+            <td>Осветление или затемнение вдоль цветовых шкал палитры</td>
+          </tr>
+          <tr>
+            <td><kbd>M</kbd></td>
+            <td>Прямоугольное выделение</td>
+            <td>Выделение прямоугольных областей с бегущими муравьями</td>
+          </tr>
+          <tr>
+            <td><kbd>L</kbd></td>
+            <td>Лассо</td>
+            <td>Свободное полигональное выделение контуров</td>
+          </tr>
+          <tr>
+            <td><kbd>W</kbd></td>
+            <td>Волшебная палочка</td>
+            <td>Выделение связных цветовых кластеров с допуском</td>
+          </tr>
+          <tr>
+            <td><kbd>Y</kbd></td>
+            <td>Точка вращения и слоты</td>
+            <td>Расстановка локального Pivot и именованных слотов действий</td>
+          </tr>
+          <tr>
+            <td><kbd>X</kbd></td>
+            <td>Смена цветов</td>
+            <td>Быстрое переключение между основным и дополнительным цветом</td>
+          </tr>
+          <tr>
+            <td><kbd>Ctrl/Cmd</kbd> + <kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd></td>
+            <td>Буфер обмена</td>
+            <td>Копирование, вырезание и вставка пикселей между кадрами</td>
+          </tr>
+          <tr>
+            <td><kbd>Space</kbd></td>
+            <td>Пуск / Пауза</td>
+            <td>Воспроизведение и остановка анимации на таймлайне</td>
+          </tr>
+          <tr>
+            <td><kbd>A</kbd> / <kbd>D</kbd></td>
+            <td>Переход по кадрам</td>
+            <td>Шаг к предыдущему или следующему кадру анимации</td>
+          </tr>
+          <tr>
+            <td><kbd>Shift</kbd> + <kbd>R</kbd></td>
+            <td>Замена цвета</td>
+            <td>Окно интерактивной замены оттенков с пипеткой</td>
+          </tr>
+          <tr>
+            <td><kbd>Ctrl/Cmd</kbd> + <kbd>U</kbd></td>
+            <td>Коррекция цвета</td>
+            <td>Регулировка тона, насыщенности и контраста (HSV)</td>
+          </tr>
+          <tr>
+            <td><kbd>Ctrl/Cmd</kbd> + <kbd>R</kbd></td>
+            <td>Свободный поворот</td>
+            <td>Поворот на произвольный угол по алгоритму RotSprite</td>
+          </tr>
+          <tr>
+            <td><kbd>Space</kbd> + <kbd>Перетаскивание</kbd></td>
+            <td>Панорамирование</td>
+            <td>Плавное перемещение холста в рабочей области</td>
+          </tr>
+          <tr>
+            <td><kbd>Ctrl/Cmd</kbd> + <kbd>Колесо мыши</kbd></td>
+            <td>Масштабирование</td>
+            <td>Пиксельно-четкий зум с центрированием на курсоре</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Download Section -->
+  <section id="downloads" class="download-section">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Скачать и запустить</h2>
+        <p class="section-desc">Автономные нативные исполняемые файлы без внешних зависимостей и веб-клиент.</p>
+      </div>
+
+      <div class="download-grid">
+        <div class="dl-card">
+          <div class="dl-icon">🪟</div>
+          <h3 class="dl-platform">Windows</h3>
+          <p class="dl-desc">Windows 10 / 11 (64-бит)<br/>Портативный исполняемый архив</p>
+          <a href="https://github.com/rbm13s/OniAnvil/releases/latest" class="btn btn-primary btn-sm">Скачать .zip</a>
+        </div>
+
+        <div class="dl-card">
+          <div class="dl-icon">🐧</div>
+          <h3 class="dl-platform">Linux</h3>
+          <p class="dl-desc">Ubuntu, Debian, Fedora, Arch<br/>Портативный .tar.gz и пакет .deb</p>
+          <a href="https://github.com/rbm13s/OniAnvil/releases/latest" class="btn btn-primary btn-sm">Скачать .deb / .tar.gz</a>
+        </div>
+
+        <div class="dl-card">
+          <div class="dl-icon">🍏</div>
+          <h3 class="dl-platform">macOS</h3>
+          <p class="dl-desc">Universal Binary (ARM64 M1-M4 + Intel x86_64)<br/>macOS 11.0 Big Sur и новее</p>
+          <a href="https://github.com/rbm13s/OniAnvil/releases/latest" class="btn btn-primary btn-sm">Скачать .zip</a>
+        </div>
+
+        <div class="dl-card">
+          <div class="dl-icon">🌐</div>
+          <h3 class="dl-platform">WebAssembly <span style="font-size:0.75rem; vertical-align: middle; background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); padding: 2px 6px; border-radius: 4px;">Экспериментально</span></h3>
+          <p class="dl-desc">Работает в Chrome, Firefox, Safari, Edge<br/>Без установки, прямо в браузере.<br/><span style="color: #f59e0b; font-size: 0.82rem;">⚠️ Внимание: Веб-билд носит статус experimental, возможны баги.</span></p>
+          <a href="app/?lang=ru" class="btn btn-secondary btn-sm">Открыть в браузере</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <p>OniAnvil — проект с открытым исходным кодом под лицензией <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener">MIT License</a>.</p>
+      <p style="margin-top: 8px;">Иконки предоставлены проектом <a href="https://fontawesome.com/" target="_blank" rel="noopener">Font Awesome Free</a> под лицензиями <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a> / <a href="https://scripts.sil.org/OFL" target="_blank" rel="noopener">SIL OFL 1.1</a>.</p>
+      <p style="margin-top: 8px;">Создано с ❤️ на Rust с использованием <a href="https://github.com/emilk/egui" target="_blank" rel="noopener">egui</a> и <a href="https://wgpu.rs/" target="_blank" rel="noopener">wgpu</a>. Репозиторий: <a href="https://github.com/rbm13s/OniAnvil" target="_blank" rel="noopener">github.com/rbm13s/OniAnvil</a></p>
+      <p style="margin-top: 12px; font-size: 0.82rem; color: var(--text-muted); max-width: 860px; margin-left: auto; margin-right: auto; line-height: 1.45;">
+        <strong>Отказ от ответственности:</strong> Программа OniAnvil распространяется бесплатно по принципу «как есть» (as is) без каких-либо явных или подразумеваемых гарантий. Автор и разработчики не несут ответственности за возможные сбои, потерю данных или любые убытки, возникшие в результате использования программы.
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>

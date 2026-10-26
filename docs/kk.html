@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OniAnvil — Ойын атластарына негізделген пиксельдік графика және кадрлық анимация студиясы</title>
+  <meta name="description" content="Rust тіліндегі пиксель-артқа арналған жоғары өнімді кроссплатформалық жұмыс станциясы. Көпжолды таймлайн, калька (Onion Skinning), эскиз қабаты және ойын қозғалтқыштарына экспорттау.">
+  <link rel="icon" type="image/x-icon" href="assets/icon.ico">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script>
+    function switchTab(idx) {
+      var btns = document.querySelectorAll('.tab-btn');
+      var contents = document.querySelectorAll('.tab-content');
+      for (var i = 0; i < btns.length; i++) {
+        btns[i].classList.remove('active');
+        contents[i].classList.remove('active');
+      }
+      btns[idx].classList.add('active');
+      contents[idx].classList.add('active');
+    }
+  </script>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a href="kk.html" class="brand">
+        <img src="assets/icon.jpg" alt="OniAnvil Logo">
+        <span>OniAnvil</span>
+        <span class="badge-ver">v1.0.0</span>
+      </a>
+
+      <nav class="main-nav">
+        <a href="#features">Мүмкіндіктер</a>
+        <a href="#tools">Құралдар</a>
+        <a href="#showcase">Скриншоттар</a>
+        <a href="#shortcuts">Ыстық пернелер</a>
+        <a href="#downloads">Жүктеп алу</a>
+        <a href="https://github.com/rbm13s/OniAnvil" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+
+      <div class="header-actions">
+        <div class="lang-selector">
+          <select aria-label="Language" onchange="window.location.href=this.value">
+            <option value="index.html">🇬🇧 English</option>
+            <option value="ru.html">🇷🇺 Русский</option>
+            <option value="uk.html">🇺🇦 Українська</option>
+            <option value="be.html">🇧🇾 Беларуская</option>
+            <option value="kk.html" selected>🇰🇿 Қазақша</option>
+            <option value="ka.html">🇬🇪 ქართული</option>
+            <option value="hy.html">🇦🇲 Հայերեն</option>
+            <option value="az.html">🇦🇿 Azərbaycan</option>
+            <option value="uz.html">🇺🇿 Oʻzbekcha</option>
+            <option value="de.html">🇩🇪 Deutsch</option>
+            <option value="fr.html">🇫🇷 Français</option>
+            <option value="es.html">🇪🇸 Español</option>
+            <option value="it.html">🇮🇹 Italiano</option>
+            <option value="pt.html">🇵🇹 Português</option>
+            <option value="pl.html">🇵🇱 Polski</option>
+            <option value="cs.html">🇨🇿 Čeština</option>
+            <option value="sk.html">🇸🇰 Slovenčina</option>
+            <option value="sl.html">🇸🇮 Slovenščina</option>
+            <option value="bg.html">🇧🇬 Български</option>
+            <option value="sr.html">🇷🇸 Српски</option>
+            <option value="hr.html">🇭🇷 Hrvatski</option>
+            <option value="nl.html">🇳🇱 Nederlands</option>
+            <option value="da.html">🇩🇰 Dansk</option>
+            <option value="no.html">🇳🇴 Norsk</option>
+            <option value="sv.html">🇸🇪 Svenska</option>
+            <option value="fi.html">🇫🇮 Suomi</option>
+            <option value="et.html">🇪🇪 Eesti</option>
+            <option value="lv.html">🇱🇻 Latviešu</option>
+            <option value="lt.html">🇱🇹 Lietuvių</option>
+            <option value="hu.html">🇭🇺 Magyar</option>
+            <option value="ro.html">🇷🇴 Română</option>
+            <option value="tr.html">🇹🇷 Türkçe</option>
+            <option value="el.html">🇬🇷 Ελληνικά</option>
+            <option value="zh-cn.html">🇨🇳 简体中文</option>
+            <option value="zh-tw.html">🇹🇼 繁體中文</option>
+            <option value="ja.html">🇯🇵 日本語</option>
+            <option value="ko.html">🇰🇷 한국어</option>
+          </select>
+        </div>
+        <a href="app/?lang=kk" class="btn btn-primary btn-sm">Online</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-pill">
+        <span class="dot"></span>
+        <span>v1.0.0 • Open Source MIT • Native Desktop &amp; WebAssembly</span>
+      </div>
+
+      <h1 class="hero-title">
+        Ойын атластарына негізделген пиксельдік графика және кадрлық анимация студиясы
+      </h1>
+
+      <p class="hero-subtitle">
+        Rust тіліндегі пиксель-артқа арналған жоғары өнімді кроссплатформалық жұмыс станциясы. Көпжолды таймлайн, калька (Onion Skinning), эскиз қабаты және ойын қозғалтқыштарына экспорттау.
+      </p>
+
+      <div class="hero-cta">
+        <a href="#downloads" class="btn btn-primary">Жүктеп алу</a>
+        <a href="app/?lang=kk" class="btn btn-secondary">🚀 Launch in Browser (WASM, Experimental)</a>
+        <a href="https://github.com/rbm13s/OniAnvil" target="_blank" rel="noopener" class="btn btn-secondary">⭐ Star on GitHub</a>
+      </div>
+
+      <div class="hero-preview">
+        <img src="screenshots/main.png" alt="OniAnvil Studio Workspace">
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Grid -->
+  <section id="features" class="features-section">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Мүмкіндіктер</h2>
+        <p class="section-desc">Designed for Indie Game Developers &amp; Pixel Artists</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="card">
+          <div class="card-icon">🎬</div>
+          <h3 class="card-title">Multi-Track Studio Timeline</h3>
+          <p class="card-body">
+            Independent layer tracks (V1, V2, V3...), layer visibility/locking, merge down, variable frame duration multipliers, linked frames, and loop tags.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">🧅</div>
+          <h3 class="card-title">Configurable Onion Skinning</h3>
+          <p class="card-body">
+            Real-time multi-frame ghosting with independent previous and next frame tinting (red/blue), opacity falloff curves, and loop wrap-around support.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">🗺️</div>
+          <h3 class="card-title">Dual Atlas-Centric Architecture</h3>
+          <p class="card-body">
+            The game sprite atlas texture is the single source of truth. Edit individual frames or switch seamlessly to the global atlas view while keeping tiles synchronized.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">📐</div>
+          <h3 class="card-title">Sketch &amp; Reference Layer</h3>
+          <p class="card-body">
+            Load concept art or reference photos (PNG, JPEG, WebP) as an underlay with free pan, zoom, opacity, and smart color sampling with palette snapping.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">✏️</div>
+          <h3 class="card-title">Precision Pixel Art Toolset</h3>
+          <p class="card-body">
+            Pixel-perfect line mode, custom brush stamping from selection, 3-click quadratic Bézier curves, solid flood-fill lasso, magic wand, and marching ants.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">🎨</div>
+          <h3 class="card-title">Palette Swapping &amp; Skins</h3>
+          <p class="card-body">
+            Create character skin variants (Day/Night, Team colors, Elemental skins) with instant palette swapping. Import and export GPL, PAL, and HEX palette formats.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">⚡</div>
+          <h3 class="card-title">Live FX &amp; RotSprite</h3>
+          <p class="card-body">
+            Color replacement with canvas/palette eyedropper, HSV adjustments, automatic outline generator, 3x3 convolution filters, and RotSprite free rotation.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">✂️</div>
+          <h3 class="card-title">Sheet Slicer &amp; 9-Grid UI</h3>
+          <p class="card-body">
+            Auto-detect sprite boundaries from raw sheets, configure 9-slice scalable UI margins, and pack textures with power-of-two padding and border extrusion.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">📦</div>
+          <h3 class="card-title">Game Engine Ready Export</h3>
+          <p class="card-body">
+            Export scaled PNGs with extruded borders to eliminate texture bleeding, generate animated GIFs, and produce standard sprite sheet JSON metadata.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">📺</div>
+          <h3 class="card-title">35 Retro &amp; Modern Themes</h3>
+          <p class="card-body">
+            Immerse yourself with authentic vintage hardware aesthetics including CRT Amber, CRT Green, Famicom, Mega Drive, Game Boy, Commodore 64, and PSX.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">🎯</div>
+          <h3 class="card-title">Pivot &amp; Socket Action Points</h3>
+          <p class="card-body">
+            Set custom origin rotation pivots and place named game socket points (e.g. muzzle flash, item grip, particle source) per frame with automatic metadata export.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">🌐</div>
+          <h3 class="card-title">Native Desktop &amp; WebAssembly</h3>
+          <p class="card-body">
+            Written in Rust for blistering performance on Windows, Linux, and macOS. A zero-install browser build is also available via WebAssembly (experimental status).
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tools Reference Section -->
+  <section id="tools" class="tools-section">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Құралдар</h2>
+        <p class="section-desc">
+          Comprehensive 15-tool precision pixel art suite with 1-column / 2-column dock layouts and instant swatch swapping (<kbd>X</kbd>).
+        </p>
+      </div>
+
+      <div class="tools-table-wrap">
+        <table class="tools-table">
+          <thead>
+            <tr>
+              <th style="width: 220px;">Tool</th>
+              <th style="width: 100px;">Shortcut</th>
+              <th style="width: 200px;">Settings &amp; Options</th>
+              <th>Description &amp; Workflow</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-pencil"></i></span>
+                  <div>
+                    <div>Pencil</div>
+                    <small style="color: var(--text-muted);">Pencil Tool</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>P</kbd></td>
+              <td>
+                <span class="tag-badge">1–64 px</span>
+                <span class="tag-badge">Pixel-Perfect</span>
+              </td>
+              <td>The fundamental pixel art instrument. Pixel-Perfect mode algorithmically eliminates staircase corners and double pixels on diagonal strokes.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-eraser"></i></span>
+                  <div>
+                    <div>Eraser</div>
+                    <small style="color: var(--text-muted);">Eraser Tool</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>E</kbd></td>
+              <td>
+                <span class="tag-badge">1–64 px</span>
+                <span class="tag-badge">Alpha Clear</span>
+              </td>
+              <td>Removes pixel data back to transparency on the active layer without altering adjacent locked or unlocked layers.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-eye-dropper"></i></span>
+                  <div>
+                    <div>Eyedropper</div>
+                    <small style="color: var(--text-muted);">Pipette</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>I</kbd> / <kbd>Alt</kbd></td>
+              <td>
+                <span class="tag-badge">Canvas / Sketch</span>
+                <span class="tag-badge">Palette Snap</span>
+              </td>
+              <td>Samples pixel colors directly from the canvas or reference sketch. Left-click assigns Primary swatch; Right-click sets Secondary swatch.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-fill-drip"></i></span>
+                  <div>
+                    <div>Paint Bucket</div>
+                    <small style="color: var(--text-muted);">Flood Fill</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>G</kbd></td>
+              <td>
+                <span class="tag-badge">Tolerance 0–255</span>
+                <span class="tag-badge">Contiguous / Global</span>
+              </td>
+              <td>Flood-fills contiguous color regions or replaces all matching color pixels across the frame with adjustable color tolerance.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-brush"></i></span>
+                  <div>
+                    <div>Gradient</div>
+                    <small style="color: var(--text-muted);">Linear &amp; Radial</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>U</kbd></td>
+              <td>
+                <span class="tag-badge">Linear / Radial</span>
+                <span class="tag-badge">Dithering</span>
+              </td>
+              <td>Interactive two-point gradient interpolation between Primary and Secondary swatches with optional retro Bayer pattern dithering.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-slash"></i></span>
+                  <div>
+                    <div>Line</div>
+                    <small style="color: var(--text-muted);">Bresenham Line</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>V</kbd></td>
+              <td>
+                <span class="tag-badge">1–64 px</span>
+                <span class="tag-badge">Shift-Snap</span>
+              </td>
+              <td>Draws straight pixel lines using Bresenham algorithm with live drag preview. Hold <kbd>Shift</kbd> to lock angles to 0°, 45°, and 90°.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-bezier-curve"></i></span>
+                  <div>
+                    <div>Bézier Curve</div>
+                    <small style="color: var(--text-muted);">Quadratic Spline</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>C</kbd></td>
+              <td>
+                <span class="tag-badge">1–64 px</span>
+                <span class="tag-badge">3-Point Spline</span>
+              </td>
+              <td>Three-point quadratic Bézier curve: click to establish start point, drag to end point, and drag middle control node for silky organic curves.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-square"></i></span>
+                  <div>
+                    <div>Rectangle</div>
+                    <small style="color: var(--text-muted);">Geometric Box</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>R</kbd></td>
+              <td>
+                <span class="tag-badge">Outline / Solid / Both</span>
+                <span class="tag-badge">Shift-Square</span>
+              </td>
+              <td>Rasterizes boxes and rectangles. Toggle stroke outline, solid color fill, or filled with border. Holding <kbd>Shift</kbd> constrains to a square.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-circle"></i></span>
+                  <div>
+                    <div>Ellipse</div>
+                    <small style="color: var(--text-muted);">Midpoint Circle</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>O</kbd></td>
+              <td>
+                <span class="tag-badge">Outline / Solid / Both</span>
+                <span class="tag-badge">Shift-Circle</span>
+              </td>
+              <td>Midpoint ellipse and circle rasterizer. Toggle outline or solid fill modes. Holding <kbd>Shift</kbd> forces an equidistant circle.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-chess-board"></i></span>
+                  <div>
+                    <div>Dither Brush</div>
+                    <small style="color: var(--text-muted);">Pattern Shader</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>D</kbd></td>
+              <td>
+                <span class="tag-badge">Bayer 2×2 / 4×4 / 8×8</span>
+                <span class="tag-badge">Checker / Diagonal</span>
+              </td>
+              <td>Authentic retro hardware shading alternating primary and secondary pixels according to classic Bayer and custom matrices.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-circle-half-stroke"></i></span>
+                  <div>
+                    <div>Shading</div>
+                    <small style="color: var(--text-muted);">Ramp Stepper</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>H</kbd></td>
+              <td>
+                <span class="tag-badge">Lighten / Darken</span>
+                <span class="tag-badge">Palette Ramps</span>
+              </td>
+              <td>Steps pixel colors up or down within color ramps defined in the current palette. Ideal for non-destructive highlights and shadows.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-vector-square"></i></span>
+                  <div>
+                    <div>Rect Select</div>
+                    <small style="color: var(--text-muted);">Marquee Selection</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>M</kbd></td>
+              <td>
+                <span class="tag-badge">Marching Ants</span>
+                <span class="tag-badge">Clipboard</span>
+              </td>
+              <td>Defines rectangular pixel bounding boxes with animated marching ants boundary. Supports clipboard copy, cut, paste, and move.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-draw-polygon"></i></span>
+                  <div>
+                    <div>Lasso Select</div>
+                    <small style="color: var(--text-muted);">Polygonal Lasso</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>L</kbd></td>
+              <td>
+                <span class="tag-badge">Freehand Polygon</span>
+                <span class="tag-badge">Auto-Close</span>
+              </td>
+              <td>Freeform polygonal selection tool. Draw organic boundaries around complex shapes, characters, and props for isolated manipulation.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                  <div>
+                    <div>Magic Wand</div>
+                    <small style="color: var(--text-muted);">Color Selector</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>W</kbd></td>
+              <td>
+                <span class="tag-badge">Tolerance 0–255</span>
+                <span class="tag-badge">Contiguous / Global</span>
+              </td>
+              <td>Selects color-contiguous or canvas-wide pixel clusters matching clicked pixel color within an adjustable RGB tolerance.</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="tool-identity">
+                  <span class="tool-icon-badge"><i class="fa-solid fa-crosshairs"></i></span>
+                  <div>
+                    <div>Pivot &amp; Sockets</div>
+                    <small style="color: var(--text-muted);">Action Points</small>
+                  </div>
+                </div>
+              </td>
+              <td><kbd>Y</kbd></td>
+              <td>
+                <span class="tag-badge">Rotation Pivot</span>
+                <span class="tag-badge">Named Sockets</span>
+              </td>
+              <td>Defines frame rotation pivot center and assigns custom named socket points (e.g. <code>muzzle</code>, <code>grip</code>, <code>sparks</code>, <code>mount</code>).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Showcase Section -->
+  <section id="showcase" class="showcase-section">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Скриншоттар</h2>
+        <p class="section-desc">A deep dive into the user interface and key creative modules.</p>
+      </div>
+
+      <div class="tabs-nav">
+        <button class="tab-btn active" onclick="switchTab(0)">1. Workspace</button>
+        <button class="tab-btn" onclick="switchTab(1)">2. Tools & Toolbar</button>
+        <button class="tab-btn" onclick="switchTab(2)">3. Timeline & Layers</button>
+        <button class="tab-btn" onclick="switchTab(3)">4. Live Preview</button>
+        <button class="tab-btn" onclick="switchTab(4)">5. Palette & Swaps</button>
+        <button class="tab-btn" onclick="switchTab(5)">6. Pivot & Action Points</button>
+        <button class="tab-btn" onclick="switchTab(6)">7. Sketch & Onion Skin</button>
+        <button class="tab-btn" onclick="switchTab(7)">8. Slicer & 9-Slice UI</button>
+        <button class="tab-btn" onclick="switchTab(8)">9. Live FX & Filters</button>
+        <button class="tab-btn" onclick="switchTab(9)">10. 35 Retro Themes</button>
+        <button class="tab-btn" onclick="switchTab(10)">11. Viewports & Backgrounds</button>
+        <button class="tab-btn" onclick="switchTab(11)">12. Menus & Dialogs</button>
+      </div>
+
+      <!-- Tab 0: Workspace -->
+      <div class="tab-content active">
+        <div class="screenshot-showcase">
+          <img src="screenshots/main.png" alt="OniAnvil Main Workspace">
+          <div class="caption">OniAnvil main workspace featuring multi-track studio timeline, viewport canvas with pixel grid, and dock panels.</div>
+        </div>
+      </div>
+
+      <!-- Tab 1: Tools & Toolbar -->
+      <div class="tab-content">
+        <div class="screenshot-gallery">
+          <div class="gallery-item">
+            <img src="screenshots/tools.png" alt="Expanded 2-column tools panel">
+            <div class="caption">Expanded 2-column tools dock with icons, tool labels, and hotkeys.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/toolbar.png" alt="Horizontal context toolbar">
+            <div class="caption">Top toolbar with tool options, brush size, pixel-perfect toggle, and view modes.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/tools_compact.png" alt="Compact 1-column slim dock">
+            <div class="caption">Compact 1-column slim dock for maximum canvas drawing area.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Timeline & Layers -->
+      <div class="tab-content">
+        <div class="screenshot-showcase">
+          <img src="screenshots/timeline.png" alt="Studio Multi-Track Timeline">
+          <div class="caption">Studio multi-track timeline with independent layer tracks (V1, V2...), frame duration multipliers, visibility/lock toggles, and playback transport.</div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Live Preview -->
+      <div class="tab-content">
+        <div class="screenshot-gallery">
+          <div class="gallery-item">
+            <img src="screenshots/live_preview.png" alt="Floating Live Animation Preview">
+            <div class="caption">Floating live playback preview window with real-time FPS counter and zoom controls.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/live_preview_scroll_test.png" alt="Large Sprite Test in Preview">
+            <div class="caption">Preview window supporting smooth scrolling and zooming for large multi-frame animation sequences.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 4: Palette & Swaps -->
+      <div class="tab-content">
+        <div class="screenshot-gallery">
+          <div class="gallery-item">
+            <img src="screenshots/palette_and_swaps.png" alt="Palette Editor and Color Swaps">
+            <div class="caption">Palette editor dock with HSV/RGB sliders, color swaps, and GPL/HEX import/export.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/remap_to_palette.png" alt="Palette Remapping Dialog">
+            <div class="caption">Global palette remapping dialog for snapping arbitrary sprite colors to index-constrained palettes.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 5: Pivot & Action Points -->
+      <div class="tab-content">
+        <div class="screenshot-showcase">
+          <img src="screenshots/pivot_and_action_points.png" alt="Pivot and Socket Action Points">
+          <div class="caption">Interactive rotation pivot point and named socket attachment points (muzzle, hand, mount) with coordinates export.</div>
+        </div>
+      </div>
+
+      <!-- Tab 6: Sketch & Onion Skin -->
+      <div class="tab-content">
+        <div class="screenshot-showcase">
+          <img src="screenshots/sketch_and_onion_skin.png" alt="Sketch Underlay and Onion Skinning">
+          <div class="caption">Reference sketch tracing underlay with opacity slider, along with multi-frame onion skin ghosting.</div>
+        </div>
+      </div>
+
+      <!-- Tab 7: Slicer & 9-Slice UI -->
+      <div class="tab-content">
+        <div class="screenshot-gallery">
+          <div class="gallery-item">
+            <img src="screenshots/slicer.png" alt="Sheet Slicer Tool">
+            <div class="caption">Automatic sprite boundary detection and interactive sheet slicer.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/3x3.png" alt="9-Slice Scalable UI Margin Editor">
+            <div class="caption">9-slice scalable UI margin editor for buttons, dialog boxes, and HUD components.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 8: Live FX & Filters -->
+      <div class="tab-content">
+        <div class="screenshot-gallery">
+          <div class="gallery-item">
+            <img src="screenshots/outline_generator.png" alt="Pixel Outline Generator Modal">
+            <div class="caption">Automatic pixel outline generator modal with customizable thickness and diagonal connection modes.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/replace_color.png" alt="Interactive Color Replacement Modal">
+            <div class="caption">Interactive color replacement modal with canvas dropper and live preview.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/hue_saturation_contrast.png" alt="HSV and Contrast Adjustment Dialog">
+            <div class="caption">Hue shift, saturation, and contrast adjustment dialog.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/matrix_filter.png" alt="3x3 Convolution Matrix Filter Modal">
+            <div class="caption">3x3 convolution matrix filter modal featuring sharpen, blur, emboss, and edge detection presets.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 9: 35 Retro Themes -->
+      <div class="tab-content">
+        <div class="screenshot-gallery">
+          <div class="gallery-item">
+            <img src="screenshots/themes.png" alt="Theme Selection Menu">
+            <div class="caption">Theme selection menu featuring 35 retro gaming and modern studio themes.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/crt_orange_theme.png" alt="Retro CRT Amber Phosphor Theme">
+            <div class="caption">Retro CRT Amber/Orange phosphor terminal theme.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/psx_theme.png" alt="PlayStation Retro Aesthetic Theme">
+            <div class="caption">Classic 90s PlayStation (PSX) console aesthetic theme.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 10: Viewports & Backgrounds -->
+      <div class="tab-content">
+        <div class="screenshot-gallery">
+          <div class="gallery-item">
+            <img src="screenshots/grid_and_dark_checkerboard.png" alt="Dark Checkerboard with Grid">
+            <div class="caption">High-contrast pixel grid over dark checkerboard pattern.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/no_grid_light_checkerboard.png" alt="Light Checkerboard without Grid">
+            <div class="caption">Clean borderless canvas over light checkerboard pattern.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/custom_solid_background.png" alt="Custom Solid Background Color">
+            <div class="caption">Custom solid color background for testing in-game sprite contrast.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 11: Menus & Dialogs -->
+      <div class="tab-content">
+        <div class="screenshot-gallery">
+          <div class="gallery-item">
+            <img src="screenshots/file_menu.png" alt="File Menu">
+            <div class="caption">File menu: project management, format imports, and game engine exports.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/edit_menu.png" alt="Edit Menu">
+            <div class="caption">Edit menu: clipboard operations, undo/redo history, and color transforms.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/select_menu.png" alt="Selection Menu">
+            <div class="caption">Selection menu: invert, clear, shrink, and expand selections.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/view_menu.png" alt="View Menu">
+            <div class="caption">View menu: rulers, guides, checkerboards, and zoom presets.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/project_menu.png" alt="Project Menu">
+            <div class="caption">Project menu: canvas resizing, sprite trimming, and atlas sync.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/new_project.png" alt="New Project Modal">
+            <div class="caption">New project modal with standard retro and modern canvas size presets.</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/new_project_palettes.png" alt="Built-in Palettes in New Project">
+            <div class="caption">Built-in retro palettes in project creation (PICO-8, Game Boy, NES, Commodore 64).</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/help.png" alt="Help and Hotkeys Reference Window">
+            <div class="caption">Interactive Help dialog with full keyboard shortcuts and documentation.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Shortcuts Section -->
+  <section id="shortcuts" class="shortcuts-section">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Ыстық пернелер</h2>
+        <p class="section-desc">Optimized for rapid one-handed muscle memory.</p>
+      </div>
+
+      <table class="shortcuts-table">
+        <thead>
+          <tr>
+            <th>Shortcut</th>
+            <th>Tool / Action</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><kbd>P</kbd></td>
+            <td>Pencil</td>
+            <td>1px precision drawing with optional Pixel-Perfect mode</td>
+          </tr>
+          <tr>
+            <td><kbd>E</kbd></td>
+            <td>Eraser</td>
+            <td>Clear pixels back to transparency on active layer</td>
+          </tr>
+          <tr>
+            <td><kbd>I</kbd> / <kbd>Alt</kbd></td>
+            <td>Eyedropper</td>
+            <td>Sample color from active canvas or reference sketch</td>
+          </tr>
+          <tr>
+            <td><kbd>G</kbd></td>
+            <td>Paint Bucket</td>
+            <td>Flood fill contiguous or global color region with tolerance</td>
+          </tr>
+          <tr>
+            <td><kbd>U</kbd></td>
+            <td>Gradient</td>
+            <td>Linear and radial gradients with dithering support</td>
+          </tr>
+          <tr>
+            <td><kbd>V</kbd></td>
+            <td>Line</td>
+            <td>Straight lines with <kbd>Shift</kbd> angle constraint</td>
+          </tr>
+          <tr>
+            <td><kbd>C</kbd></td>
+            <td>Bézier Curve</td>
+            <td>Smooth 3-point quadratic spline curve</td>
+          </tr>
+          <tr>
+            <td><kbd>R</kbd></td>
+            <td>Rectangle</td>
+            <td>Outlined or solid rectangular shapes (<kbd>Shift</kbd> for square)</td>
+          </tr>
+          <tr>
+            <td><kbd>O</kbd></td>
+            <td>Ellipse</td>
+            <td>Outlined or solid ellipses (<kbd>Shift</kbd> for perfect circle)</td>
+          </tr>
+          <tr>
+            <td><kbd>D</kbd></td>
+            <td>Dither Brush</td>
+            <td>Pattern dither drawing with Bayer and checker matrices</td>
+          </tr>
+          <tr>
+            <td><kbd>H</kbd></td>
+            <td>Shading</td>
+            <td>Step lighter or darker through palette color ramps</td>
+          </tr>
+          <tr>
+            <td><kbd>M</kbd></td>
+            <td>Rectangular Select</td>
+            <td>Select rectangular region with marching ants boundary</td>
+          </tr>
+          <tr>
+            <td><kbd>L</kbd></td>
+            <td>Lasso Select</td>
+            <td>Freehand polygonal selection with auto-closing loop</td>
+          </tr>
+          <tr>
+            <td><kbd>W</kbd></td>
+            <td>Magic Wand</td>
+            <td>Select color-contiguous pixel regions within tolerance</td>
+          </tr>
+          <tr>
+            <td><kbd>Y</kbd></td>
+            <td>Pivot &amp; Sockets</td>
+            <td>Place rotation pivot point and named attachment sockets</td>
+          </tr>
+          <tr>
+            <td><kbd>X</kbd></td>
+            <td>Swap Swatches</td>
+            <td>Swap Primary and Secondary active color swatches</td>
+          </tr>
+          <tr>
+            <td><kbd>Ctrl/Cmd+C / X / V</kbd></td>
+            <td>Clipboard</td>
+            <td>Copy, Cut, and Paste selected pixel clusters across frames</td>
+          </tr>
+          <tr>
+            <td><kbd>Space</kbd></td>
+            <td>Play / Pause</td>
+            <td>Toggle real-time animation playback in timeline</td>
+          </tr>
+          <tr>
+            <td><kbd>A / D</kbd></td>
+            <td>Step Frames</td>
+            <td>Step to Previous or Next animation frame</td>
+          </tr>
+          <tr>
+            <td><kbd>Shift+R</kbd></td>
+            <td>Replace Color</td>
+            <td>Modal to swap colors with live preview and pipette</td>
+          </tr>
+          <tr>
+            <td><kbd>Ctrl/Cmd+U</kbd></td>
+            <td>Color Adjust</td>
+            <td>HSV hue shift, saturation, and contrast adjustment</td>
+          </tr>
+          <tr>
+            <td><kbd>Ctrl/Cmd+R</kbd></td>
+            <td>Free Rotate</td>
+            <td>Arbitrary angle rotation using RotSprite algorithm</td>
+          </tr>
+          <tr>
+            <td><kbd>Space+Drag</kbd></td>
+            <td>Pan Canvas</td>
+            <td>Smooth infinite panning across canvas coordinates</td>
+          </tr>
+          <tr>
+            <td><kbd>Ctrl/Cmd+Wheel</kbd></td>
+            <td>Zoom</td>
+            <td>Pixel-crisp zoom centered around mouse cursor</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Download Section -->
+  <section id="downloads" class="download-section">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Жүктеп алу</h2>
+        <p class="section-desc">Standalone zero-dependency desktop binaries and web client.</p>
+      </div>
+
+      <div class="download-grid">
+        <div class="dl-card">
+          <div class="dl-icon">🪟</div>
+          <h3 class="dl-platform">Windows</h3>
+          <p class="dl-desc">Windows 10 / 11 (64-bit)<br/>Standalone portable executable</p>
+          <a href="https://github.com/rbm13s/OniAnvil/releases/latest" class="btn btn-primary btn-sm">Download .zip</a>
+        </div>
+
+        <div class="dl-card">
+          <div class="dl-icon">🐧</div>
+          <h3 class="dl-platform">Linux</h3>
+          <p class="dl-desc">Ubuntu, Debian, Fedora, Arch<br/>Portable .tar.gz &amp; Debian .deb</p>
+          <a href="https://github.com/rbm13s/OniAnvil/releases/latest" class="btn btn-primary btn-sm">Download .deb / .tar.gz</a>
+        </div>
+
+        <div class="dl-card">
+          <div class="dl-icon">🍏</div>
+          <h3 class="dl-platform">macOS</h3>
+          <p class="dl-desc">Universal Binary (ARM64 M1-M4 + Intel x86_64)<br/>macOS 11.0 Big Sur or later</p>
+          <a href="https://github.com/rbm13s/OniAnvil/releases/latest" class="btn btn-primary btn-sm">Download .zip</a>
+        </div>
+
+        <div class="dl-card">
+          <div class="dl-icon">🌐</div>
+          <h3 class="dl-platform">WebAssembly <span style="font-size:0.75rem; vertical-align: middle; background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); padding: 2px 6px; border-radius: 4px;">Experimental</span></h3>
+          <p class="dl-desc">Run directly in Chrome, Firefox, Safari, Edge<br/>Zero installation required.<br/><span style="color: #f59e0b; font-size: 0.82rem;">⚠️ Note: Web build is experimental and may contain browser-specific bugs.</span></p>
+          <a href="app/?lang=kk" class="btn btn-secondary btn-sm">Open in Browser</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <p>OniAnvil is an open-source project released under the <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener">MIT License</a>.</p>
+      <p style="margin-top: 8px;">Icons provided by <a href="https://fontawesome.com/" target="_blank" rel="noopener">Font Awesome Free</a> under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a> / <a href="https://scripts.sil.org/OFL" target="_blank" rel="noopener">SIL OFL 1.1</a>.</p>
+      <p style="margin-top: 8px;">Built with ❤️ in Rust using <a href="https://github.com/emilk/egui" target="_blank" rel="noopener">egui</a> and <a href="https://wgpu.rs/" target="_blank" rel="noopener">wgpu</a>. Repository: <a href="https://github.com/rbm13s/OniAnvil" target="_blank" rel="noopener">github.com/rbm13s/OniAnvil</a></p>
+      <p style="margin-top: 12px; font-size: 0.82rem; color: var(--text-muted); max-width: 860px; margin-left: auto; margin-right: auto; line-height: 1.45;">
+        <strong>Disclaimer:</strong> OniAnvil is distributed free of charge on an "AS IS" basis without warranties of any kind. The authors and copyright holders bear no liability for any direct, indirect, or incidental damages or loss of data resulting from the use of this software.
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>

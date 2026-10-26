@@ -1,0 +1,48 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+
+# Release archives & packages
+*.zip
+*.tar.gz
+*.deb
+*.dmg
+*.pkg
+
+# Executables & dynamic libraries outside target/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# WebAssembly, Trunk & Docs App build artifacts
+/dist/
+/.trunk/
+/docs/app/
+
+# Linux packaging artifacts
+/deb_pkg/
+
+# Environment files, secrets & logs
+.env
+.env.*
+*.log
+*.pem
+*.key
+
+# IDE, Editor & Tooling directories
+.idea/
+.vscode/
+.gemini/
+*.swp
+*.swo
+*~
+*.tmp
+*.bak
+*.orig
+
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
