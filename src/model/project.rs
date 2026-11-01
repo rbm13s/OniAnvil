@@ -1,6 +1,7 @@
 use crate::model::frame::{ActionPoint, ActionPointCoord, FrameMeta, LayerMeta};
 use crate::model::metadata::ProjectMetadata;
-use crate::model::sketch::nearest_palette_color;
+use crate::model::palette::{PaletteDitherMode, PREDEFINED_PALETTES};
+use crate::model::sketch::{nearest_palette_color, BakePaletteSource, BakeSketchSettings};
 use crate::tools::selection::SelectionMask;
 use egui::ColorImage;
 use image::{Rgba, RgbaImage};
@@ -416,10 +417,26 @@ impl Project {
 
     /// Rasterizes the positioned high-resolution sketch directly into `frame_index`,
     /// automatically quantized to the active palette colors.
+    #[allow(dead_code)]
     pub fn bake_sketch_to_frame(
         &mut self,
         frame_index: usize,
         lock_alpha: bool,
+        selection: &SelectionMask,
+    ) -> bool {
+        let settings = BakeSketchSettings {
+            lock_alpha,
+            ..Default::default()
+        };
+        self.bake_sketch_advanced(frame_index, &settings, selection)
+    }
+
+    /// Advanced rasterization of the sketch with palette selection, configurable dithering,
+    /// dominant/mode filtering for AI pixel art noise elimination, and line/edge protection.
+    pub fn bake_sketch_advanced(
+        &mut self,
+        frame_index: usize,
+        settings: &BakeSketchSettings,
         selection: &SelectionMask,
     ) -> bool {
         let sketch_img = match &self.sketch_rgba {
@@ -430,11 +447,38 @@ impl Project {
         let fw = self.metadata.frame_width.max(1);
         let fh = self.metadata.frame_height.max(1);
         let (ox, oy) = self.metadata.frame_origin(frame_index);
+
+        let palette_buf: Option<Vec<[u8; 4]>> = match settings.palette_source {
+            BakePaletteSource::ActivePalette => Some(self.metadata.palette.colors.clone()),
+            BakePaletteSource::Predefined(idx) => {
+                let clamped = idx.min(PREDEFINED_PALETTES.len().saturating_sub(1));
+                Some(PREDEFINED_PALETTES[clamped].to_rgba_vec())
+            }
+            BakePaletteSource::OriginalColors => None,
+        };
+
+        let mut sampled_grid: Vec<Option<[u8; 4]>> = vec![None; (fw * fh) as usize];
+        for ly in 0..(fh as i32) {
+            for lx in 0..(fw as i32) {
+                let idx = (ly as u32 * fw + lx as u32) as usize;
+                sampled_grid[idx] = self.metadata.sketch.sample_pixel_area(
+                    sketch_img,
+                    fw,
+                    fh,
+                    lx,
+                    ly,
+                    settings.pixel_precision,
+                    settings.alpha_threshold,
+                    palette_buf.as_deref(),
+                );
+            }
+        }
+
         let mut changed = false;
 
         for ly in 0..(fh as i32) {
             for lx in 0..(fw as i32) {
-                if !selection.contains(lx, ly) {
+                if settings.in_selection_only && !selection.contains(lx, ly) {
                     continue;
                 }
                 let ax = ox + lx as u32;
@@ -442,23 +486,74 @@ impl Project {
                 if ax >= self.atlas_rgba.width() || ay >= self.atlas_rgba.height() {
                     continue;
                 }
-                if lock_alpha && self.atlas_rgba.get_pixel(ax, ay)[3] == 0 {
+                if settings.lock_alpha && self.atlas_rgba.get_pixel(ax, ay)[3] == 0 {
                     continue;
                 }
 
-                let fx = lx as f32 + 0.5;
-                let fy = ly as f32 + 0.5;
-                if let Some(sampled) =
-                    self.metadata
-                        .sketch
-                        .sample_rgba_at_frame_pos(sketch_img, fw, fh, fx, fy)
-                {
-                    if sampled[3] >= 32 {
-                        let quantized =
-                            nearest_palette_color(sampled, &self.metadata.palette.colors);
-                        self.atlas_rgba.put_pixel(ax, ay, Rgba(quantized));
-                        changed = true;
+                let grid_idx = (ly as u32 * fw + lx as u32) as usize;
+                let Some(base_col) = sampled_grid[grid_idx] else {
+                    continue;
+                };
+
+                let mut is_edge = false;
+                if settings.edge_protection && settings.crisp_pixels_and_lines {
+                    for (nx, ny) in [
+                        (lx - 1, ly),
+                        (lx + 1, ly),
+                        (lx, ly - 1),
+                        (lx, ly + 1),
+                    ] {
+                        if nx < 0 || ny < 0 || nx >= fw as i32 || ny >= fh as i32 {
+                            is_edge = true;
+                            break;
+                        }
+                        let n_idx = (ny as u32 * fw + nx as u32) as usize;
+                        match sampled_grid[n_idx] {
+                            None => {
+                                is_edge = true;
+                                break;
+                            }
+                            Some(ncol) => {
+                                let dr = (base_col[0] as i32 - ncol[0] as i32).abs();
+                                let dg = (base_col[1] as i32 - ncol[1] as i32).abs();
+                                let db = (base_col[2] as i32 - ncol[2] as i32).abs();
+                                if dr + dg + db > 80 {
+                                    is_edge = true;
+                                    break;
+                                }
+                            }
+                        }
                     }
+                }
+
+                let final_col = if let Some(pal) = palette_buf.as_deref() {
+                    if is_edge || settings.dither_mode == PaletteDitherMode::None {
+                        nearest_palette_color(base_col, pal)
+                    } else {
+                        let d = match settings.dither_mode {
+                            PaletteDitherMode::None => 0.0,
+                            PaletteDitherMode::Bayer4x4 => {
+                                (crate::tools::fill::BAYER_4X4[(ly as usize) % 4][(lx as usize) % 4] - 0.5)
+                                    * settings.dither_strength
+                            }
+                            PaletteDitherMode::Bayer8x8 => {
+                                (crate::tools::fill::BAYER_8X8[(ly as usize) % 8][(lx as usize) % 8] - 0.5)
+                                    * settings.dither_strength
+                            }
+                        };
+                        let pr = (base_col[0] as f32 + d).clamp(0.0, 255.0) as u8;
+                        let pg = (base_col[1] as f32 + d).clamp(0.0, 255.0) as u8;
+                        let pb = (base_col[2] as f32 + d).clamp(0.0, 255.0) as u8;
+                        nearest_palette_color([pr, pg, pb, base_col[3]], pal)
+                    }
+                } else {
+                    base_col
+                };
+
+                let cur = self.atlas_rgba.get_pixel(ax, ay);
+                if cur.0 != final_col {
+                    self.atlas_rgba.put_pixel(ax, ay, Rgba(final_col));
+                    changed = true;
                 }
             }
         }
@@ -1613,6 +1708,25 @@ mod tests {
         let sel = SelectionMask::default();
         assert!(proj.bake_sketch_to_frame(0, false, &sel));
         assert_eq!(*proj.atlas_rgba.get_pixel(4, 4), Rgba([189, 55, 68, 255]));
+    }
+
+    #[test]
+    fn test_bake_sketch_advanced_with_preset_palette_and_dither() {
+        let meta = ProjectMetadata::new_config("bake_adv_test".to_string(), 8, 8, 1, 1, None);
+        let mut proj = Project::new(meta);
+        let sketch = RgbaImage::from_pixel(32, 32, Rgba([255, 255, 255, 255]));
+        proj.set_sketch_image(Some(sketch), None, None);
+
+        let sel = SelectionMask::default();
+        let settings = BakeSketchSettings {
+            palette_source: BakePaletteSource::Predefined(0), // e.g. Pico-8 or DB16
+            dither_mode: PaletteDitherMode::Bayer4x4,
+            dither_strength: 8.0,
+            crisp_pixels_and_lines: true,
+            ..Default::default()
+        };
+        assert!(proj.bake_sketch_advanced(0, &settings, &sel));
+        assert_ne!(*proj.atlas_rgba.get_pixel(4, 4), Rgba([0, 0, 0, 0]));
     }
 
     #[test]

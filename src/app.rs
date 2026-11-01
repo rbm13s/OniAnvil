@@ -29,7 +29,9 @@ use crate::ui::modals::{
     ExportScaledPngModalState, ModifySelectionMode, ModifySelectionModalState, NewProjectWizardState,
     OutlineFxAction, OutlineFxModalState,
     ReGridModalState, RecoveryAction, RemapPaletteAction, RemapPaletteModalState, ReplaceColorModalState, Resize9GridModalState, RotateAction, RotateModalState, SheetSlicerModalState,
+    BakeSketchAction, BakeSketchModalState,
 };
+use crate::model::sketch::BakePaletteSource;
 use crate::tools::selection::SelectionModifyShape;
 use crate::ui::right_dock::show_right_dock;
 use crate::ui::start_screen::{show_start_screen, StartScreenAction};
@@ -74,6 +76,7 @@ pub struct OniAnvilApp {
     pub outline_fx_modal: OutlineFxModalState,
     pub convolution_modal: ConvolutionModalState,
     pub remap_palette_modal: RemapPaletteModalState,
+    pub bake_sketch_modal: BakeSketchModalState,
     pub rotate_modal: RotateModalState,
     pub pack_atlas_modal: ExportPackedAtlasModalState,
     pub pending_after_save: Option<PendingAfterSave>,
@@ -133,6 +136,7 @@ impl OniAnvilApp {
             outline_fx_modal: OutlineFxModalState::default(),
             convolution_modal: ConvolutionModalState::default(),
             remap_palette_modal: RemapPaletteModalState::default(),
+            bake_sketch_modal: BakeSketchModalState::default(),
             rotate_modal: RotateModalState::default(),
             pack_atlas_modal: ExportPackedAtlasModalState::default(),
             modal_preview_backup: None,
@@ -521,6 +525,36 @@ impl OniAnvilApp {
                 doc.project.has_unsaved_changes = true;
                 doc.project.canvas_dirty = true;
                 self.status_key = "app.status.palette_remapped";
+            }
+        }
+    }
+
+    pub fn apply_bake_sketch(&mut self, action: BakeSketchAction) {
+        if let Some(doc) = self.documents.get_mut(self.active_doc_idx) {
+            let snap = doc.current_snapshot();
+            let sel = doc.renderer.selection.clone();
+            let frames: Vec<usize> = if action.settings.all_frames {
+                (0..doc.project.metadata.frame_count as usize).collect()
+            } else {
+                vec![doc.project.active_frame]
+            };
+            let mut any_baked = false;
+            for f_idx in frames {
+                if doc.project.bake_sketch_advanced(f_idx, &action.settings, &sel) {
+                    any_baked = true;
+                }
+            }
+            if any_baked {
+                if action.settings.set_as_active_palette {
+                    if let BakePaletteSource::Predefined(idx) = action.settings.palette_source {
+                        let clamped = idx.min(crate::model::palette::PREDEFINED_PALETTES.len().saturating_sub(1));
+                        doc.project.metadata.palette = crate::model::palette::PREDEFINED_PALETTES[clamped].to_palette_data();
+                    }
+                }
+                doc.project.sync_active_layer();
+                doc.project.has_unsaved_changes = true;
+                doc.history.push(snap);
+                self.status_key = "app.status.sketch_baked";
             }
         }
     }
@@ -1879,25 +1913,11 @@ impl eframe::App for OniAnvilApp {
                         doc.project.set_sketch_image(None, None, None);
                     }
                     if right_actions.trigger_bake_sketch {
-                        let snap = doc.current_snapshot();
+                        let has_sel = !doc.renderer.selection.is_empty();
+                        let pal = doc.project.metadata.palette.colors.clone();
                         let lock_alpha = self.tools.lock_alpha;
                         let batch = self.tools.batch_mode;
-                        let sel = doc.renderer.selection.clone();
-                        let frames: Vec<usize> = if batch {
-                            (0..doc.project.metadata.frame_count as usize).collect()
-                        } else {
-                            vec![doc.project.active_frame]
-                        };
-                        let mut any_baked = false;
-                        for f_idx in frames {
-                            if doc.project.bake_sketch_to_frame(f_idx, lock_alpha, &sel) {
-                                any_baked = true;
-                            }
-                        }
-                        if any_baked {
-                            doc.history.push(snap);
-                            self.status_key = "app.status.sketch_baked";
-                        }
+                        self.bake_sketch_modal.open_with(has_sel, &pal, lock_alpha, batch);
                     }
                     if right_actions.trigger_import_palette {
                         self.io.trigger_import_palette_dialog(ctx.clone());
@@ -2150,7 +2170,8 @@ impl eframe::App for OniAnvilApp {
             || self.outline_fx_modal.open
             || self.convolution_modal.open
             || self.remap_palette_modal.open
-            || self.rotate_modal.open;
+            || self.rotate_modal.open
+            || self.bake_sketch_modal.open;
         if any_fx_modal_open_before {
             if let Some(doc) = self.documents.get(self.active_doc_idx) {
                 let needs_backup = match &self.modal_preview_backup {
@@ -2420,13 +2441,24 @@ impl eframe::App for OniAnvilApp {
             self.apply_rotate_arbitrary(action);
         }
 
-        // Handle live preview or cancel restoration for the 6 FX modals
+        if let Some(action) = self.bake_sketch_modal.show(ctx, &self.i18n) {
+            if let Some((b_idx, orig_rgba)) = self.modal_preview_backup.take() {
+                if let Some(doc) = self.documents.get_mut(b_idx) {
+                    doc.project.atlas_rgba = orig_rgba;
+                    doc.project.sync_active_layer();
+                }
+            }
+            self.apply_bake_sketch(action);
+        }
+
+        // Handle live preview or cancel restoration for FX modals
         let any_fx_modal_open_after = self.replace_color_modal.open
             || self.color_adjust_modal.open
             || self.outline_fx_modal.open
             || self.convolution_modal.open
             || self.remap_palette_modal.open
-            || self.rotate_modal.open;
+            || self.rotate_modal.open
+            || self.bake_sketch_modal.open;
 
         if any_fx_modal_open_after {
             if let Some((b_idx, ref orig_rgba)) = self.modal_preview_backup {
@@ -2622,6 +2654,16 @@ impl eframe::App for OniAnvilApp {
                                     );
                                 }
                             }
+                        }
+                    } else if self.bake_sketch_modal.open && self.bake_sketch_modal.preview {
+                        let sel = doc.renderer.selection.clone();
+                        let frames: Vec<usize> = if self.bake_sketch_modal.settings.all_frames {
+                            (0..doc.project.metadata.frame_count as usize).collect()
+                        } else {
+                            vec![doc.project.active_frame]
+                        };
+                        for f_idx in frames {
+                            doc.project.bake_sketch_advanced(f_idx, &self.bake_sketch_modal.settings, &sel);
                         }
                     }
 
@@ -2897,6 +2939,7 @@ mod tests {
             outline_fx_modal: OutlineFxModalState::default(),
             convolution_modal: ConvolutionModalState::default(),
             remap_palette_modal: RemapPaletteModalState::default(),
+            bake_sketch_modal: BakeSketchModalState::default(),
             rotate_modal: RotateModalState::default(),
             pack_atlas_modal: ExportPackedAtlasModalState::default(),
             modal_preview_backup: None,
@@ -2972,6 +3015,7 @@ mod tests {
             outline_fx_modal: OutlineFxModalState::default(),
             convolution_modal: ConvolutionModalState::default(),
             remap_palette_modal: RemapPaletteModalState::default(),
+            bake_sketch_modal: BakeSketchModalState::default(),
             rotate_modal: RotateModalState::default(),
             pack_atlas_modal: ExportPackedAtlasModalState::default(),
             modal_preview_backup: None,
@@ -3054,6 +3098,7 @@ mod tests {
             outline_fx_modal: OutlineFxModalState::default(),
             convolution_modal: ConvolutionModalState::default(),
             remap_palette_modal: RemapPaletteModalState::default(),
+            bake_sketch_modal: BakeSketchModalState::default(),
             rotate_modal: RotateModalState::default(),
             pack_atlas_modal: ExportPackedAtlasModalState::default(),
             modal_preview_backup: None,

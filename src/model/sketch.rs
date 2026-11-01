@@ -1,5 +1,58 @@
+use crate::model::palette::PaletteDitherMode;
 use image::RgbaImage;
 use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum BakePaletteSource {
+    #[default]
+    ActivePalette,
+    Predefined(usize),
+    OriginalColors,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum PixelPrecisionMode {
+    /// Dominant / Mode color in cell footprint. Eliminates AI gradient transitions, noise, and anti-aliasing blur.
+    #[default]
+    Dominant,
+    /// Exact center point sample.
+    Center,
+    /// Box-filtered area average.
+    Average,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BakeSketchSettings {
+    pub palette_source: BakePaletteSource,
+    pub dither_mode: PaletteDitherMode,
+    pub dither_strength: f32,
+    pub crisp_pixels_and_lines: bool,
+    pub pixel_precision: PixelPrecisionMode,
+    pub alpha_threshold: u8,
+    pub edge_protection: bool,
+    pub lock_alpha: bool,
+    pub all_frames: bool,
+    pub in_selection_only: bool,
+    pub set_as_active_palette: bool,
+}
+
+impl Default for BakeSketchSettings {
+    fn default() -> Self {
+        Self {
+            palette_source: BakePaletteSource::ActivePalette,
+            dither_mode: PaletteDitherMode::None,
+            dither_strength: 16.0,
+            crisp_pixels_and_lines: true,
+            pixel_precision: PixelPrecisionMode::Dominant,
+            alpha_threshold: 128,
+            edge_protection: true,
+            lock_alpha: false,
+            all_frames: false,
+            in_selection_only: false,
+            set_as_active_palette: false,
+        }
+    }
+}
 
 fn default_true() -> bool {
     true
@@ -170,6 +223,141 @@ impl SketchReferenceState {
             None
         }
     }
+
+    /// Samples a frame pixel cell at `(lx, ly)` according to `precision`, `alpha_threshold`,
+    /// and optional target `palette` (used for mode/majority voting in Dominant mode).
+    #[allow(clippy::too_many_arguments)]
+    pub fn sample_pixel_area(
+        &self,
+        sketch_img: &RgbaImage,
+        frame_w: u32,
+        frame_h: u32,
+        lx: i32,
+        ly: i32,
+        precision: PixelPrecisionMode,
+        alpha_threshold: u8,
+        palette: Option<&[[u8; 4]]>,
+    ) -> Option<[u8; 4]> {
+        let fx = lx as f32 + 0.5;
+        let fy = ly as f32 + 0.5;
+
+        match precision {
+            PixelPrecisionMode::Center => {
+                let sampled = self.sample_rgba_at_frame_pos(sketch_img, frame_w, frame_h, fx, fy)?;
+                if sampled[3] >= alpha_threshold {
+                    if let Some(pal) = palette {
+                        Some(nearest_palette_color(sampled, pal))
+                    } else {
+                        Some([sampled[0], sampled[1], sampled[2], 255])
+                    }
+                } else {
+                    None
+                }
+            }
+            PixelPrecisionMode::Average => {
+                let mut sum_r = 0u64;
+                let mut sum_g = 0u64;
+                let mut sum_b = 0u64;
+                let mut total_a = 0u64;
+                let mut total_samples = 0usize;
+
+                for &dy in &[-0.35, 0.0, 0.35] {
+                    for &dx in &[-0.35, 0.0, 0.35] {
+                        if let Some(p) = self.sample_rgba_at_frame_pos(
+                            sketch_img,
+                            frame_w,
+                            frame_h,
+                            fx + dx,
+                            fy + dy,
+                        ) {
+                            let a = p[3] as u64;
+                            sum_r += p[0] as u64 * a;
+                            sum_g += p[1] as u64 * a;
+                            sum_b += p[2] as u64 * a;
+                            total_a += a;
+                        }
+                        total_samples += 1;
+                    }
+                }
+
+                if total_samples == 0 || total_a == 0 {
+                    return None;
+                }
+                let avg_a = (total_a / total_samples as u64) as u8;
+                if avg_a < alpha_threshold {
+                    return None;
+                }
+                let avg_r = (sum_r / total_a).min(255) as u8;
+                let avg_g = (sum_g / total_a).min(255) as u8;
+                let avg_b = (sum_b / total_a).min(255) as u8;
+                let col = [avg_r, avg_g, avg_b, 255];
+                if let Some(pal) = palette {
+                    Some(nearest_palette_color(col, pal))
+                } else {
+                    Some(col)
+                }
+            }
+            PixelPrecisionMode::Dominant => {
+                let mut valid_samples: Vec<[u8; 4]> = Vec::with_capacity(9);
+                let mut transparent_count = 0usize;
+
+                for &dy in &[-0.33, 0.0, 0.33] {
+                    for &dx in &[-0.33, 0.0, 0.33] {
+                        if let Some(p) = self.sample_rgba_at_frame_pos(
+                            sketch_img,
+                            frame_w,
+                            frame_h,
+                            fx + dx,
+                            fy + dy,
+                        ) {
+                            if p[3] >= alpha_threshold {
+                                valid_samples.push(p);
+                            } else {
+                                transparent_count += 1;
+                            }
+                        } else {
+                            transparent_count += 1;
+                        }
+                    }
+                }
+
+                if valid_samples.is_empty() || transparent_count >= 5 {
+                    return None;
+                }
+
+                if let Some(pal) = palette {
+                    let mut votes: Vec<([u8; 4], usize)> = Vec::new();
+                    for &p in &valid_samples {
+                        let snapped = nearest_palette_color(p, pal);
+                        if let Some(entry) = votes.iter_mut().find(|(c, _)| *c == snapped) {
+                            entry.1 += 1;
+                        } else {
+                            votes.push((snapped, 1));
+                        }
+                    }
+                    votes.sort_by(|a, b| b.1.cmp(&a.1));
+                    votes.first().map(|(c, _)| *c)
+                } else {
+                    let mut clusters: Vec<([u8; 4], usize)> = Vec::new();
+                    for &p in &valid_samples {
+                        if let Some(entry) = clusters.iter_mut().find(|(c, _)| {
+                            let dr = (c[0] as i32 - p[0] as i32).abs();
+                            let dg = (c[1] as i32 - p[1] as i32).abs();
+                            let db = (c[2] as i32 - p[2] as i32).abs();
+                            dr + dg + db <= 24
+                        }) {
+                            entry.1 += 1;
+                        } else {
+                            clusters.push(([p[0], p[1], p[2], 255], 1));
+                        }
+                    }
+                    clusters.sort_by(|a, b| b.1.cmp(&a.1));
+                    clusters.first().map(|(c, _)| *c)
+                }
+            }
+        }
+    }
+
 }
 
 /// Finds the nearest color in `palette` to `target_rgba` using weighted RGB Euclidean distance.
@@ -242,5 +430,48 @@ mod tests {
         let palette = vec![[20, 20, 20, 255], [195, 55, 48, 255], [40, 200, 60, 255]];
         let snapped = nearest_palette_color(sampled.unwrap(), &palette);
         assert_eq!(snapped, [195, 55, 48, 255]);
+    }
+
+    #[test]
+    fn test_sample_pixel_area_dominant_and_alpha_threshold() {
+        let mut sketch_img = RgbaImage::from_pixel(64, 64, Rgba([0, 0, 0, 0]));
+        // Put solid red in top-left quarter, but add some noisy border pixels
+        for y in 0..32 {
+            for x in 0..32 {
+                sketch_img.put_pixel(x, y, Rgba([200, 50, 50, 255]));
+            }
+        }
+        // One noisy pixel in the cell
+        sketch_img.put_pixel(16, 16, Rgba([50, 180, 50, 255]));
+
+        let state = SketchReferenceState::default();
+        let palette = vec![[20, 20, 20, 255], [195, 55, 48, 255], [40, 200, 60, 255]];
+
+        // Dominant mode should outvote the noise and pick the red palette color
+        let sampled = state.sample_pixel_area(
+            &sketch_img,
+            32,
+            32,
+            8,
+            8,
+            PixelPrecisionMode::Dominant,
+            128,
+            Some(&palette),
+        );
+        assert_eq!(sampled, Some([195, 55, 48, 255]));
+
+        // Check alpha threshold filtering
+        sketch_img.put_pixel(48, 48, Rgba([200, 50, 50, 64])); // Alpha 64
+        let below_thresh = state.sample_pixel_area(
+            &sketch_img,
+            32,
+            32,
+            24,
+            24,
+            PixelPrecisionMode::Center,
+            128,
+            Some(&palette),
+        );
+        assert_eq!(below_thresh, None);
     }
 }

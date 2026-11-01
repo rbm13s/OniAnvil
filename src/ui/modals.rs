@@ -4,6 +4,7 @@ use crate::io::settings::AppSettings;
 use crate::io::updater::GITHUB_REPO_URL;
 use crate::model::metadata::ProjectMetadata;
 use crate::model::palette::{PaletteDitherMode, PREDEFINED_PALETTES};
+use crate::model::sketch::{BakePaletteSource, BakeSketchSettings, PixelPrecisionMode};
 use crate::model::project::Project;
 use crate::theme::*;
 use crate::tools::fill::{OutlineCornerStyle, OutlinePlacement};
@@ -2687,6 +2688,305 @@ impl RemapPaletteModalState {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct BakeSketchAction {
+    pub settings: BakeSketchSettings,
+}
+
+pub struct BakeSketchModalState {
+    pub open: bool,
+    pub settings: BakeSketchSettings,
+    pub selected_preset_index: usize,
+    pub has_selection: bool,
+    pub active_palette_colors: Vec<[u8; 4]>,
+    pub preview: bool,
+}
+
+impl Default for BakeSketchModalState {
+    fn default() -> Self {
+        Self {
+            open: false,
+            settings: BakeSketchSettings::default(),
+            selected_preset_index: 0,
+            has_selection: false,
+            active_palette_colors: Vec::new(),
+            preview: true,
+        }
+    }
+}
+
+impl BakeSketchModalState {
+    pub fn open_with(
+        &mut self,
+        has_selection: bool,
+        active_palette: &[[u8; 4]],
+        lock_alpha: bool,
+        batch_mode: bool,
+    ) {
+        self.open = true;
+        self.has_selection = has_selection;
+        self.settings.in_selection_only = has_selection;
+        self.settings.lock_alpha = lock_alpha;
+        self.settings.all_frames = batch_mode;
+        self.active_palette_colors = active_palette.to_vec();
+        self.preview = true;
+    }
+
+    pub fn show(&mut self, ctx: &Context, i18n: &I18n) -> Option<BakeSketchAction> {
+        if !self.open {
+            return None;
+        }
+        let mut triggered = None;
+        let mut window_open = self.open;
+        let mut close_requested = false;
+
+        Window::new(i18n.tr("modal.bake_sketch.title"))
+            .open(&mut window_open)
+            .collapsible(false)
+            .resizable(false)
+            .default_width(380.0)
+            .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+            .show(ctx, |ui| {
+                ui.set_width(380.0);
+                ui.label(i18n.tr("modal.bake_sketch.prompt"));
+                ui.add_space(6.0);
+
+                // Palette Section
+                ui.group(|ui| {
+                    ui.label(RichText::new(i18n.tr("modal.bake_sketch.palette_section")).strong());
+                    ui.add_space(2.0);
+
+                    ui.horizontal(|ui| {
+                        ui.label(i18n.tr("panel.palette.title"));
+                        egui::ComboBox::from_id_salt("bake_sketch_palette_source_combo")
+                            .selected_text(match self.settings.palette_source {
+                                BakePaletteSource::ActivePalette => i18n.tr("modal.bake_sketch.palette_active"),
+                                BakePaletteSource::Predefined(_) => i18n.tr("modal.bake_sketch.palette_preset"),
+                                BakePaletteSource::OriginalColors => i18n.tr("modal.bake_sketch.palette_original"),
+                            })
+                            .show_ui(ui, |ui| {
+                                if ui.selectable_label(
+                                    matches!(self.settings.palette_source, BakePaletteSource::ActivePalette),
+                                    i18n.tr("modal.bake_sketch.palette_active"),
+                                ).clicked() {
+                                    self.settings.palette_source = BakePaletteSource::ActivePalette;
+                                }
+                                if ui.selectable_label(
+                                    matches!(self.settings.palette_source, BakePaletteSource::Predefined(_)),
+                                    i18n.tr("modal.bake_sketch.palette_preset"),
+                                ).clicked() {
+                                    self.settings.palette_source = BakePaletteSource::Predefined(self.selected_preset_index);
+                                }
+                                if ui.selectable_label(
+                                    matches!(self.settings.palette_source, BakePaletteSource::OriginalColors),
+                                    i18n.tr("modal.bake_sketch.palette_original"),
+                                ).clicked() {
+                                    self.settings.palette_source = BakePaletteSource::OriginalColors;
+                                }
+                            });
+                    });
+
+                    if let BakePaletteSource::Predefined(_) = self.settings.palette_source {
+                        ui.add_space(2.0);
+                        ui.horizontal(|ui| {
+                            ui.label(i18n.tr("modal.new_project.palette_preset"));
+                            let preset_idx = self.selected_preset_index.min(PREDEFINED_PALETTES.len().saturating_sub(1));
+                            egui::ComboBox::from_id_salt("bake_sketch_preset_combo")
+                                .selected_text(PREDEFINED_PALETTES[preset_idx].name)
+                                .show_ui(ui, |ui| {
+                                    for (idx, p) in PREDEFINED_PALETTES.iter().enumerate() {
+                                        if ui.selectable_value(&mut self.selected_preset_index, idx, p.name).clicked() {
+                                            self.settings.palette_source = BakePaletteSource::Predefined(idx);
+                                        }
+                                    }
+                                });
+                        });
+                        ui.checkbox(&mut self.settings.set_as_active_palette, i18n.tr("modal.bake_sketch.set_as_active"));
+                    }
+
+                    // Render swatches strip
+                    let colors_to_show: Vec<[u8; 4]> = match self.settings.palette_source {
+                        BakePaletteSource::ActivePalette => self.active_palette_colors.clone(),
+                        BakePaletteSource::Predefined(_) => {
+                            let idx = self.selected_preset_index.min(PREDEFINED_PALETTES.len().saturating_sub(1));
+                            PREDEFINED_PALETTES[idx].to_rgba_vec()
+                        }
+                        BakePaletteSource::OriginalColors => Vec::new(),
+                    };
+
+                    if !colors_to_show.is_empty() {
+                        ui.add_space(4.0);
+                        ui.horizontal_wrapped(|ui| {
+                            ui.spacing_mut().item_spacing = vec2(2.0, 2.0);
+                            for &[r, g, b, a] in colors_to_show.iter().take(32) {
+                                let (rect, _) = ui.allocate_exact_size(vec2(14.0, 14.0), Sense::hover());
+                                ui.painter().rect_filled(rect, 2.0, Color32::from_rgba_unmultiplied(r, g, b, a));
+                                ui.painter().rect_stroke(rect, 2.0, Stroke::new(1.0, Color32::from_black_alpha(80)), StrokeKind::Inside);
+                            }
+                        });
+                    }
+                });
+
+                ui.add_space(6.0);
+
+                // Dithering Section
+                ui.group(|ui| {
+                    ui.label(RichText::new(i18n.tr("modal.bake_sketch.dither_section")).strong());
+                    ui.add_space(2.0);
+
+                    ui.horizontal(|ui| {
+                        ui.label(i18n.tr("modal.remap_palette.dither"));
+                        egui::ComboBox::from_id_salt("bake_sketch_dither_combo")
+                            .selected_text(match self.settings.dither_mode {
+                                PaletteDitherMode::None => i18n.tr("context.gradient_dither_none"),
+                                PaletteDitherMode::Bayer4x4 => i18n.tr("context.gradient_dither_bayer4"),
+                                PaletteDitherMode::Bayer8x8 => i18n.tr("context.gradient_dither_bayer8"),
+                            })
+                            .show_ui(ui, |ui| {
+                                ui.selectable_value(
+                                    &mut self.settings.dither_mode,
+                                    PaletteDitherMode::None,
+                                    i18n.tr("context.gradient_dither_none"),
+                                );
+                                ui.selectable_value(
+                                    &mut self.settings.dither_mode,
+                                    PaletteDitherMode::Bayer4x4,
+                                    i18n.tr("context.gradient_dither_bayer4"),
+                                );
+                                ui.selectable_value(
+                                    &mut self.settings.dither_mode,
+                                    PaletteDitherMode::Bayer8x8,
+                                    i18n.tr("context.gradient_dither_bayer8"),
+                                );
+                            });
+                    });
+
+                    if self.settings.dither_mode != PaletteDitherMode::None {
+                        ui.add_space(2.0);
+                        ui.horizontal(|ui| {
+                            ui.label(i18n.tr("modal.bake_sketch.dither_strength"));
+                            ui.add(egui::Slider::new(&mut self.settings.dither_strength, 1.0..=64.0).suffix(" px"));
+                        });
+                    }
+                });
+
+                ui.add_space(6.0);
+
+                // Precision & Sharp Lines Section
+                ui.group(|ui| {
+                    ui.label(RichText::new(i18n.tr("modal.bake_sketch.precision_section")).strong());
+                    ui.add_space(2.0);
+
+                    ui.checkbox(
+                        &mut self.settings.crisp_pixels_and_lines,
+                        i18n.tr("modal.bake_sketch.crisp_pixels"),
+                    )
+                    .on_hover_text(i18n.tr("modal.bake_sketch.crisp_pixels_tooltip"));
+
+                    ui.horizontal(|ui| {
+                        ui.label(i18n.tr("modal.bake_sketch.mode"));
+                        egui::ComboBox::from_id_salt("bake_sketch_precision_mode_combo")
+                            .selected_text(match self.settings.pixel_precision {
+                                PixelPrecisionMode::Dominant => i18n.tr("modal.bake_sketch.mode_dominant"),
+                                PixelPrecisionMode::Center => i18n.tr("modal.bake_sketch.mode_center"),
+                                PixelPrecisionMode::Average => i18n.tr("modal.bake_sketch.mode_average"),
+                            })
+                            .show_ui(ui, |ui| {
+                                ui.selectable_value(
+                                    &mut self.settings.pixel_precision,
+                                    PixelPrecisionMode::Dominant,
+                                    i18n.tr("modal.bake_sketch.mode_dominant"),
+                                );
+                                ui.selectable_value(
+                                    &mut self.settings.pixel_precision,
+                                    PixelPrecisionMode::Center,
+                                    i18n.tr("modal.bake_sketch.mode_center"),
+                                );
+                                ui.selectable_value(
+                                    &mut self.settings.pixel_precision,
+                                    PixelPrecisionMode::Average,
+                                    i18n.tr("modal.bake_sketch.mode_average"),
+                                );
+                            });
+                    });
+
+                    if self.settings.crisp_pixels_and_lines && self.settings.dither_mode != PaletteDitherMode::None {
+                        ui.checkbox(
+                            &mut self.settings.edge_protection,
+                            i18n.tr("modal.bake_sketch.edge_protection"),
+                        )
+                        .on_hover_text(i18n.tr("modal.bake_sketch.edge_protection_tooltip"));
+                    }
+
+                    ui.horizontal(|ui| {
+                        ui.label(i18n.tr("modal.bake_sketch.alpha_threshold"));
+                        ui.add(egui::Slider::new(&mut self.settings.alpha_threshold, 1..=255));
+                    });
+
+                    ui.checkbox(
+                        &mut self.settings.lock_alpha,
+                        i18n.tr("modal.bake_sketch.lock_alpha"),
+                    );
+                });
+
+                ui.add_space(6.0);
+                ui.separator();
+                ui.add_space(4.0);
+
+                ui.checkbox(&mut self.settings.all_frames, i18n.tr("modal.bake_sketch.all_frames"));
+                if self.has_selection {
+                    ui.checkbox(&mut self.settings.in_selection_only, i18n.tr("modal.bake_sketch.selection_only"));
+                }
+                ui.checkbox(&mut self.preview, i18n.tr("modal.preview"));
+
+                ui.add_space(10.0);
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = 8.0;
+                    let btn_w = 176.0;
+                    if ui
+                        .add_sized(
+                            [btn_w, 28.0],
+                            egui::Button::new(
+                                RichText::new(format!("{FA_CHECK} {}", i18n.tr("modal.bake_sketch.apply"))).strong(),
+                            ),
+                        )
+                        .clicked()
+                    {
+                        triggered = Some(BakeSketchAction {
+                            settings: self.settings.clone(),
+                        });
+                        close_requested = true;
+                    }
+
+                    if ui
+                        .add_sized(
+                            [btn_w, 28.0],
+                            egui::Button::new(
+                                RichText::new(format!("{FA_CLOSE} {}", i18n.tr("modal.modify_sel.cancel"))).strong(),
+                            ),
+                        )
+                        .clicked()
+                    {
+                        close_requested = true;
+                    }
+                });
+
+                if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                    close_requested = true;
+                }
+                if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                    triggered = Some(BakeSketchAction {
+                        settings: self.settings.clone(),
+                    });
+                    close_requested = true;
+                }
+            });
+
+        self.open = window_open && !close_requested;
+        triggered
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RotateAction {
     pub angle_deg: f32,
@@ -4093,6 +4393,18 @@ mod tests {
                 assert_eq!(res, None);
             });
             assert!(pack_modal.open);
+
+            // 17. Bake sketch modal
+            let mut bake_sketch = BakeSketchModalState {
+                open: true,
+                ..Default::default()
+            };
+            bake_sketch.open_with(true, &[[255, 0, 0, 255], [0, 255, 0, 255]], false, false);
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                let res = bake_sketch.show(ctx, &i18n);
+                assert_eq!(res, None);
+            });
+            assert!(bake_sketch.open);
         }
     }
 }

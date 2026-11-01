@@ -212,6 +212,20 @@ Instead of storing isolated individual frame images in memory and stitching them
   - Retro Consoles: PlayStation 1, PlayStation 2, Dreamcast, SNES, Genesis, Game Boy.
   - Vintage Computers: C64, ZX Spectrum, Amiga Workbench, Atari ST, Apple II, DOS CGA, Mac Classic, Windows 98.
 
+### 4.9. Reference Sketch Baking & AI Pseudo-Pixel Art Engine
+- **Modal Dialog with Live Preview (`src/ui/modals.rs`):** Dedicated modal for rasterizing reference sketch images directly into sprite pixels with real-time canvas preview and target palette swatch preview.
+- **Flexible Palette Targeting:**
+  - Active project palette.
+  - Predefined retro palettes (PICO-8, DB16/32, Game Boy, NES, Commodore 64, etc.) with an option to adopt as the active project palette.
+  - Original colors (direct color sampling without palette quantization).
+- **Configurable Dithering:** None, Bayer 4x4, Bayer 8x8 with spread/strength slider (`1.0..=64.0 px`).
+- **Crisp Pixel & Clean Line Preservation Mode:**
+  - Solves the problem of AI-generated pseudo-pixel art (which contains anti-aliased gradients between pixel blocks, diffusion noise, and fuzzy halos).
+  - Majority/Dominant color voting in the cell footprint (`PixelPrecisionMode::Dominant`), snapping blurry transitions to solid dominant colors.
+  - Center-point (`PixelPrecisionMode::Center`) and area-average (`PixelPrecisionMode::Average`) alternatives.
+  - Outline/Edge Protection (`edge_protection`): prevents dithering from breaking solid outlines and high-contrast edges into noisy dots.
+  - Configurable alpha threshold cutoff (1..255) to eliminate semi-transparent fringe.
+
 ---
 
 ## 5. Roadmap Status & Milestone Progress
