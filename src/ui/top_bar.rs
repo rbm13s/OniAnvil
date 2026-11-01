@@ -22,6 +22,8 @@ pub struct TopBarActions {
     pub trigger_export_frame_sequence: bool,
     pub open_export_gif_modal: bool,
     pub trigger_export_sprite_json: bool,
+    pub trigger_export_aseprite: bool,
+    pub trigger_export_godot_tres: bool,
     pub open_export_packed_atlas_modal: bool,
     pub trigger_undo: bool,
     pub trigger_redo: bool,
@@ -169,6 +171,26 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_export_sprite_json = true;
+                    ui.close_menu();
+                }
+                if ui
+                    .add_enabled(
+                        has_doc,
+                        egui::Button::new(format!("{FA_EXPORT} {}", i18n.tr("menu.file.export_aseprite"))),
+                    )
+                    .clicked()
+                {
+                    actions.trigger_export_aseprite = true;
+                    ui.close_menu();
+                }
+                if ui
+                    .add_enabled(
+                        has_doc,
+                        egui::Button::new(format!("{FA_EXPORT} {}", i18n.tr("menu.file.export_godot_tres"))),
+                    )
+                    .clicked()
+                {
+                    actions.trigger_export_godot_tres = true;
                     ui.close_menu();
                 }
                 if ui

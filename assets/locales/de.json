@@ -703,5 +703,14 @@
   "tooltip.layer_merge_down": "Ebene nach unten zusammenführen",
   "tooltip.layer_delete": "Ebene löschen",
   "modal.hotkeys.curve_3click": "3-Klick-Kurve (Start → Ende → Bogen)",
-  "modal.hotkeys.timeline_scroll": "Zeitleiste scrollen"
+  "modal.hotkeys.timeline_scroll": "Zeitleiste scrollen",
+  "panel.pivots.copy_prev": "Vom vorh. Frame",
+  "panel.pivots.apply_all": "Auf alle Frames",
+  "tooltip.pivot_copy_prev": "Aktionspunkt-Koordinaten vom vorherigen Frame kopieren",
+  "tooltip.pivot_apply_all": "Aktionspunkt-Koordinaten dieses Frames auf alle Frames anwenden",
+  "tooltip.pivot_apply_point_all": "Koordinaten dieses Aktionspunkts auf alle Frames anwenden",
+  "menu.file.export_aseprite": "Als Aseprite (.aseprite) exportieren...",
+  "menu.file.export_godot_tres": "Als Godot SpriteFrames (.tres) exportieren...",
+  "app.status.exported_aseprite": "Aseprite-Datei (.aseprite) erfolgreich exportiert",
+  "app.status.exported_godot_tres": "Godot SpriteFrames (.tres) erfolgreich exportiert"
 }

@@ -703,5 +703,14 @@
   "tooltip.layer_merge_down": "Fusionner le calque vers le bas",
   "tooltip.layer_delete": "Supprimer le calque",
   "modal.hotkeys.curve_3click": "Courbe en 3 clics (Début → Fin → Courbure)",
-  "modal.hotkeys.timeline_scroll": "Faire défiler les calques et images de la chronologie"
+  "modal.hotkeys.timeline_scroll": "Faire défiler les calques et images de la chronologie",
+  "panel.pivots.copy_prev": "Copier préc.",
+  "panel.pivots.apply_all": "Sur toutes",
+  "tooltip.pivot_copy_prev": "Copier les coordonnées des points d'action depuis l'image précédente",
+  "tooltip.pivot_apply_all": "Appliquer les coordonnées des points d'action de cette image à toutes les images",
+  "tooltip.pivot_apply_point_all": "Appliquer la position de ce point d'action à toutes les images",
+  "menu.file.export_aseprite": "Exporter en Aseprite (.aseprite)...",
+  "menu.file.export_godot_tres": "Exporter en Godot SpriteFrames (.tres)...",
+  "app.status.exported_aseprite": "Fichier Aseprite (.aseprite) exporté avec succès",
+  "app.status.exported_godot_tres": "Ressource Godot SpriteFrames (.tres) exportée avec succès"
 }

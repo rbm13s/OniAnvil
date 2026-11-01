@@ -29,6 +29,8 @@ pub enum IoEvent {
     PaletteSaved,
     ExportedPngSaved,
     ExportedGifSaved,
+    ExportedAsepriteSaved,
+    ExportedGodotTresSaved,
     Error(String),
 }
 
@@ -1168,6 +1170,96 @@ impl IoManager {
                 {
                     if handle.write(json_text.as_bytes()).await.is_ok() {
                         io_clone.push_event(IoEvent::ProjectSaved(None));
+                    }
+                    ctx.request_repaint();
+                }
+            });
+        }
+    }
+
+    pub fn trigger_export_aseprite_dialog(&self, project: &Project, ctx: egui::Context) {
+        use crate::io::export::encode_aseprite_bytes;
+        let ase_bytes = encode_aseprite_bytes(project);
+        let default_name = format!("{}.aseprite", project.metadata.project_name);
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Some(path) = rfd::FileDialog::new()
+                .set_file_name(&default_name)
+                .add_filter("Aseprite File (.aseprite, .ase)", &["aseprite", "ase"])
+                .save_file()
+            {
+                if std::fs::write(path, ase_bytes).is_ok() {
+                    self.push_event(IoEvent::ExportedAsepriteSaved);
+                }
+                ctx.request_repaint();
+            }
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            let io_clone = self.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                if let Some(handle) = rfd::AsyncFileDialog::new()
+                    .set_file_name(&default_name)
+                    .save_file()
+                    .await
+                {
+                    if handle.write(&ase_bytes).await.is_ok() {
+                        io_clone.push_event(IoEvent::ExportedAsepriteSaved);
+                    }
+                    ctx.request_repaint();
+                }
+            });
+        }
+    }
+
+    pub fn trigger_export_godot_tres_dialog(&self, project: &Project, ctx: egui::Context) {
+        use crate::io::export::encode_godot_sprite_frames_tres;
+        let default_name = format!("{}.tres", project.metadata.project_name);
+        let composited = project.composited_atlas_rgba();
+        let png_bytes_opt = Self::encode_png_bytes(&composited).ok();
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Some(path) = rfd::FileDialog::new()
+                .set_file_name(&default_name)
+                .add_filter("Godot SpriteFrames (.tres)", &["tres"])
+                .save_file()
+            {
+                let stem = path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or(&project.metadata.project_name);
+                let tex_res = format!("res://{stem}.png");
+                let tres_text = encode_godot_sprite_frames_tres(project, &tex_res);
+                if std::fs::write(&path, tres_text).is_ok() {
+                    if let Some(png_bytes) = png_bytes_opt {
+                        let png_path = path.with_extension("png");
+                        if !png_path.exists() {
+                            let _ = std::fs::write(png_path, png_bytes);
+                        }
+                    }
+                    self.push_event(IoEvent::ExportedGodotTresSaved);
+                }
+                ctx.request_repaint();
+            }
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = png_bytes_opt;
+            let default_tex = format!("res://{}.png", project.metadata.project_name);
+            let tres_text = encode_godot_sprite_frames_tres(project, &default_tex);
+            let io_clone = self.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                if let Some(handle) = rfd::AsyncFileDialog::new()
+                    .set_file_name(&default_name)
+                    .save_file()
+                    .await
+                {
+                    if handle.write(tres_text.as_bytes()).await.is_ok() {
+                        io_clone.push_event(IoEvent::ExportedGodotTresSaved);
                     }
                     ctx.request_repaint();
                 }

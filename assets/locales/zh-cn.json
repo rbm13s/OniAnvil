@@ -703,5 +703,14 @@
   "viewport.mode.atlas": "图集",
   "viewport.mode.frame": "帧",
   "viewport.zoom.100": "100%",
-  "viewport.zoom.fit": "自适应"
+  "viewport.zoom.fit": "自适应",
+  "panel.pivots.copy_prev": "复制上一帧",
+  "panel.pivots.apply_all": "应用到所有帧",
+  "tooltip.pivot_copy_prev": "从上一帧复制动作点坐标",
+  "tooltip.pivot_apply_all": "将当前帧的所有动作点坐标应用到所有帧",
+  "tooltip.pivot_apply_point_all": "将此动作点的坐标应用到所有帧",
+  "menu.file.export_aseprite": "导出 Aseprite (.aseprite)...",
+  "menu.file.export_godot_tres": "导出 Godot SpriteFrames (.tres)...",
+  "app.status.exported_aseprite": "Aseprite (.aseprite) 文件已成功导出",
+  "app.status.exported_godot_tres": "Godot SpriteFrames (.tres) 资源已成功导出"
 }

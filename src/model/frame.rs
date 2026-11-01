@@ -73,6 +73,13 @@ impl Default for LayerMeta {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+pub struct ActionPointCoord {
+    pub name: String,
+    pub x: i32,
+    pub y: i32,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct FrameMeta {
     /// Duration multiplier in animation ticks (e.g., 1 = standard frame time, 3 = hold 3x ticks).
@@ -80,6 +87,9 @@ pub struct FrameMeta {
     /// If Some(linked_index), this frame shares pixel content with frame `linked_index`.
     #[serde(default)]
     pub linked_from: Option<usize>,
+    /// Per-frame coordinates for action points. Falls back to `PivotConfig::action_points` if not present.
+    #[serde(default)]
+    pub action_points: Vec<ActionPointCoord>,
 }
 
 impl Default for FrameMeta {
@@ -87,6 +97,7 @@ impl Default for FrameMeta {
         Self {
             hold_multiplier: 1,
             linked_from: None,
+            action_points: Vec::new(),
         }
     }
 }

@@ -757,5 +757,14 @@
   "tooltip.layer_merge_down": "Qatlamni pastdagisi bilan birlashtirish",
   "tooltip.layer_delete": "Qatlamni o'chirish",
   "modal.hotkeys.curve_3click": "3 bosishli egri chiziq (Boshlanish → Tugash → Bukilish)",
-  "modal.hotkeys.timeline_scroll": "Vaqt shkalasi qatlamlari va kadrlarini aylantirish"
+  "modal.hotkeys.timeline_scroll": "Vaqt shkalasi qatlamlari va kadrlarini aylantirish",
+  "panel.pivots.copy_prev": "Copy from Prev",
+  "panel.pivots.apply_all": "Apply to All",
+  "tooltip.pivot_copy_prev": "Copy action point coordinates from the previous frame",
+  "tooltip.pivot_apply_all": "Apply current frame's action point coordinates to all frames",
+  "tooltip.pivot_apply_point_all": "Apply this action point's position to all frames",
+  "menu.file.export_aseprite": "Export Aseprite (.aseprite)...",
+  "menu.file.export_godot_tres": "Export Godot SpriteFrames (.tres)...",
+  "app.status.exported_aseprite": "Aseprite (.aseprite) file exported successfully",
+  "app.status.exported_godot_tres": "Godot SpriteFrames (.tres) resource exported successfully"
 }

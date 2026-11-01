@@ -703,5 +703,14 @@
   "tooltip.layer_merge_down": "Unisci livello in basso",
   "tooltip.layer_delete": "Elimina livello",
   "modal.hotkeys.curve_3click": "Curva a 3 clic (Inizio → Fine → Curvatura)",
-  "modal.hotkeys.timeline_scroll": "Scorri livelli e fotogrammi della sequenza temporale"
+  "modal.hotkeys.timeline_scroll": "Scorri livelli e fotogrammi della sequenza temporale",
+  "panel.pivots.copy_prev": "Copia prec.",
+  "panel.pivots.apply_all": "Su tutti",
+  "tooltip.pivot_copy_prev": "Copia le coordinate dei punti d'azione dal fotogramma precedente",
+  "tooltip.pivot_apply_all": "Applica le coordinate dei punti d'azione di questo fotogramma a tutti i fotogrammi",
+  "tooltip.pivot_apply_point_all": "Applica la posizione di questo punto d'azione a tutti i fotogrammi",
+  "menu.file.export_aseprite": "Esporta in Aseprite (.aseprite)...",
+  "menu.file.export_godot_tres": "Esporta in Godot SpriteFrames (.tres)...",
+  "app.status.exported_aseprite": "File Aseprite (.aseprite) esportato con successo",
+  "app.status.exported_godot_tres": "Risorsa Godot SpriteFrames (.tres) esportata con successo"
 }

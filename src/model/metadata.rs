@@ -104,4 +104,20 @@ impl ProjectMetadata {
         let row = idx / cols;
         (col * self.frame_width, row * self.frame_height)
     }
+
+    /// Resolves the `(x, y)` coordinates of action point `ap_idx` on `frame_idx`.
+    /// Falls back to the default coordinate in `self.pivot.action_points[ap_idx]` if no per-frame entry exists.
+    pub fn get_frame_action_point(&self, frame_idx: usize, ap_idx: usize) -> Option<(i32, i32)> {
+        let ap = self.pivot.action_points.get(ap_idx)?;
+        if let Some(frame_meta) = self.frames.get(frame_idx) {
+            if let Some(coord) = frame_meta
+                .action_points
+                .iter()
+                .find(|c| c.name == ap.name)
+            {
+                return Some((coord.x, coord.y));
+            }
+        }
+        Some((ap.x, ap.y))
+    }
 }

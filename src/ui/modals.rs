@@ -4023,8 +4023,10 @@ mod tests {
             assert!(replace_color.open);
 
             // 11. Modify selection modal
-            let mut modify_sel = ModifySelectionModalState::default();
-            modify_sel.open = true;
+            let mut modify_sel = ModifySelectionModalState {
+                open: true,
+                ..Default::default()
+            };
             let _ = ctx.run(egui::RawInput::default(), |ctx| {
                 let res = modify_sel.show(ctx, &i18n);
                 assert_eq!(res, None);
@@ -4032,8 +4034,10 @@ mod tests {
             assert!(modify_sel.open);
 
             // 12. Outline FX modal
-            let mut outline_fx = OutlineFxModalState::default();
-            outline_fx.open = true;
+            let mut outline_fx = OutlineFxModalState {
+                open: true,
+                ..Default::default()
+            };
             let _ = ctx.run(egui::RawInput::default(), |ctx| {
                 let res = outline_fx.show(
                     ctx,
@@ -4047,8 +4051,10 @@ mod tests {
             assert!(outline_fx.open);
 
             // 13. Convolution matrix modal
-            let mut convolution = ConvolutionModalState::default();
-            convolution.open = true;
+            let mut convolution = ConvolutionModalState {
+                open: true,
+                ..Default::default()
+            };
             let _ = ctx.run(egui::RawInput::default(), |ctx| {
                 let res = convolution.show(ctx, &i18n);
                 assert_eq!(res, None);
@@ -4056,8 +4062,10 @@ mod tests {
             assert!(convolution.open);
 
             // 14. Remap palette modal
-            let mut remap_palette = RemapPaletteModalState::default();
-            remap_palette.open = true;
+            let mut remap_palette = RemapPaletteModalState {
+                open: true,
+                ..Default::default()
+            };
             let _ = ctx.run(egui::RawInput::default(), |ctx| {
                 let res = remap_palette.show(ctx, &i18n);
                 assert_eq!(res, None);
@@ -4065,8 +4073,10 @@ mod tests {
             assert!(remap_palette.open);
 
             // 15. Free rotate modal
-            let mut rotate_modal = RotateModalState::default();
-            rotate_modal.open = true;
+            let mut rotate_modal = RotateModalState {
+                open: true,
+                ..Default::default()
+            };
             let _ = ctx.run(egui::RawInput::default(), |ctx| {
                 let res = rotate_modal.show(ctx, &i18n);
                 assert_eq!(res, None);
@@ -4074,8 +4084,10 @@ mod tests {
             assert!(rotate_modal.open);
 
             // 16. Export packed atlas modal
-            let mut pack_modal = ExportPackedAtlasModalState::default();
-            pack_modal.open = true;
+            let mut pack_modal = ExportPackedAtlasModalState {
+                open: true,
+                ..Default::default()
+            };
             let _ = ctx.run(egui::RawInput::default(), |ctx| {
                 let res = pack_modal.show(ctx, &i18n, None);
                 assert_eq!(res, None);

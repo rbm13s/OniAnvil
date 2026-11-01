@@ -703,5 +703,14 @@
   "tooltip.layer_merge_down": "Sloučit vrstvu dolů",
   "tooltip.layer_delete": "Smazat vrstvu",
   "modal.hotkeys.curve_3click": "Křivka na 3 kliknutí (Začátek → Konec → Prohnutí)",
-  "modal.hotkeys.timeline_scroll": "Posouvání vrstev a snímků časové osy"
+  "modal.hotkeys.timeline_scroll": "Posouvání vrstev a snímků časové osy",
+  "panel.pivots.copy_prev": "Copy from Prev",
+  "panel.pivots.apply_all": "Apply to All",
+  "tooltip.pivot_copy_prev": "Copy action point coordinates from the previous frame",
+  "tooltip.pivot_apply_all": "Apply current frame's action point coordinates to all frames",
+  "tooltip.pivot_apply_point_all": "Apply this action point's position to all frames",
+  "menu.file.export_aseprite": "Export Aseprite (.aseprite)...",
+  "menu.file.export_godot_tres": "Export Godot SpriteFrames (.tres)...",
+  "app.status.exported_aseprite": "Aseprite (.aseprite) file exported successfully",
+  "app.status.exported_godot_tres": "Godot SpriteFrames (.tres) resource exported successfully"
 }

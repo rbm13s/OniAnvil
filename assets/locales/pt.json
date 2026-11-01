@@ -703,5 +703,14 @@
   "tooltip.layer_merge_down": "Mesclar camada para baixo",
   "tooltip.layer_delete": "Excluir camada",
   "modal.hotkeys.curve_3click": "Curva em 3 cliques (Início → Fim → Curvatura)",
-  "modal.hotkeys.timeline_scroll": "Rolar camadas e quadros da linha do tempo"
+  "modal.hotkeys.timeline_scroll": "Rolar camadas e quadros da linha do tempo",
+  "panel.pivots.copy_prev": "Copiar ant.",
+  "panel.pivots.apply_all": "Em todos",
+  "tooltip.pivot_copy_prev": "Copiar coordenadas dos pontos de ação do quadro anterior",
+  "tooltip.pivot_apply_all": "Aplicar coordenadas dos pontos de ação deste quadro a todos os quadros",
+  "tooltip.pivot_apply_point_all": "Aplicar a posição deste ponto de ação a todos os quadros",
+  "menu.file.export_aseprite": "Exportar para Aseprite (.aseprite)...",
+  "menu.file.export_godot_tres": "Exportar para Godot SpriteFrames (.tres)...",
+  "app.status.exported_aseprite": "Arquivo Aseprite (.aseprite) exportado com sucesso",
+  "app.status.exported_godot_tres": "Recurso Godot SpriteFrames (.tres) exportado com sucesso"
 }

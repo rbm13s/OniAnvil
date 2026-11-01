@@ -757,5 +757,14 @@
   "tooltip.layer_merge_down": "向下合併圖層",
   "tooltip.layer_delete": "刪除圖層",
   "modal.hotkeys.curve_3click": "三點曲線 (起點 → 終點 → 彎曲)",
-  "modal.hotkeys.timeline_scroll": "滾動時間軸圖層與影格"
+  "modal.hotkeys.timeline_scroll": "滾動時間軸圖層與影格",
+  "panel.pivots.copy_prev": "複製上一幀",
+  "panel.pivots.apply_all": "套用到所有幀",
+  "tooltip.pivot_copy_prev": "從上一幀複製動作點座標",
+  "tooltip.pivot_apply_all": "將目前幀的所有動作點座標套用到所有幀",
+  "tooltip.pivot_apply_point_all": "將此動作點的座標套用到所有幀",
+  "menu.file.export_aseprite": "匯出 Aseprite (.aseprite)...",
+  "menu.file.export_godot_tres": "匯出 Godot SpriteFrames (.tres)...",
+  "app.status.exported_aseprite": "Aseprite (.aseprite) 檔案已成功匯出",
+  "app.status.exported_godot_tres": "Godot SpriteFrames (.tres) 資源已成功匯出"
 }

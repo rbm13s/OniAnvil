@@ -172,7 +172,7 @@ Instead of storing isolated individual frame images in memory and stitching them
   - Sub-pixel grid rendering that gracefully fades when zoomed out to prevent visual moiré noise.
   - **Multi-Frame Onion Skinning:** Configurable ghosting with colored tints (green for past frames, red for future frames) and adjustable opacity falloff.
   - **Selection Marching Ants:** Animated dual-tone boundary outline for active selections.
-  - **Action & Pivot Gizmos:** Visual crosshairs for sprite anchor points, weapon sockets, and collision boxes.
+  - **Action & Pivot Gizmos (Per-Frame Action Points):** Global sprite `Origin` combined with per-frame `ActionPointCoord` coordinates stored in `FrameMeta`. Supports onion-skin trajectory lines and ghosted crosshairs for past/future frames, active frame badge in the right dock, `Copy from Prev` and `Apply to All` helpers, and per-frame `"pivot"` + `"actionPoints"` serialization in game engine JSON exports.
 
 ### 4.6. Precision Pixel Tools & Algorithms
 1. **Pixel-Perfect Pencil (`src/tools/stroke.rs`):**
@@ -186,8 +186,11 @@ Instead of storing isolated individual frame images in memory and stitching them
    - Implements the classic RotSprite algorithm (Scale8x + directional sampling + intermediate error reduction), allowing arbitrary angle rotation of pixel art without blurring.
 5. **3x3 Matrix Convolutions (`src/tools/filters.rs`):**
    - Blur, Sharpen, Edge Detect, and Emboss filters with transparency/alpha preservation.
-6. **Extruded Atlas Export (`src/io/export.rs`):**
+6. **Extruded Atlas & Direct Game Engine Exports (`src/io/export.rs`):**
    - Duplicates outer frame pixel borders into transparent margins to prevent texture bleed during bilinear filtering and mipmapping in 3D and 2D game engines.
+   - **Aseprite JSON Array Standard (`encode_sprite_sheet_json` / `encode_packed_atlas_json`):** Includes normalized `frames[i].pivot` (`0.0..=1.0` for Unity/TexturePacker), pixel `frames[i].origin`, per-frame `frames[i].actionPoints`, `meta.frameTags`, `meta.layers`, and `meta.slices` with per-frame `keys`.
+   - **Direct Binary Aseprite Export (`encode_aseprite_bytes`):** Generates standalone `.aseprite` / `.ase` binary files (128-byte header `0xA5E0`, frame headers `0xF1FA`, sRGB profile `0x2007`, palette `0x2019`, layers `0x2004`, frame tags `0x2018`, slices with per-frame keys `0x2022`, and RFC 1950 ZLIB-compressed cel chunks `0x2005`) for zero-plugin import into Unity's official *2D Aseprite Importer* and Godot's *Aseprite Wizard*.
+   - **Native Godot 4 `SpriteFrames` Export (`encode_godot_sprite_frames_tres`):** Generates `.tres` resources (`format=3`) with `AtlasTexture` sub-resources, per-frame `metadata/action_points` + `metadata/origin`, hold durations, and automatic Forward / Reverse / Ping-Pong tag expansion for instant use on `AnimatedSprite2D`.
 
 ### 4.7. Advanced Color Engine & Palette System
 - Over 25 authentic retro palettes:

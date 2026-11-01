@@ -757,5 +757,14 @@
   "tooltip.layer_merge_down": "Объединить слой с предыдущим",
   "tooltip.layer_delete": "Удалить слой",
   "modal.hotkeys.curve_3click": "Кривая в 3 клика (Начало → Конец → Изгиб)",
-  "modal.hotkeys.timeline_scroll": "Прокрутка слоёв и кадров таймлайна"
+  "modal.hotkeys.timeline_scroll": "Прокрутка слоёв и кадров таймлайна",
+  "panel.pivots.copy_prev": "Копия с пред.",
+  "panel.pivots.apply_all": "На все кадры",
+  "tooltip.pivot_copy_prev": "Скопировать координаты точек привязки с предыдущего кадра",
+  "tooltip.pivot_apply_all": "Применить координаты всех точек привязки текущего кадра ко всем кадрам",
+  "tooltip.pivot_apply_point_all": "Применить координаты этой точки ко всем кадрам",
+  "menu.file.export_aseprite": "Экспорт в Aseprite (.aseprite)...",
+  "menu.file.export_godot_tres": "Экспорт в Godot SpriteFrames (.tres)...",
+  "app.status.exported_aseprite": "Файл Aseprite (.aseprite) успешно экспортирован",
+  "app.status.exported_godot_tres": "Ресурс Godot SpriteFrames (.tres) успешно экспортирован"
 }

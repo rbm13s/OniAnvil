@@ -703,5 +703,14 @@
   "viewport.mode.atlas": "アトラス",
   "viewport.mode.frame": "フレーム",
   "viewport.zoom.100": "100%",
-  "viewport.zoom.fit": "フィット"
+  "viewport.zoom.fit": "フィット",
+  "panel.pivots.copy_prev": "前フレームから複製",
+  "panel.pivots.apply_all": "全フレームに適用",
+  "tooltip.pivot_copy_prev": "前のフレームからアクションポイントの座標をコピーします",
+  "tooltip.pivot_apply_all": "現在のフレームのすべてのアクションポイント座標を全フレームに適用します",
+  "tooltip.pivot_apply_point_all": "このアクションポイントの座標を全フレームに適用します",
+  "menu.file.export_aseprite": "Aseprite (.aseprite) をエクスポート...",
+  "menu.file.export_godot_tres": "Godot SpriteFrames (.tres) をエクスポート...",
+  "app.status.exported_aseprite": "Aseprite (.aseprite) ファイルをエクスポートしました",
+  "app.status.exported_godot_tres": "Godot SpriteFrames (.tres) をエクスポートしました"
 }

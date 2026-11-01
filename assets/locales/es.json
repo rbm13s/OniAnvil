@@ -703,5 +703,14 @@
   "tooltip.layer_merge_down": "Fusionar capa hacia abajo",
   "tooltip.layer_delete": "Eliminar capa",
   "modal.hotkeys.curve_3click": "Curva de 3 clics (Inicio → Fin → Curvatura)",
-  "modal.hotkeys.timeline_scroll": "Desplazar capas y fotogramas en la línea de tiempo"
+  "modal.hotkeys.timeline_scroll": "Desplazar capas y fotogramas en la línea de tiempo",
+  "panel.pivots.copy_prev": "Copiar ant.",
+  "panel.pivots.apply_all": "A todos",
+  "tooltip.pivot_copy_prev": "Copiar coordenadas de puntos de acción del fotograma anterior",
+  "tooltip.pivot_apply_all": "Aplicar coordenadas de puntos de acción de este fotograma a todos los fotogramas",
+  "tooltip.pivot_apply_point_all": "Aplicar la posición de este punto de acción a todos los fotogramas",
+  "menu.file.export_aseprite": "Exportar a Aseprite (.aseprite)...",
+  "menu.file.export_godot_tres": "Exportar a Godot SpriteFrames (.tres)...",
+  "app.status.exported_aseprite": "Archivo Aseprite (.aseprite) exportado con éxito",
+  "app.status.exported_godot_tres": "Recurso Godot SpriteFrames (.tres) exportado con éxito"
 }

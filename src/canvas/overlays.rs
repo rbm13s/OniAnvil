@@ -338,6 +338,7 @@ pub fn draw_pivot_gizmos(
     painter: &Painter,
     active_frame_rect: Rect,
     metadata: &ProjectMetadata,
+    active_frame: usize,
     zoom: f32,
 ) {
     if !metadata.pivot.show_gizmos {
@@ -366,24 +367,135 @@ pub fn draw_pivot_gizmos(
     );
     painter.circle_stroke(origin_pos, 3.5, origin_stroke);
 
-    for pt in &metadata.pivot.action_points {
-        let pos = Pos2::new(
-            active_frame_rect.min.x + pt.x as f32 * zoom,
-            active_frame_rect.min.y + pt.y as f32 * zoom,
+    let onion = &metadata.onion_skin;
+    let total_frames = metadata.frame_count as usize;
+
+    for (ap_idx, pt) in metadata.pivot.action_points.iter().enumerate() {
+        let (cur_x, cur_y) = metadata
+            .get_frame_action_point(active_frame, ap_idx)
+            .unwrap_or((pt.x, pt.y));
+        let cur_pos = Pos2::new(
+            active_frame_rect.min.x + cur_x as f32 * zoom,
+            active_frame_rect.min.y + cur_y as f32 * zoom,
         );
         let [r, g, b, a] = pt.color;
+
+        // Draw onion skin ghost action points and trajectory lines if Onion Skin is enabled
+        if onion.enabled && total_frames > 1 {
+            let base_opacity = onion.opacity.clamp(0.15, 0.95);
+
+            // Previous frames (red tint if color_tint is enabled, otherwise point's own color)
+            let mut prev_chain_pos = cur_pos;
+            for step in 1..=(onion.prev_frames as usize) {
+                if let Some(prev_f) = active_frame.checked_sub(step) {
+                    let (px, py) = metadata
+                        .get_frame_action_point(prev_f, ap_idx)
+                        .unwrap_or((pt.x, pt.y));
+                    let ghost_pos = Pos2::new(
+                        active_frame_rect.min.x + px as f32 * zoom,
+                        active_frame_rect.min.y + py as f32 * zoom,
+                    );
+                    let falloff = (base_opacity / (step as f32)).clamp(0.12, 0.85);
+                    let alpha = (falloff * 255.0) as u8;
+                    let ghost_col = if onion.color_tint {
+                        Color32::from_rgba_unmultiplied(255, 95, 95, alpha)
+                    } else {
+                        Color32::from_rgba_unmultiplied(r, g, b, alpha)
+                    };
+                    let line_col = Color32::from_rgba_unmultiplied(
+                        ghost_col.r(),
+                        ghost_col.g(),
+                        ghost_col.b(),
+                        alpha / 2,
+                    );
+                    if (ghost_pos - prev_chain_pos).length_sq() > 1.0 {
+                        painter.line_segment([prev_chain_pos, ghost_pos], Stroke::new(1.0, line_col));
+                    }
+                    let g_stroke = Stroke::new(1.2, ghost_col);
+                    painter.line_segment(
+                        [
+                            Pos2::new(ghost_pos.x - 3.0, ghost_pos.y),
+                            Pos2::new(ghost_pos.x + 3.0, ghost_pos.y),
+                        ],
+                        g_stroke,
+                    );
+                    painter.line_segment(
+                        [
+                            Pos2::new(ghost_pos.x, ghost_pos.y - 3.0),
+                            Pos2::new(ghost_pos.x, ghost_pos.y + 3.0),
+                        ],
+                        g_stroke,
+                    );
+                    prev_chain_pos = ghost_pos;
+                }
+            }
+
+            // Next frames (green tint if color_tint is enabled, otherwise point's own color)
+            let mut next_chain_pos = cur_pos;
+            for step in 1..=(onion.next_frames as usize) {
+                let next_f = active_frame + step;
+                if next_f < total_frames {
+                    let (nx, ny) = metadata
+                        .get_frame_action_point(next_f, ap_idx)
+                        .unwrap_or((pt.x, pt.y));
+                    let ghost_pos = Pos2::new(
+                        active_frame_rect.min.x + nx as f32 * zoom,
+                        active_frame_rect.min.y + ny as f32 * zoom,
+                    );
+                    let falloff = (base_opacity / (step as f32)).clamp(0.12, 0.85);
+                    let alpha = (falloff * 255.0) as u8;
+                    let ghost_col = if onion.color_tint {
+                        Color32::from_rgba_unmultiplied(95, 240, 145, alpha)
+                    } else {
+                        Color32::from_rgba_unmultiplied(r, g, b, alpha)
+                    };
+                    let line_col = Color32::from_rgba_unmultiplied(
+                        ghost_col.r(),
+                        ghost_col.g(),
+                        ghost_col.b(),
+                        alpha / 2,
+                    );
+                    if (ghost_pos - next_chain_pos).length_sq() > 1.0 {
+                        painter.line_segment([next_chain_pos, ghost_pos], Stroke::new(1.0, line_col));
+                    }
+                    let g_stroke = Stroke::new(1.2, ghost_col);
+                    painter.line_segment(
+                        [
+                            Pos2::new(ghost_pos.x - 3.0, ghost_pos.y),
+                            Pos2::new(ghost_pos.x + 3.0, ghost_pos.y),
+                        ],
+                        g_stroke,
+                    );
+                    painter.line_segment(
+                        [
+                            Pos2::new(ghost_pos.x, ghost_pos.y - 3.0),
+                            Pos2::new(ghost_pos.x, ghost_pos.y + 3.0),
+                        ],
+                        g_stroke,
+                    );
+                    next_chain_pos = ghost_pos;
+                }
+            }
+        }
+
         let color = Color32::from_rgba_unmultiplied(r, g, b, a);
         let stroke = Stroke::new(1.5, color);
         painter.line_segment(
-            [Pos2::new(pos.x - 4.0, pos.y), Pos2::new(pos.x + 4.0, pos.y)],
+            [
+                Pos2::new(cur_pos.x - 4.0, cur_pos.y),
+                Pos2::new(cur_pos.x + 4.0, cur_pos.y),
+            ],
             stroke,
         );
         painter.line_segment(
-            [Pos2::new(pos.x, pos.y - 4.0), Pos2::new(pos.x + 4.0, pos.y)],
+            [
+                Pos2::new(cur_pos.x, cur_pos.y - 4.0),
+                Pos2::new(cur_pos.x, cur_pos.y + 4.0),
+            ],
             stroke,
         );
         painter.text(
-            Pos2::new(pos.x + 5.0, pos.y - 5.0),
+            Pos2::new(cur_pos.x + 5.0, cur_pos.y - 5.0),
             egui::Align2::LEFT_BOTTOM,
             &pt.name,
             FontId::proportional(11.0),

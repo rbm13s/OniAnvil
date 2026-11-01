@@ -318,66 +318,83 @@ pub fn encode_packed_atlas_json(
     let fps = project.metadata.fps.max(1);
     let base_duration_ms = (1000.0 / fps as f64).round() as u64;
 
-    let frames_json: Vec<String> = result
-        .rects
-        .iter()
-        .map(|r| {
-            let hold = project
-                .metadata
-                .frames
-                .get(r.frame_index)
-                .map(|m| m.hold_multiplier.max(1) as u64)
-                .unwrap_or(1);
-            let duration_ms = base_duration_ms * hold;
+    let mut frames_arr = Vec::new();
+    for r in &result.rects {
+        let hold = project
+            .metadata
+            .frames
+            .get(r.frame_index)
+            .map(|m| m.hold_multiplier.max(1) as u64)
+            .unwrap_or(1);
+        let duration_ms = base_duration_ms * hold;
 
-            format!(
-                r#"    {{
-      "filename": "{}_{}.png",
-      "frame": {{ "x": {}, "y": {}, "w": {}, "h": {} }},
-      "rotated": false,
-      "trimmed": {},
-      "spriteSourceSize": {{ "x": {}, "y": {}, "w": {}, "h": {} }},
-      "sourceSize": {{ "w": {}, "h": {} }},
-      "duration": {}
-    }}"#,
-                project.metadata.project_name,
-                r.frame_index,
-                r.x,
-                r.y,
-                r.width,
-                r.height,
-                r.width != r.source_w || r.height != r.source_h,
-                r.trim_offset_x,
-                r.trim_offset_y,
-                r.width,
-                r.height,
-                r.source_w,
-                r.source_h,
-                duration_ms
-            )
-        })
-        .collect();
+        let mut action_points_obj = serde_json::Map::new();
+        for (ap_idx, ap) in project.metadata.pivot.action_points.iter().enumerate() {
+            let (ax, ay) = project
+                .get_frame_action_point(r.frame_index, ap_idx)
+                .unwrap_or((ap.x, ap.y));
+            action_points_obj.insert(
+                ap.name.clone(),
+                serde_json::json!({
+                    "x": ax,
+                    "y": ay
+                }),
+            );
+        }
 
-    format!(
-        r#"{{
-  "frames": [
-{}
-  ],
-  "meta": {{
-    "app": "OniAnvil",
-    "version": "{}",
-    "image": "{}",
-    "format": "RGBA8888",
-    "size": {{ "w": {}, "h": {} }},
-    "scale": "1"
-  }}
-}}"#,
-        frames_json.join(",\n"),
-        env!("CARGO_PKG_VERSION"),
-        image_filename,
-        result.width,
-        result.height
-    )
+        let fw = project.metadata.frame_width.max(1) as f64;
+        let fh = project.metadata.frame_height.max(1) as f64;
+        let norm_pivot_x = (project.metadata.pivot.origin_x as f64) / fw;
+        let norm_pivot_y = (project.metadata.pivot.origin_y as f64) / fh;
+
+        frames_arr.push(serde_json::json!({
+            "filename": format!("{}_{}.png", project.metadata.project_name, r.frame_index),
+            "frame": { "x": r.x, "y": r.y, "w": r.width, "h": r.height },
+            "rotated": false,
+            "trimmed": r.width != r.source_w || r.height != r.source_h,
+            "spriteSourceSize": { "x": r.trim_offset_x, "y": r.trim_offset_y, "w": r.width, "h": r.height },
+            "sourceSize": { "w": r.source_w, "h": r.source_h },
+            "pivot": {
+                "x": norm_pivot_x,
+                "y": norm_pivot_y
+            },
+            "origin": {
+                "x": project.metadata.pivot.origin_x,
+                "y": project.metadata.pivot.origin_y
+            },
+            "actionPoints": action_points_obj,
+            "duration": duration_ms
+        }));
+    }
+
+    let mut frame_tags = Vec::new();
+    for tag in &project.metadata.tags {
+        frame_tags.push(serde_json::json!({
+            "name": tag.name,
+            "from": tag.start_frame,
+            "to": tag.end_frame,
+            "direction": tag.direction.as_direction_str()
+        }));
+    }
+
+    let (layers, slices) = crate::io::export::build_aseprite_meta_layers_and_slices(project, 1);
+
+    let out = serde_json::json!({
+        "frames": frames_arr,
+        "meta": {
+            "app": "OniAnvil",
+            "version": env!("CARGO_PKG_VERSION"),
+            "image": image_filename,
+            "format": "RGBA8888",
+            "size": { "w": result.width, "h": result.height },
+            "scale": "1",
+            "frameTags": frame_tags,
+            "layers": layers,
+            "slices": slices
+        }
+    });
+
+    serde_json::to_string_pretty(&out).unwrap_or_default()
 }
 
 #[cfg(test)]

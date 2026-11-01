@@ -1281,6 +1281,12 @@ impl OniAnvilApp {
                 IoEvent::ExportedGifSaved => {
                     self.status_key = "app.status.exported_gif";
                 }
+                IoEvent::ExportedAsepriteSaved => {
+                    self.status_key = "app.status.exported_aseprite";
+                }
+                IoEvent::ExportedGodotTresSaved => {
+                    self.status_key = "app.status.exported_godot_tres";
+                }
                 IoEvent::Error(_err) => {
                     self.status_key = "app.status.load_error";
                 }
@@ -1662,6 +1668,18 @@ impl eframe::App for OniAnvilApp {
                     .trigger_export_sprite_sheet_json_dialog(&doc.project, ctx.clone());
             }
         }
+        if top_actions.trigger_export_aseprite {
+            if let Some(doc) = self.documents.get(self.active_doc_idx) {
+                self.io
+                    .trigger_export_aseprite_dialog(&doc.project, ctx.clone());
+            }
+        }
+        if top_actions.trigger_export_godot_tres {
+            if let Some(doc) = self.documents.get(self.active_doc_idx) {
+                self.io
+                    .trigger_export_godot_tres_dialog(&doc.project, ctx.clone());
+            }
+        }
         if top_actions.open_export_packed_atlas_modal {
             if let Some(doc) = self.documents.get(self.active_doc_idx) {
                 self.pack_atlas_modal.open_for(&doc.project);
@@ -1925,6 +1943,20 @@ impl eframe::App for OniAnvilApp {
                     }
                     if let Some(pt_info) = right_actions.request_delete_pivot_point {
                         self.pending_delete_pivot_point = Some(pt_info);
+                    }
+                    if right_actions.trigger_copy_prev_action_points {
+                        let snap = doc.current_snapshot();
+                        let cur_f = doc.project.active_frame;
+                        if doc.project.copy_action_points_from_prev_frame(cur_f) {
+                            doc.history.push(snap);
+                        }
+                    }
+                    if let Some(target_ap) = right_actions.trigger_apply_action_points_all_frames {
+                        let snap = doc.current_snapshot();
+                        let cur_f = doc.project.active_frame;
+                        if doc.project.apply_action_points_to_all_frames(cur_f, target_ap) {
+                            doc.history.push(snap);
+                        }
                     }
                 }
             }
@@ -2725,9 +2757,13 @@ impl eframe::App for OniAnvilApp {
             if let Some(doc) = self.documents.get_mut(self.active_doc_idx) {
                 if pt_idx < doc.project.metadata.pivot.action_points.len() {
                     let snap = doc.current_snapshot();
-                    doc.project.metadata.pivot.action_points.remove(pt_idx);
+                    doc.project.remove_action_point(pt_idx);
                     if doc.preview.active_pivot_target == Some(pt_idx) {
                         doc.preview.active_pivot_target = None;
+                    } else if let Some(cur) = doc.preview.active_pivot_target {
+                        if cur > pt_idx {
+                            doc.preview.active_pivot_target = Some(cur - 1);
+                        }
                     }
                     doc.history.push(snap);
                 }

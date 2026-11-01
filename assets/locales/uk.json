@@ -703,5 +703,14 @@
   "viewport.mode.atlas": "Атлас",
   "viewport.mode.frame": "Кадр",
   "viewport.zoom.100": "100%",
-  "viewport.zoom.fit": "Авто"
+  "viewport.zoom.fit": "Авто",
+  "panel.pivots.copy_prev": "Копія з попер.",
+  "panel.pivots.apply_all": "На всі кадри",
+  "tooltip.pivot_copy_prev": "Скопіювати координати точок прив'язки з попереднього кадру",
+  "tooltip.pivot_apply_all": "Застосувати координати всіх точок прив'язки поточного кадру до всіх кадрів",
+  "tooltip.pivot_apply_point_all": "Застосувати координати цієї точки до всіх кадрів",
+  "menu.file.export_aseprite": "Експорт в Aseprite (.aseprite)...",
+  "menu.file.export_godot_tres": "Експорт в Godot SpriteFrames (.tres)...",
+  "app.status.exported_aseprite": "Файл Aseprite (.aseprite) успішно експортовано",
+  "app.status.exported_godot_tres": "Ресурс Godot SpriteFrames (.tres) успішно експортовано"
 }

@@ -703,5 +703,14 @@
   "viewport.mode.atlas": "Атлас",
   "viewport.mode.frame": "Кадр",
   "viewport.zoom.100": "100%",
-  "viewport.zoom.fit": "Упісаць"
+  "viewport.zoom.fit": "Упісаць",
+  "panel.pivots.copy_prev": "Копія з папяр.",
+  "panel.pivots.apply_all": "На ўсе кадры",
+  "tooltip.pivot_copy_prev": "Скапіяваць каардынаты кропак прывязкі з папярэдняга кадра",
+  "tooltip.pivot_apply_all": "Прымяніць каардынаты ўсіх кропак прывязкі бягучага кадра да ўсіх кадраў",
+  "tooltip.pivot_apply_point_all": "Прымяніць каардынаты гэтай кропкі да ўсіх кадраў",
+  "menu.file.export_aseprite": "Экспарт у Aseprite (.aseprite)...",
+  "menu.file.export_godot_tres": "Экспарт у Godot SpriteFrames (.tres)...",
+  "app.status.exported_aseprite": "Файл Aseprite (.aseprite) паспяхова экспартаваны",
+  "app.status.exported_godot_tres": "Рэсурс Godot SpriteFrames (.tres) паспяхова экспартаваны"
 }

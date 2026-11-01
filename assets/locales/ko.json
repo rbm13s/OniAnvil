@@ -757,5 +757,14 @@
   "tooltip.layer_merge_down": "아래 레이어와 병합",
   "tooltip.layer_delete": "레이어 삭제",
   "modal.hotkeys.curve_3click": "3클릭 곡선 (시작점 → 끝점 → 굴곡)",
-  "modal.hotkeys.timeline_scroll": "타임라인 레이어 및 프레임 스크롤"
+  "modal.hotkeys.timeline_scroll": "타임라인 레이어 및 프레임 스크롤",
+  "panel.pivots.copy_prev": "이전 프레임 복사",
+  "panel.pivots.apply_all": "모든 프레임 적용",
+  "tooltip.pivot_copy_prev": "이전 프레임에서 액션 포인트 좌표를 복사합니다",
+  "tooltip.pivot_apply_all": "현재 프레임의 모든 액션 포인트 좌표를 모든 프레임에 적용합니다",
+  "tooltip.pivot_apply_point_all": "이 액션 포인트의 위치를 모든 프레임에 적용합니다",
+  "menu.file.export_aseprite": "Aseprite (.aseprite) 내보내기...",
+  "menu.file.export_godot_tres": "Godot SpriteFrames (.tres) 내보내기...",
+  "app.status.exported_aseprite": "Aseprite (.aseprite) 파일 내보내기 완료",
+  "app.status.exported_godot_tres": "Godot SpriteFrames (.tres) 리소스 내보내기 완료"
 }

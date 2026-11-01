@@ -861,21 +861,35 @@ impl CanvasRenderer {
                                 );
                             }
                             ToolKind::PivotPoint => {
+                                history.push(HistorySnapshot {
+                                    atlas_rgba: project.atlas_rgba.clone(),
+                                    metadata: project.metadata.clone(),
+                                    active_frame: project.active_frame,
+                                });
                                 project.metadata.pivot.show_gizmos = true;
                                 if let Some(ap_idx) = self.active_pivot_target {
-                                    if let Some(ap) =
-                                        project.metadata.pivot.action_points.get_mut(ap_idx)
-                                    {
-                                        ap.x = lx;
-                                        ap.y = ly;
+                                    if ap_idx < project.metadata.pivot.action_points.len() {
+                                        project.set_frame_action_point(f_idx, ap_idx, lx, ly);
                                     } else {
                                         project.metadata.pivot.origin_x = lx;
                                         project.metadata.pivot.origin_y = ly;
+                                        project.has_unsaved_changes = true;
                                     }
                                 } else {
                                     project.metadata.pivot.origin_x = lx;
                                     project.metadata.pivot.origin_y = ly;
+                                    project.has_unsaved_changes = true;
                                 }
+                                self.active_stroke = Some(ActiveStroke {
+                                    tool: ToolKind::PivotPoint,
+                                    button: btn,
+                                    frame_index: f_idx,
+                                    start_local: (lx, ly),
+                                    last_local: (lx, ly),
+                                    raw_points: vec![(lx, ly)],
+                                    base_atlas: project.atlas_rgba.clone(),
+                                    moving_selection: false,
+                                });
                             }
                             ToolKind::Curve => {}
                             ToolKind::Pencil
@@ -1072,6 +1086,26 @@ impl CanvasRenderer {
                                                     project.metadata.frame_height,
                                                 );
                                             }
+                                        }
+                                    }
+                                    ToolKind::PivotPoint => {
+                                        if let Some(ap_idx) = self.active_pivot_target {
+                                            if ap_idx < project.metadata.pivot.action_points.len() {
+                                                project.set_frame_action_point(
+                                                    stroke.frame_index,
+                                                    ap_idx,
+                                                    lx,
+                                                    ly,
+                                                );
+                                            } else {
+                                                project.metadata.pivot.origin_x = lx;
+                                                project.metadata.pivot.origin_y = ly;
+                                                project.has_unsaved_changes = true;
+                                            }
+                                        } else {
+                                            project.metadata.pivot.origin_x = lx;
+                                            project.metadata.pivot.origin_y = ly;
+                                            project.has_unsaved_changes = true;
                                         }
                                     }
                                     _ => {}
@@ -1573,6 +1607,12 @@ impl CanvasRenderer {
             viewport.symmetry_norm_x,
             viewport.symmetry_norm_y,
         );
-        draw_pivot_gizmos(&painter, active_frame_rect, &project.metadata, viewport.zoom);
+        draw_pivot_gizmos(
+            &painter,
+            active_frame_rect,
+            &project.metadata,
+            project.active_frame,
+            viewport.zoom,
+        );
     }
 }

@@ -1,4 +1,4 @@
-use crate::model::frame::{FrameMeta, LayerMeta};
+use crate::model::frame::{ActionPoint, ActionPointCoord, FrameMeta, LayerMeta};
 use crate::model::metadata::ProjectMetadata;
 use crate::model::sketch::nearest_palette_color;
 use crate::tools::selection::SelectionMask;
@@ -612,7 +612,17 @@ impl Project {
         let insert_pos = (index + 1).min(total);
 
         if insert_pos <= self.metadata.frames.len() {
-            self.metadata.frames.insert(insert_pos, FrameMeta::default());
+            let mut new_meta = FrameMeta::default();
+            for ap_idx in 0..self.metadata.pivot.action_points.len() {
+                if let Some((x, y)) = self.get_frame_action_point(index, ap_idx) {
+                    new_meta.action_points.push(ActionPointCoord {
+                        name: self.metadata.pivot.action_points[ap_idx].name.clone(),
+                        x,
+                        y,
+                    });
+                }
+            }
+            self.metadata.frames.insert(insert_pos, new_meta);
         }
 
         for (i, meta) in self.metadata.frames.iter_mut().enumerate() {
@@ -700,10 +710,20 @@ impl Project {
         let root = self.get_link_group_root(safe_idx);
         let insert_pos = safe_idx + 1;
 
-        let new_meta = FrameMeta {
+        let mut new_meta = FrameMeta {
             hold_multiplier: 1,
             linked_from: Some(root),
+            action_points: Vec::new(),
         };
+        for ap_idx in 0..self.metadata.pivot.action_points.len() {
+            if let Some((x, y)) = self.get_frame_action_point(safe_idx, ap_idx) {
+                new_meta.action_points.push(ActionPointCoord {
+                    name: self.metadata.pivot.action_points[ap_idx].name.clone(),
+                    x,
+                    y,
+                });
+            }
+        }
         if insert_pos <= self.metadata.frames.len() {
             self.metadata.frames.insert(insert_pos, new_meta);
         }
@@ -994,6 +1014,12 @@ impl Project {
             pt.x += offset_x;
             pt.y += offset_y;
         }
+        for frame_meta in &mut self.metadata.frames {
+            for pt in &mut frame_meta.action_points {
+                pt.x += offset_x;
+                pt.y += offset_y;
+            }
+        }
 
         let active_idx = self
             .metadata
@@ -1098,6 +1124,12 @@ impl Project {
         for pt in &mut self.metadata.pivot.action_points {
             pt.x += offset_x;
             pt.y += offset_y;
+        }
+        for frame_meta in &mut self.metadata.frames {
+            for pt in &mut frame_meta.action_points {
+                pt.x += offset_x;
+                pt.y += offset_y;
+            }
         }
 
         let active_idx = self
@@ -1318,6 +1350,232 @@ impl Project {
         }
         Some(proj)
     }
+
+    /// Returns the resolved `(x, y)` coordinates of action point `ap_idx` on `frame_idx`.
+    pub fn get_frame_action_point(&self, frame_idx: usize, ap_idx: usize) -> Option<(i32, i32)> {
+        self.metadata.get_frame_action_point(frame_idx, ap_idx)
+    }
+
+    /// Sets the `(x, y)` coordinates of action point `ap_idx` for a specific `frame_idx`.
+    /// Materializes any missing per-frame action point entries across all frames so other frames
+    /// keep their existing positions undisturbed.
+    pub fn set_frame_action_point(&mut self, frame_idx: usize, ap_idx: usize, x: i32, y: i32) -> bool {
+        let (ap_name, default_x, default_y) = match self.metadata.pivot.action_points.get(ap_idx) {
+            Some(ap) => (ap.name.clone(), ap.x, ap.y),
+            None => return false,
+        };
+
+        let total_frames = self.metadata.frame_count.max(1) as usize;
+        while self.metadata.frames.len() < total_frames {
+            self.metadata.frames.push(FrameMeta::default());
+        }
+
+        let mut changed = false;
+        for (idx, frame_meta) in self.metadata.frames.iter_mut().enumerate() {
+            if idx == frame_idx {
+                if let Some(coord) = frame_meta
+                    .action_points
+                    .iter_mut()
+                    .find(|c| c.name == ap_name)
+                {
+                    if coord.x != x || coord.y != y {
+                        coord.x = x;
+                        coord.y = y;
+                        changed = true;
+                    }
+                } else {
+                    if default_x != x || default_y != y {
+                        changed = true;
+                    }
+                    frame_meta.action_points.push(ActionPointCoord {
+                        name: ap_name.clone(),
+                        x,
+                        y,
+                    });
+                }
+            } else if !frame_meta.action_points.iter().any(|c| c.name == ap_name) {
+                frame_meta.action_points.push(ActionPointCoord {
+                    name: ap_name.clone(),
+                    x: default_x,
+                    y: default_y,
+                });
+            }
+        }
+
+        if frame_idx == 0 {
+            if let Some(ap) = self.metadata.pivot.action_points.get_mut(ap_idx) {
+                ap.x = x;
+                ap.y = y;
+            }
+        }
+
+        if changed {
+            self.has_unsaved_changes = true;
+        }
+        changed
+    }
+
+    /// Adds a new action point with a unique name and initializes its coordinates across all frames.
+    /// Returns the index of the newly added action point.
+    pub fn add_action_point(&mut self, base_name: &str, x: i32, y: i32, color: [u8; 4]) -> usize {
+        let mut name = base_name.trim().to_string();
+        if name.is_empty() {
+            name = "action_point".to_string();
+        }
+        if self.metadata.pivot.action_points.iter().any(|p| p.name == name) {
+            let mut suffix = 2;
+            loop {
+                let candidate = format!("{name}_{suffix}");
+                if !self
+                    .metadata
+                    .pivot
+                    .action_points
+                    .iter()
+                    .any(|p| p.name == candidate)
+                {
+                    name = candidate;
+                    break;
+                }
+                suffix += 1;
+            }
+        }
+
+        self.metadata.pivot.action_points.push(ActionPoint {
+            name: name.clone(),
+            x,
+            y,
+            color,
+        });
+
+        let total_frames = self.metadata.frame_count.max(1) as usize;
+        while self.metadata.frames.len() < total_frames {
+            self.metadata.frames.push(FrameMeta::default());
+        }
+        for frame_meta in &mut self.metadata.frames {
+            frame_meta.action_points.retain(|c| c.name != name);
+            frame_meta.action_points.push(ActionPointCoord {
+                name: name.clone(),
+                x,
+                y,
+            });
+        }
+
+        self.has_unsaved_changes = true;
+        self.metadata.pivot.action_points.len() - 1
+    }
+
+    /// Renames action point `ap_idx` both in the global registry and across all per-frame entries.
+    pub fn rename_action_point(&mut self, ap_idx: usize, new_name: String) -> bool {
+        let trimmed = new_name.trim();
+        if trimmed.is_empty() {
+            return false;
+        }
+        let old_name = match self.metadata.pivot.action_points.get(ap_idx) {
+            Some(ap) => ap.name.clone(),
+            None => return false,
+        };
+        if old_name == trimmed {
+            return false;
+        }
+        if self
+            .metadata
+            .pivot
+            .action_points
+            .iter()
+            .enumerate()
+            .any(|(i, p)| i != ap_idx && p.name == trimmed)
+        {
+            return false;
+        }
+
+        if let Some(ap) = self.metadata.pivot.action_points.get_mut(ap_idx) {
+            ap.name = trimmed.to_string();
+        }
+        for frame_meta in &mut self.metadata.frames {
+            for coord in &mut frame_meta.action_points {
+                if coord.name == old_name {
+                    coord.name = trimmed.to_string();
+                }
+            }
+        }
+        self.has_unsaved_changes = true;
+        true
+    }
+
+    /// Removes action point `ap_idx` from the global registry and all per-frame entries.
+    pub fn remove_action_point(&mut self, ap_idx: usize) -> bool {
+        if ap_idx >= self.metadata.pivot.action_points.len() {
+            return false;
+        }
+        let removed = self.metadata.pivot.action_points.remove(ap_idx);
+        for frame_meta in &mut self.metadata.frames {
+            frame_meta.action_points.retain(|c| c.name != removed.name);
+        }
+        self.has_unsaved_changes = true;
+        true
+    }
+
+    /// Copies all action point coordinates from `frame_idx - 1` into `frame_idx`.
+    pub fn copy_action_points_from_prev_frame(&mut self, frame_idx: usize) -> bool {
+        if frame_idx == 0 || self.metadata.pivot.action_points.is_empty() {
+            return false;
+        }
+        let prev_idx = frame_idx - 1;
+        let mut any_changed = false;
+        for ap_idx in 0..self.metadata.pivot.action_points.len() {
+            if let Some((px, py)) = self.get_frame_action_point(prev_idx, ap_idx) {
+                if self.set_frame_action_point(frame_idx, ap_idx, px, py) {
+                    any_changed = true;
+                }
+            }
+        }
+        any_changed
+    }
+
+    /// Applies action point coordinates from `source_frame_idx` to all frames in the project.
+    /// If `target_ap_idx` is `Some(idx)`, only that specific action point is propagated;
+    /// otherwise all action points are propagated.
+    pub fn apply_action_points_to_all_frames(
+        &mut self,
+        source_frame_idx: usize,
+        target_ap_idx: Option<usize>,
+    ) -> bool {
+        if self.metadata.pivot.action_points.is_empty() {
+            return false;
+        }
+        let total_frames = self.metadata.frame_count.max(1) as usize;
+        while self.metadata.frames.len() < total_frames {
+            self.metadata.frames.push(FrameMeta::default());
+        }
+
+        let indices: Vec<usize> = match target_ap_idx {
+            Some(idx) if idx < self.metadata.pivot.action_points.len() => vec![idx],
+            Some(_) => return false,
+            None => (0..self.metadata.pivot.action_points.len()).collect(),
+        };
+
+        let mut any_changed = false;
+        for ap_idx in indices {
+            if let Some((sx, sy)) = self.get_frame_action_point(source_frame_idx, ap_idx) {
+                if let Some(ap) = self.metadata.pivot.action_points.get_mut(ap_idx) {
+                    if ap.x != sx || ap.y != sy {
+                        ap.x = sx;
+                        ap.y = sy;
+                        any_changed = true;
+                    }
+                }
+                for f_idx in 0..total_frames {
+                    if self.set_frame_action_point(f_idx, ap_idx, sx, sy) {
+                        any_changed = true;
+                    }
+                }
+            }
+        }
+        if any_changed {
+            self.has_unsaved_changes = true;
+        }
+        any_changed
+    }
 }
 
 #[cfg(test)]
@@ -1486,5 +1744,44 @@ mod tests {
         assert_eq!(proj.metadata.active_layer, 0);
         assert_eq!(*proj.atlas_rgba.get_pixel(0, 0), Rgba([0, 0, 255, 255]));
         assert_eq!(*proj.atlas_rgba.get_pixel(1, 0), Rgba([255, 0, 0, 255]));
+    }
+
+    #[test]
+    fn test_per_frame_action_points_lifecycle() {
+        let meta = ProjectMetadata::new_config("ap_test".to_string(), 16, 16, 3, 3, None);
+        let mut proj = Project::new(meta);
+
+        // Add an action point with initial coordinates (8, 8)
+        let ap_idx = proj.add_action_point("hand_r", 8, 8, [0, 220, 255, 255]);
+        assert_eq!(ap_idx, 0);
+        assert_eq!(proj.get_frame_action_point(0, 0), Some((8, 8)));
+        assert_eq!(proj.get_frame_action_point(1, 0), Some((8, 8)));
+        assert_eq!(proj.get_frame_action_point(2, 0), Some((8, 8)));
+
+        // Change coordinate on frame 1 only
+        assert!(proj.set_frame_action_point(1, 0, 12, 5));
+        assert_eq!(proj.get_frame_action_point(0, 0), Some((8, 8)));
+        assert_eq!(proj.get_frame_action_point(1, 0), Some((12, 5)));
+        assert_eq!(proj.get_frame_action_point(2, 0), Some((8, 8)));
+
+        // Copy from previous frame (frame 1 -> frame 2)
+        assert!(proj.copy_action_points_from_prev_frame(2));
+        assert_eq!(proj.get_frame_action_point(2, 0), Some((12, 5)));
+
+        // Rename action point and verify per-frame coordinates remain mapped
+        assert!(proj.rename_action_point(0, "weapon_grip".to_string()));
+        assert_eq!(proj.metadata.pivot.action_points[0].name, "weapon_grip");
+        assert_eq!(proj.get_frame_action_point(1, 0), Some((12, 5)));
+
+        // Apply frame 1 coordinates to all frames
+        assert!(proj.apply_action_points_to_all_frames(1, Some(0)));
+        assert_eq!(proj.get_frame_action_point(0, 0), Some((12, 5)));
+        assert_eq!(proj.get_frame_action_point(1, 0), Some((12, 5)));
+        assert_eq!(proj.get_frame_action_point(2, 0), Some((12, 5)));
+
+        // Remove action point
+        assert!(proj.remove_action_point(0));
+        assert!(proj.metadata.pivot.action_points.is_empty());
+        assert!(proj.metadata.frames.iter().all(|f| f.action_points.is_empty()));
     }
 }

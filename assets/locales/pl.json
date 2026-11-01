@@ -703,5 +703,14 @@
   "tooltip.layer_merge_down": "Połącz warstwę w dół",
   "tooltip.layer_delete": "Usuń warstwę",
   "modal.hotkeys.curve_3click": "Krzywa w 3 kliknięciach (Początek → Koniec → Wygięcie)",
-  "modal.hotkeys.timeline_scroll": "Przewijanie warstw i klatek osi czasu"
+  "modal.hotkeys.timeline_scroll": "Przewijanie warstw i klatek osi czasu",
+  "panel.pivots.copy_prev": "Kopiuj z poprz.",
+  "panel.pivots.apply_all": "Na wszystkie",
+  "tooltip.pivot_copy_prev": "Skopiuj współrzędne punktów akcji z poprzedniej klatki",
+  "tooltip.pivot_apply_all": "Zastosuj współrzędne punktów akcji z tej klatki do wszystkich klatek",
+  "tooltip.pivot_apply_point_all": "Zastosuj pozycję tego punktu akcji do wszystkich klatek",
+  "menu.file.export_aseprite": "Eksportuj do Aseprite (.aseprite)...",
+  "menu.file.export_godot_tres": "Eksportuj do Godot SpriteFrames (.tres)...",
+  "app.status.exported_aseprite": "Plik Aseprite (.aseprite) wyeksportowany pomyślnie",
+  "app.status.exported_godot_tres": "Zasób Godot SpriteFrames (.tres) wyeksportowany pomyślnie"
 }

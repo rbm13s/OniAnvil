@@ -1,7 +1,6 @@
 use crate::canvas::renderer::CanvasRenderer;
 use crate::i18n::I18n;
 use crate::io::settings::AppSettings;
-use crate::model::frame::ActionPoint;
 use crate::model::palette::{
     apply_palette_swap_to_atlas, generate_color_ramp, replace_color_in_atlas, PaletteSortCriterion,
     PaletteSwap, PREDEFINED_PALETTES,
@@ -28,6 +27,8 @@ pub struct RightDockActions {
     pub request_delete_skin: Option<(usize, String)>,
     pub request_delete_palette_slot: Option<(usize, [u8; 4])>,
     pub request_delete_pivot_point: Option<(usize, String)>,
+    pub trigger_copy_prev_action_points: bool,
+    pub trigger_apply_action_points_all_frames: Option<Option<usize>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1331,6 +1332,50 @@ pub fn show_right_dock(
                         });
 
                         ui.add_space(4.0);
+                        ui.separator();
+
+                        // Active Frame Indicator Badge for Per-Frame Action Points
+                        let cur_f = project.active_frame;
+                        let total_f = project.metadata.frame_count.max(1) as usize;
+                        let active_tag_name = project
+                            .metadata
+                            .tags
+                            .iter()
+                            .find(|t| cur_f >= t.start_frame && cur_f <= t.end_frame)
+                            .map(|t| t.name.clone());
+                        let badge_label = match active_tag_name {
+                            Some(t_name) => format!(
+                                "{FA_VIEW_FRAME} {} {} / {} ({})",
+                                i18n.tr("timeline.frame"),
+                                cur_f + 1,
+                                total_f,
+                                t_name
+                            ),
+                            None => format!(
+                                "{FA_VIEW_FRAME} {} {} / {}",
+                                i18n.tr("timeline.frame"),
+                                cur_f + 1,
+                                total_f
+                            ),
+                        };
+                        ui.horizontal(|ui| {
+                            egui::Frame::NONE
+                                .fill(Color32::from_rgba_unmultiplied(60, 130, 210, 45))
+                                .stroke(Stroke::new(
+                                    1.0,
+                                    Color32::from_rgba_unmultiplied(90, 165, 245, 140),
+                                ))
+                                .corner_radius(3.0)
+                                .inner_margin(egui::Margin::symmetric(6, 2))
+                                .show(ui, |ui| {
+                                    ui.small(
+                                        egui::RichText::new(badge_label)
+                                            .strong()
+                                            .color(Color32::from_rgb(160, 215, 255)),
+                                    );
+                                });
+                        });
+
                         ui.horizontal(|ui| {
                             ui.small(i18n.tr("panel.pivots.action_points"));
                             if ui
@@ -1338,19 +1383,59 @@ pub fn show_right_dock(
                                 .on_hover_text(i18n.tr("tooltip.pivot_add_point"))
                                 .clicked()
                             {
-                                project.metadata.pivot.action_points.push(ActionPoint {
-                                    name: i18n.tr("panel.pivots.default_point_name").to_string(),
-                                    x: (project.metadata.frame_width / 2) as i32,
-                                    y: (project.metadata.frame_height / 2) as i32,
-                                    color: [0, 220, 255, 255],
-                                });
-                                preview.active_pivot_target =
-                                    Some(project.metadata.pivot.action_points.len() - 1);
+                                let default_name =
+                                    i18n.tr("panel.pivots.default_point_name").to_string();
+                                let cx = (project.metadata.frame_width / 2) as i32;
+                                let cy = (project.metadata.frame_height / 2) as i32;
+                                let new_idx = project.add_action_point(
+                                    &default_name,
+                                    cx,
+                                    cy,
+                                    [0, 220, 255, 255],
+                                );
+                                project.metadata.pivot.show_gizmos = true;
+                                preview.active_pivot_target = Some(new_idx);
                             }
                         });
 
-                        for (idx, pt) in project.metadata.pivot.action_points.iter_mut().enumerate()
-                        {
+                        if !project.metadata.pivot.action_points.is_empty() && total_f > 1 {
+                            ui.horizontal_wrapped(|ui| {
+                                if ui
+                                    .add_enabled(
+                                        cur_f > 0,
+                                        egui::Button::new(format!(
+                                            "{FA_STEP_PREV} {}",
+                                            i18n.tr("panel.pivots.copy_prev")
+                                        ))
+                                        .small(),
+                                    )
+                                    .on_hover_text(i18n.tr("tooltip.pivot_copy_prev"))
+                                    .clicked()
+                                {
+                                    actions.trigger_copy_prev_action_points = true;
+                                }
+                                if ui
+                                    .small_button(format!(
+                                        "{FA_CHECK} {}",
+                                        i18n.tr("panel.pivots.apply_all")
+                                    ))
+                                    .on_hover_text(i18n.tr("tooltip.pivot_apply_all"))
+                                    .clicked()
+                                {
+                                    actions.trigger_apply_action_points_all_frames = Some(None);
+                                }
+                            });
+                        }
+
+                        let ap_count = project.metadata.pivot.action_points.len();
+                        for idx in 0..ap_count {
+                            let (mut cur_x, mut cur_y) = project
+                                .get_frame_action_point(cur_f, idx)
+                                .unwrap_or((0, 0));
+                            let mut cur_name =
+                                project.metadata.pivot.action_points[idx].name.clone();
+                            let mut cur_color = project.metadata.pivot.action_points[idx].color;
+
                             ui.horizontal(|ui| {
                                 let is_target = preview.active_pivot_target == Some(idx);
                                 if ui
@@ -1360,28 +1445,56 @@ pub fn show_right_dock(
                                 {
                                     preview.active_pivot_target = if is_target {
                                         None
-                                     } else {
+                                    } else {
                                         Some(idx)
                                     };
                                 }
                                 modern_color_picker_button(
                                     ui,
                                     ("attach_pt_col", idx),
-                                    &mut pt.color,
+                                    &mut cur_color,
                                     i18n,
                                     settings.as_deref_mut(),
                                 );
-                                ui.add(
-                                    egui::TextEdit::singleline(&mut pt.name).desired_width(72.0),
+                                if project.metadata.pivot.action_points[idx].color != cur_color {
+                                    project.metadata.pivot.action_points[idx].color = cur_color;
+                                    project.has_unsaved_changes = true;
+                                }
+
+                                let name_resp = ui.add(
+                                    egui::TextEdit::singleline(&mut cur_name).desired_width(68.0),
                                 );
-                                ui.add(egui::DragValue::new(&mut pt.x).range(-512..=2048));
-                                ui.add(egui::DragValue::new(&mut pt.y).range(-512..=2048));
+                                if name_resp.changed() {
+                                    project.rename_action_point(idx, cur_name.clone());
+                                }
+
+                                let x_resp =
+                                    ui.add(egui::DragValue::new(&mut cur_x).range(-512..=2048));
+                                let y_resp =
+                                    ui.add(egui::DragValue::new(&mut cur_y).range(-512..=2048));
+                                if x_resp.changed() || y_resp.changed() {
+                                    project.set_frame_action_point(cur_f, idx, cur_x, cur_y);
+                                }
+
+                                if total_f > 1
+                                    && ui
+                                        .small_button(FA_CHECK)
+                                        .on_hover_text(i18n.tr("tooltip.pivot_apply_point_all"))
+                                        .clicked()
+                                {
+                                    actions.trigger_apply_action_points_all_frames =
+                                        Some(Some(idx));
+                                }
+
                                 if ui
                                     .small_button(FA_TRASH)
                                     .on_hover_text(i18n.tr("tooltip.pivot_remove_point"))
                                     .clicked()
                                 {
-                                    actions.request_delete_pivot_point = Some((idx, pt.name.clone()));
+                                    actions.request_delete_pivot_point = Some((
+                                        idx,
+                                        project.metadata.pivot.action_points[idx].name.clone(),
+                                    ));
                                 }
                             });
                         }
