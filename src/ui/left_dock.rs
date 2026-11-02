@@ -67,7 +67,7 @@ pub fn show_left_dock(
                             let label_color = if is_active || resp.hovered() {
                                 visuals.fg_stroke.color
                             } else {
-                                ui.visuals().weak_text_color()
+                                ui.visuals().text_color()
                             };
 
                             let icon_pos = egui::pos2(rect.center().x, rect.center().y - 6.5);

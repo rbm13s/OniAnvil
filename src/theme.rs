@@ -114,6 +114,38 @@ pub enum AppTheme {
 }
 
 
+#[derive(Clone, Copy, Debug)]
+pub struct ThemePalette {
+    pub bg_panel: Color32,
+    pub bg_backdrop: Color32,
+    pub bg_widget_inactive: Color32,
+    pub bg_widget_hovered: Color32,
+    pub bg_widget_active: Color32,
+    pub border_subtle: Color32,
+    pub border_focused: Color32,
+    pub text_primary: Color32,
+    pub selection_bg: Color32,
+    pub is_light: bool,
+}
+
+pub fn is_dark_color(c: Color32) -> bool {
+    (c.r() as u32 * 299 + c.g() as u32 * 587 + c.b() as u32 * 114) / 1000 < 135
+}
+
+pub fn contrast_fg(bg: Color32, preferred_fg: Color32) -> Color32 {
+    let bg_is_dark = is_dark_color(bg);
+    let fg_is_dark = is_dark_color(preferred_fg);
+    if bg_is_dark == fg_is_dark {
+        if bg_is_dark {
+            Color32::WHITE
+        } else {
+            Color32::from_rgb(0, 0, 0)
+        }
+    } else {
+        preferred_fg
+    }
+}
+
 impl AppTheme {
     pub const ALL: [AppTheme; 35] = [
         AppTheme::StudioDark,
@@ -193,32 +225,18 @@ impl AppTheme {
         }
     }
 
-    pub fn apply(self, ctx: &egui::Context) {
-        let mut style: Style = (*ctx.style()).clone();
-
-        if self == Self::System {
-            let visuals = Visuals {
-                window_corner_radius: CornerRadius::same(4),
-                ..Default::default()
-            };
-            style.visuals = visuals;
-            ctx.set_style(style);
-            return;
-        }
-
-        let is_light = self == Self::StudioLight
+    pub fn is_light(self) -> bool {
+        self == Self::StudioLight
             || self == Self::SolarizedLight
             || self == Self::MacClassic
             || self == Self::Snes
             || self == Self::Windows98
             || self == Self::Dreamcast
-            || self == Self::AtariSt;
-        let mut visuals = if is_light {
-            Visuals::light()
-        } else {
-            Visuals::dark()
-        };
+            || self == Self::AtariSt
+    }
 
+    pub fn palette(self) -> ThemePalette {
+        let is_light = self.is_light();
         let (
             bg_panel,
             bg_backdrop,
@@ -268,7 +286,7 @@ impl AppTheme {
                 Color32::from_rgb(9, 10, 20),
                 Color32::from_rgb(30, 32, 58),
                 Color32::from_rgb(42, 46, 82),
-                Color32::from_rgb(0, 240, 255),
+                Color32::from_rgb(56, 62, 108),
                 Color32::from_rgb(255, 0, 85),
                 Color32::from_rgb(0, 240, 255),
                 Color32::from_rgb(230, 249, 255),
@@ -279,7 +297,7 @@ impl AppTheme {
                 Color32::from_rgb(22, 13, 34),
                 Color32::from_rgb(54, 34, 78),
                 Color32::from_rgb(74, 46, 106),
-                Color32::from_rgb(247, 89, 144),
+                Color32::from_rgb(95, 58, 136),
                 Color32::from_rgb(104, 59, 140),
                 Color32::from_rgb(255, 210, 117),
                 Color32::from_rgb(255, 220, 140),
@@ -301,7 +319,7 @@ impl AppTheme {
                 Color32::from_rgb(25, 24, 26),
                 Color32::from_rgb(45, 42, 46),
                 Color32::from_rgb(64, 62, 65),
-                Color32::from_rgb(255, 216, 102),
+                Color32::from_rgb(82, 80, 84),
                 Color32::from_rgb(64, 62, 65),
                 Color32::from_rgb(255, 216, 102),
                 Color32::from_rgb(252, 252, 250),
@@ -312,7 +330,7 @@ impl AppTheme {
                 Color32::from_rgb(0, 43, 54),
                 Color32::from_rgb(11, 66, 80),
                 Color32::from_rgb(19, 82, 99),
-                Color32::from_rgb(38, 139, 210),
+                Color32::from_rgb(26, 98, 118),
                 Color32::from_rgb(26, 94, 112),
                 Color32::from_rgb(42, 161, 152),
                 Color32::from_rgb(147, 161, 161),
@@ -323,7 +341,7 @@ impl AppTheme {
                 Color32::from_rgb(10, 6, 0),
                 Color32::from_rgb(43, 29, 2),
                 Color32::from_rgb(61, 42, 4),
-                Color32::from_rgb(255, 176, 0),
+                Color32::from_rgb(82, 56, 6),
                 Color32::from_rgb(94, 64, 8),
                 Color32::from_rgb(255, 176, 0),
                 Color32::from_rgb(255, 176, 0),
@@ -334,7 +352,7 @@ impl AppTheme {
                 Color32::from_rgb(0, 12, 4),
                 Color32::from_rgb(0, 42, 16),
                 Color32::from_rgb(0, 64, 24),
-                Color32::from_rgb(0, 255, 65),
+                Color32::from_rgb(0, 86, 32),
                 Color32::from_rgb(0, 56, 20),
                 Color32::from_rgb(51, 255, 102),
                 Color32::from_rgb(51, 255, 102),
@@ -345,7 +363,7 @@ impl AppTheme {
                 Color32::from_rgb(0, 0, 0),
                 Color32::from_rgb(32, 32, 44),
                 Color32::from_rgb(0, 0, 215),
-                Color32::from_rgb(255, 255, 0),
+                Color32::from_rgb(0, 0, 160),
                 Color32::from_rgb(0, 180, 215),
                 Color32::from_rgb(255, 0, 0),
                 Color32::from_rgb(255, 255, 255),
@@ -367,7 +385,7 @@ impl AppTheme {
                 Color32::from_rgb(180, 180, 180),
                 Color32::from_rgb(236, 236, 236),
                 Color32::from_rgb(208, 208, 208),
-                Color32::from_rgb(51, 102, 204),
+                Color32::from_rgb(190, 190, 190),
                 Color32::from_rgb(150, 150, 150),
                 Color32::from_rgb(30, 30, 30),
                 Color32::from_rgb(10, 10, 10),
@@ -378,7 +396,7 @@ impl AppTheme {
                 Color32::from_rgb(20, 12, 32),
                 Color32::from_rgb(60, 36, 92),
                 Color32::from_rgb(88, 50, 120),
-                Color32::from_rgb(255, 0, 77),
+                Color32::from_rgb(110, 64, 150),
                 Color32::from_rgb(126, 37, 83),
                 Color32::from_rgb(255, 119, 168),
                 Color32::from_rgb(255, 241, 232),
@@ -389,7 +407,7 @@ impl AppTheme {
                 Color32::from_rgb(33, 34, 44),
                 Color32::from_rgb(52, 55, 70),
                 Color32::from_rgb(68, 71, 90),
-                Color32::from_rgb(189, 147, 249),
+                Color32::from_rgb(88, 92, 116),
                 Color32::from_rgb(68, 71, 90),
                 Color32::from_rgb(139, 233, 253),
                 Color32::from_rgb(248, 248, 242),
@@ -400,7 +418,7 @@ impl AppTheme {
                 Color32::from_rgb(19, 20, 29),
                 Color32::from_rgb(36, 40, 59),
                 Color32::from_rgb(53, 59, 87),
-                Color32::from_rgb(122, 162, 247),
+                Color32::from_rgb(68, 76, 112),
                 Color32::from_rgb(41, 46, 66),
                 Color32::from_rgb(187, 154, 247),
                 Color32::from_rgb(192, 202, 245),
@@ -411,7 +429,7 @@ impl AppTheme {
                 Color32::from_rgb(24, 24, 37),
                 Color32::from_rgb(49, 50, 68),
                 Color32::from_rgb(69, 71, 90),
-                Color32::from_rgb(203, 166, 247),
+                Color32::from_rgb(88, 91, 114),
                 Color32::from_rgb(69, 71, 90),
                 Color32::from_rgb(245, 194, 231),
                 Color32::from_rgb(205, 214, 244),
@@ -422,7 +440,7 @@ impl AppTheme {
                 Color32::from_rgb(29, 32, 33),
                 Color32::from_rgb(60, 56, 54),
                 Color32::from_rgb(80, 73, 69),
-                Color32::from_rgb(250, 189, 47),
+                Color32::from_rgb(102, 92, 84),
                 Color32::from_rgb(80, 73, 69),
                 Color32::from_rgb(254, 128, 25),
                 Color32::from_rgb(235, 219, 178),
@@ -433,7 +451,7 @@ impl AppTheme {
                 Color32::from_rgb(238, 232, 213),
                 Color32::from_rgb(238, 232, 213),
                 Color32::from_rgb(218, 210, 185),
-                Color32::from_rgb(181, 137, 0),
+                Color32::from_rgb(200, 192, 168),
                 Color32::from_rgb(195, 186, 158),
                 Color32::from_rgb(38, 139, 210),
                 Color32::from_rgb(7, 54, 66),
@@ -444,7 +462,7 @@ impl AppTheme {
                 Color32::from_rgb(0, 10, 16),
                 Color32::from_rgb(0, 36, 50),
                 Color32::from_rgb(0, 56, 76),
-                Color32::from_rgb(0, 229, 255),
+                Color32::from_rgb(0, 76, 102),
                 Color32::from_rgb(0, 50, 68),
                 Color32::from_rgb(0, 229, 255),
                 Color32::from_rgb(51, 235, 255),
@@ -455,7 +473,7 @@ impl AppTheme {
                 Color32::from_rgb(72, 12, 22),
                 Color32::from_rgb(148, 36, 50),
                 Color32::from_rgb(180, 48, 64),
-                Color32::from_rgb(235, 195, 80),
+                Color32::from_rgb(205, 56, 74),
                 Color32::from_rgb(88, 16, 26),
                 Color32::from_rgb(235, 195, 80),
                 Color32::from_rgb(248, 242, 224),
@@ -466,7 +484,7 @@ impl AppTheme {
                 Color32::from_rgb(14, 15, 18),
                 Color32::from_rgb(38, 40, 46),
                 Color32::from_rgb(54, 58, 68),
-                Color32::from_rgb(220, 175, 40),
+                Color32::from_rgb(70, 75, 88),
                 Color32::from_rgb(48, 52, 62),
                 Color32::from_rgb(0, 136, 255),
                 Color32::from_rgb(235, 238, 245),
@@ -477,7 +495,7 @@ impl AppTheme {
                 Color32::from_rgb(180, 180, 194),
                 Color32::from_rgb(222, 222, 230),
                 Color32::from_rgb(192, 192, 206),
-                Color32::from_rgb(79, 66, 132),
+                Color32::from_rgb(175, 175, 190),
                 Color32::from_rgb(160, 160, 178),
                 Color32::from_rgb(141, 121, 178),
                 Color32::from_rgb(28, 26, 36),
@@ -488,10 +506,10 @@ impl AppTheme {
                 Color32::from_rgb(10, 52, 44),
                 Color32::from_rgb(32, 120, 102),
                 Color32::from_rgb(45, 155, 132),
-                Color32::from_rgb(72, 255, 216),
+                Color32::from_rgb(58, 180, 154),
                 Color32::from_rgb(16, 74, 62),
                 Color32::from_rgb(72, 255, 216),
-                Color32::from_rgb(5, 32, 26),
+                Color32::from_rgb(180, 255, 235),
                 Color32::from_rgb(45, 185, 156),
             ),
             Self::SuperGameBoy => (
@@ -499,7 +517,7 @@ impl AppTheme {
                 Color32::from_rgb(34, 28, 52),
                 Color32::from_rgb(70, 60, 100),
                 Color32::from_rgb(92, 78, 128),
-                Color32::from_rgb(255, 198, 54),
+                Color32::from_rgb(115, 98, 158),
                 Color32::from_rgb(40, 32, 60),
                 Color32::from_rgb(255, 110, 140),
                 Color32::from_rgb(240, 235, 250),
@@ -510,7 +528,7 @@ impl AppTheme {
                 Color32::from_rgb(26, 27, 32),
                 Color32::from_rgb(58, 60, 70),
                 Color32::from_rgb(76, 78, 92),
-                Color32::from_rgb(0, 168, 150),
+                Color32::from_rgb(46, 75, 175),
                 Color32::from_rgb(68, 70, 82),
                 Color32::from_rgb(238, 90, 131),
                 Color32::from_rgb(235, 236, 242),
@@ -521,7 +539,7 @@ impl AppTheme {
                 Color32::from_rgb(218, 220, 226),
                 Color32::from_rgb(226, 227, 233),
                 Color32::from_rgb(210, 212, 222),
-                Color32::from_rgb(255, 92, 0),
+                Color32::from_rgb(195, 197, 208),
                 Color32::from_rgb(186, 188, 198),
                 Color32::from_rgb(255, 92, 0),
                 Color32::from_rgb(24, 26, 34),
@@ -532,7 +550,7 @@ impl AppTheme {
                 Color32::from_rgb(10, 11, 18),
                 Color32::from_rgb(30, 34, 52),
                 Color32::from_rgb(44, 50, 78),
-                Color32::from_rgb(0, 170, 255),
+                Color32::from_rgb(58, 66, 104),
                 Color32::from_rgb(38, 44, 68),
                 Color32::from_rgb(0, 210, 255),
                 Color32::from_rgb(225, 235, 255),
@@ -543,7 +561,7 @@ impl AppTheme {
                 Color32::from_rgb(0, 128, 128),
                 Color32::from_rgb(212, 212, 212),
                 Color32::from_rgb(228, 228, 228),
-                Color32::from_rgb(0, 0, 128),
+                Color32::from_rgb(185, 185, 185),
                 Color32::from_rgb(128, 128, 128),
                 Color32::from_rgb(0, 0, 128),
                 Color32::from_rgb(0, 0, 0),
@@ -554,7 +572,7 @@ impl AppTheme {
                 Color32::from_rgb(0, 50, 105),
                 Color32::from_rgb(18, 102, 192),
                 Color32::from_rgb(32, 120, 216),
-                Color32::from_rgb(255, 136, 0),
+                Color32::from_rgb(45, 138, 238),
                 Color32::from_rgb(0, 68, 140),
                 Color32::from_rgb(255, 136, 0),
                 Color32::from_rgb(255, 255, 255),
@@ -565,7 +583,7 @@ impl AppTheme {
                 Color32::from_rgb(190, 194, 184),
                 Color32::from_rgb(230, 232, 226),
                 Color32::from_rgb(205, 208, 200),
-                Color32::from_rgb(24, 98, 136),
+                Color32::from_rgb(185, 188, 180),
                 Color32::from_rgb(152, 156, 144),
                 Color32::from_rgb(24, 98, 136),
                 Color32::from_rgb(20, 22, 18),
@@ -576,7 +594,7 @@ impl AppTheme {
                 Color32::from_rgb(12, 14, 38),
                 Color32::from_rgb(38, 44, 92),
                 Color32::from_rgb(52, 60, 120),
-                Color32::from_rgb(64, 224, 208),
+                Color32::from_rgb(68, 78, 150),
                 Color32::from_rgb(48, 54, 108),
                 Color32::from_rgb(240, 80, 140),
                 Color32::from_rgb(238, 242, 255),
@@ -587,7 +605,7 @@ impl AppTheme {
                 Color32::from_rgb(8, 12, 8),
                 Color32::from_rgb(26, 36, 26),
                 Color32::from_rgb(38, 54, 38),
-                Color32::from_rgb(34, 204, 68),
+                Color32::from_rgb(50, 72, 50),
                 Color32::from_rgb(32, 48, 32),
                 Color32::from_rgb(154, 76, 222),
                 Color32::from_rgb(52, 230, 88),
@@ -598,7 +616,7 @@ impl AppTheme {
                 Color32::from_rgb(0, 0, 68),
                 Color32::from_rgb(0, 0, 180),
                 Color32::from_rgb(20, 40, 210),
-                Color32::from_rgb(0, 180, 180),
+                Color32::from_rgb(30, 60, 230),
                 Color32::from_rgb(0, 0, 210),
                 Color32::from_rgb(255, 255, 85),
                 Color32::from_rgb(255, 255, 255),
@@ -606,50 +624,111 @@ impl AppTheme {
             ),
         };
 
-        visuals.panel_fill = bg_panel;
-        visuals.window_fill = bg_panel;
-        visuals.extreme_bg_color = bg_backdrop;
-        visuals.faint_bg_color = bg_widget_inactive;
-        visuals.code_bg_color = bg_widget_inactive;
-        visuals.override_text_color = Some(text_primary);
+        ThemePalette {
+            bg_panel,
+            bg_backdrop,
+            bg_widget_inactive,
+            bg_widget_hovered,
+            bg_widget_active,
+            border_subtle,
+            border_focused,
+            text_primary,
+            selection_bg,
+            is_light,
+        }
+    }
 
-        let widget_text = text_primary;
+    pub fn apply(self, ctx: &egui::Context) {
+        let mut style: Style = (*ctx.style()).clone();
 
-        visuals.widgets.noninteractive.bg_fill = bg_panel;
-        visuals.widgets.noninteractive.weak_bg_fill = bg_panel;
-        visuals.widgets.noninteractive.bg_stroke = Stroke::new(1.0, border_subtle);
-        visuals.widgets.noninteractive.fg_stroke = Stroke::new(1.0, widget_text);
+        if self == Self::System {
+            let visuals = Visuals {
+                window_corner_radius: CornerRadius::same(4),
+                ..Default::default()
+            };
+            style.visuals = visuals;
+            ctx.set_style(style);
+            return;
+        }
+
+        let p = self.palette();
+        let mut visuals = if p.is_light {
+            Visuals::light()
+        } else {
+            Visuals::dark()
+        };
+
+        visuals.panel_fill = p.bg_panel;
+        visuals.window_fill = p.bg_panel;
+        visuals.extreme_bg_color = p.bg_backdrop;
+        visuals.faint_bg_color = p.bg_widget_inactive;
+        visuals.code_bg_color = p.bg_widget_inactive;
+        visuals.override_text_color = None;
+
+        let strong_fg = if p.is_light {
+            if is_dark_color(p.text_primary) {
+                p.text_primary
+            } else {
+                Color32::from_rgb(15, 15, 18)
+            }
+        } else {
+            if !is_dark_color(p.text_primary) {
+                p.text_primary
+            } else {
+                Color32::from_rgb(240, 240, 245)
+            }
+        };
+
+        let noninteractive_fg = contrast_fg(p.bg_panel, p.text_primary);
+        let inactive_fg = contrast_fg(p.bg_widget_inactive, p.text_primary);
+        let hovered_fg = contrast_fg(p.bg_widget_hovered, p.text_primary);
+        let open_fg = contrast_fg(p.bg_widget_hovered, p.text_primary);
+
+        visuals.widgets.noninteractive.bg_fill = p.bg_panel;
+        visuals.widgets.noninteractive.weak_bg_fill = p.bg_panel;
+        visuals.widgets.noninteractive.bg_stroke = Stroke::new(1.0, p.border_subtle);
+        visuals.widgets.noninteractive.fg_stroke = Stroke::new(1.0, noninteractive_fg);
         visuals.widgets.noninteractive.corner_radius = CornerRadius::same(2);
 
-        visuals.widgets.inactive.bg_fill = bg_widget_inactive;
-        visuals.widgets.inactive.weak_bg_fill = bg_widget_inactive;
-        visuals.widgets.inactive.bg_stroke = Stroke::new(1.0, border_subtle);
-        visuals.widgets.inactive.fg_stroke = Stroke::new(1.0, widget_text);
+        visuals.widgets.inactive.bg_fill = p.bg_widget_inactive;
+        visuals.widgets.inactive.weak_bg_fill = p.bg_widget_inactive;
+        visuals.widgets.inactive.bg_stroke = Stroke::new(1.0, p.border_subtle);
+        visuals.widgets.inactive.fg_stroke = Stroke::new(1.0, inactive_fg);
         visuals.widgets.inactive.corner_radius = CornerRadius::same(3);
 
-        visuals.widgets.hovered.bg_fill = bg_widget_hovered;
-        visuals.widgets.hovered.weak_bg_fill = bg_widget_hovered;
-        visuals.widgets.hovered.bg_stroke = Stroke::new(1.0, border_focused);
-        visuals.widgets.hovered.fg_stroke = Stroke::new(1.0, if is_light { Color32::from_rgb(0, 0, 0) } else { Color32::WHITE });
+        visuals.widgets.hovered.bg_fill = p.bg_widget_hovered;
+        visuals.widgets.hovered.weak_bg_fill = p.bg_widget_hovered;
+        visuals.widgets.hovered.bg_stroke = Stroke::new(1.0, p.border_focused);
+        visuals.widgets.hovered.fg_stroke = Stroke::new(1.0, hovered_fg);
         visuals.widgets.hovered.corner_radius = CornerRadius::same(3);
 
-        visuals.widgets.active.bg_fill = bg_widget_active;
-        visuals.widgets.active.weak_bg_fill = bg_widget_active;
-        visuals.widgets.active.bg_stroke = Stroke::new(1.0, border_focused);
-        visuals.widgets.active.fg_stroke = Stroke::new(1.0, if is_light { Color32::from_rgb(0, 0, 0) } else { Color32::WHITE });
+        visuals.widgets.active.bg_fill = p.bg_widget_active;
+        visuals.widgets.active.weak_bg_fill = p.bg_widget_active;
+        visuals.widgets.active.bg_stroke = Stroke::new(1.0, p.border_focused);
+        visuals.widgets.active.fg_stroke = Stroke::new(1.0, strong_fg);
         visuals.widgets.active.corner_radius = CornerRadius::same(3);
 
-        visuals.widgets.open.bg_fill = bg_widget_hovered;
-        visuals.widgets.open.weak_bg_fill = bg_widget_hovered;
-        visuals.widgets.open.bg_stroke = Stroke::new(1.0, border_focused);
-        visuals.widgets.open.fg_stroke = Stroke::new(1.0, widget_text);
+        visuals.widgets.open.bg_fill = p.bg_widget_hovered;
+        visuals.widgets.open.weak_bg_fill = p.bg_widget_hovered;
+        visuals.widgets.open.bg_stroke = Stroke::new(1.0, p.border_focused);
+        visuals.widgets.open.fg_stroke = Stroke::new(1.0, open_fg);
         visuals.widgets.open.corner_radius = CornerRadius::same(3);
 
-        visuals.selection.bg_fill = selection_bg;
-        visuals.selection.stroke = Stroke::new(1.0, Color32::WHITE);
+        visuals.selection.bg_fill = p.selection_bg;
+        visuals.selection.stroke = Stroke::new(1.0, contrast_fg(p.selection_bg, Color32::WHITE));
+
+        if p.is_light {
+            visuals.warn_fg_color = Color32::from_rgb(215, 120, 20);
+            visuals.error_fg_color = Color32::from_rgb(205, 35, 35);
+            visuals.hyperlink_color = Color32::from_rgb(30, 95, 205);
+        } else {
+            visuals.warn_fg_color = Color32::from_rgb(250, 195, 60);
+            visuals.error_fg_color = Color32::from_rgb(245, 90, 90);
+            visuals.hyperlink_color = Color32::from_rgb(100, 175, 255);
+        }
 
         visuals.window_corner_radius = CornerRadius::same(4);
-        visuals.window_stroke = Stroke::new(1.0, border_subtle);
+        visuals.window_stroke = Stroke::new(1.0, p.border_subtle);
 
         style.spacing.item_spacing = egui::vec2(5.0, 4.0);
         style.spacing.button_padding = egui::vec2(6.0, 3.0);
@@ -658,6 +737,312 @@ impl AppTheme {
 
         ctx.set_style(style);
     }
+
+    pub fn timeline_colors(self) -> TimelineColors {
+        match self {
+            Self::CrtAmber => TimelineColors {
+                ruler_hdr_bg: Color32::from_rgb(28, 18, 0),
+                ruler_hdr_stroke: Color32::from_rgb(94, 64, 8),
+                ruler_cell_bg: Color32::from_rgb(18, 12, 0),
+                ruler_cell_active_bg: Color32::from_rgb(60, 40, 4),
+                ruler_playhead_bg: Color32::from_rgb(94, 64, 8),
+                ruler_tick_stroke: Color32::from_rgb(94, 64, 8),
+                ruler_text: Color32::from_rgb(204, 136, 0),
+                ruler_text_active: Color32::from_rgb(255, 176, 0),
+
+                track_hdr_bg: Color32::from_rgb(22, 14, 0),
+                track_hdr_active_bg: Color32::from_rgb(44, 28, 2),
+                track_border: Color32::from_rgb(94, 64, 8),
+                track_border_active: Color32::from_rgb(255, 176, 0),
+                track_active_stripe: Color32::from_rgb(255, 176, 0),
+
+                clip_bg: Color32::from_rgb(14, 8, 0),
+                clip_bg_hidden: Color32::from_rgb(10, 6, 0),
+                clip_active_frame_bg: Color32::from_rgb(32, 20, 2),
+                clip_active_cell_bg: Color32::from_rgb(52, 34, 4),
+                clip_hdr_bg: Color32::from_rgb(38, 24, 2),
+                clip_hdr_active_layer_bg: Color32::from_rgb(76, 50, 6),
+                clip_hdr_active_cell_bg: Color32::from_rgb(255, 176, 0),
+                clip_hdr_text: Color32::from_rgb(204, 136, 0),
+                clip_hdr_active_text: Color32::from_rgb(10, 6, 0),
+
+                thumb_bg: Color32::from_rgb(10, 6, 0),
+                thumb_border: Some(Color32::from_rgb(60, 40, 4)),
+                clip_border: Color32::from_rgb(60, 40, 4),
+                clip_border_active_frame: Color32::from_rgb(204, 136, 0),
+                clip_border_active_cell: Color32::from_rgb(255, 176, 0),
+            },
+            Self::CrtGreen => TimelineColors {
+                ruler_hdr_bg: Color32::from_rgb(0, 24, 8),
+                ruler_hdr_stroke: Color32::from_rgb(0, 56, 20),
+                ruler_cell_bg: Color32::from_rgb(0, 16, 6),
+                ruler_cell_active_bg: Color32::from_rgb(0, 48, 16),
+                ruler_playhead_bg: Color32::from_rgb(0, 64, 22),
+                ruler_tick_stroke: Color32::from_rgb(0, 56, 20),
+                ruler_text: Color32::from_rgb(0, 200, 50),
+                ruler_text_active: Color32::from_rgb(0, 255, 65),
+
+                track_hdr_bg: Color32::from_rgb(0, 20, 7),
+                track_hdr_active_bg: Color32::from_rgb(0, 36, 12),
+                track_border: Color32::from_rgb(0, 56, 20),
+                track_border_active: Color32::from_rgb(0, 255, 65),
+                track_active_stripe: Color32::from_rgb(0, 255, 65),
+
+                clip_bg: Color32::from_rgb(0, 12, 4),
+                clip_bg_hidden: Color32::from_rgb(0, 8, 3),
+                clip_active_frame_bg: Color32::from_rgb(0, 28, 10),
+                clip_active_cell_bg: Color32::from_rgb(0, 44, 15),
+                clip_hdr_bg: Color32::from_rgb(0, 32, 11),
+                clip_hdr_active_layer_bg: Color32::from_rgb(0, 60, 22),
+                clip_hdr_active_cell_bg: Color32::from_rgb(0, 255, 65),
+                clip_hdr_text: Color32::from_rgb(0, 200, 50),
+                clip_hdr_active_text: Color32::from_rgb(0, 12, 4),
+
+                thumb_bg: Color32::from_rgb(0, 12, 4),
+                thumb_border: Some(Color32::from_rgb(0, 48, 16)),
+                clip_border: Color32::from_rgb(0, 48, 16),
+                clip_border_active_frame: Color32::from_rgb(51, 255, 102),
+                clip_border_active_cell: Color32::from_rgb(0, 255, 65),
+            },
+            Self::CrtCyan => TimelineColors {
+                ruler_hdr_bg: Color32::from_rgb(0, 24, 28),
+                ruler_hdr_stroke: Color32::from_rgb(0, 60, 70),
+                ruler_cell_bg: Color32::from_rgb(0, 16, 20),
+                ruler_cell_active_bg: Color32::from_rgb(0, 48, 56),
+                ruler_playhead_bg: Color32::from_rgb(0, 64, 76),
+                ruler_tick_stroke: Color32::from_rgb(0, 56, 68),
+                ruler_text: Color32::from_rgb(0, 200, 230),
+                ruler_text_active: Color32::from_rgb(0, 255, 255),
+
+                track_hdr_bg: Color32::from_rgb(0, 20, 24),
+                track_hdr_active_bg: Color32::from_rgb(0, 38, 46),
+                track_border: Color32::from_rgb(0, 56, 68),
+                track_border_active: Color32::from_rgb(0, 255, 255),
+                track_active_stripe: Color32::from_rgb(0, 255, 255),
+
+                clip_bg: Color32::from_rgb(0, 12, 16),
+                clip_bg_hidden: Color32::from_rgb(0, 8, 12),
+                clip_active_frame_bg: Color32::from_rgb(0, 28, 36),
+                clip_active_cell_bg: Color32::from_rgb(0, 48, 60),
+                clip_hdr_bg: Color32::from_rgb(0, 32, 40),
+                clip_hdr_active_layer_bg: Color32::from_rgb(0, 65, 80),
+                clip_hdr_active_cell_bg: Color32::from_rgb(0, 255, 255),
+                clip_hdr_text: Color32::from_rgb(0, 200, 230),
+                clip_hdr_active_text: Color32::from_rgb(0, 12, 16),
+
+                thumb_bg: Color32::from_rgb(0, 10, 14),
+                thumb_border: Some(Color32::from_rgb(0, 48, 60)),
+                clip_border: Color32::from_rgb(0, 48, 60),
+                clip_border_active_frame: Color32::from_rgb(0, 200, 230),
+                clip_border_active_cell: Color32::from_rgb(0, 255, 255),
+            },
+            Self::Windows98 => TimelineColors {
+                ruler_hdr_bg: Color32::from_rgb(198, 198, 198),
+                ruler_hdr_stroke: Color32::from_rgb(128, 128, 128),
+                ruler_cell_bg: Color32::from_rgb(212, 212, 212),
+                ruler_cell_active_bg: Color32::from_rgb(0, 0, 128),
+                ruler_playhead_bg: Color32::from_rgb(0, 0, 128),
+                ruler_tick_stroke: Color32::from_rgb(128, 128, 128),
+                ruler_text: Color32::from_rgb(0, 0, 0),
+                ruler_text_active: Color32::WHITE,
+
+                track_hdr_bg: Color32::from_rgb(198, 198, 198),
+                track_hdr_active_bg: Color32::from_rgb(218, 218, 218),
+                track_border: Color32::from_rgb(128, 128, 128),
+                track_border_active: Color32::from_rgb(0, 0, 128),
+                track_active_stripe: Color32::from_rgb(0, 0, 128),
+
+                clip_bg: Color32::from_rgb(212, 212, 212),
+                clip_bg_hidden: Color32::from_rgb(190, 190, 190),
+                clip_active_frame_bg: Color32::from_rgb(226, 226, 226),
+                clip_active_cell_bg: Color32::from_rgb(240, 240, 240),
+                clip_hdr_bg: Color32::from_rgb(180, 180, 180),
+                clip_hdr_active_layer_bg: Color32::from_rgb(0, 128, 128),
+                clip_hdr_active_cell_bg: Color32::from_rgb(0, 0, 128),
+                clip_hdr_text: Color32::from_rgb(0, 0, 0),
+                clip_hdr_active_text: Color32::WHITE,
+
+                thumb_bg: Color32::WHITE,
+                thumb_border: Some(Color32::from_rgb(128, 128, 128)),
+                clip_border: Color32::from_rgb(128, 128, 128),
+                clip_border_active_frame: Color32::from_rgb(0, 128, 128),
+                clip_border_active_cell: Color32::from_rgb(0, 0, 128),
+            },
+            Self::CyberpunkNeon => TimelineColors {
+                ruler_hdr_bg: Color32::from_rgb(18, 19, 36),
+                ruler_hdr_stroke: Color32::from_rgb(255, 0, 85),
+                ruler_cell_bg: Color32::from_rgb(18, 19, 36),
+                ruler_cell_active_bg: Color32::from_rgb(30, 32, 58),
+                ruler_playhead_bg: Color32::from_rgb(255, 0, 85),
+                ruler_tick_stroke: Color32::from_rgb(60, 40, 80),
+                ruler_text: Color32::from_rgb(200, 220, 240),
+                ruler_text_active: Color32::from_rgb(0, 240, 255),
+
+                track_hdr_bg: Color32::from_rgb(18, 19, 36),
+                track_hdr_active_bg: Color32::from_rgb(30, 32, 58),
+                track_border: Color32::from_rgb(255, 0, 85),
+                track_border_active: Color32::from_rgb(0, 240, 255),
+                track_active_stripe: Color32::from_rgb(0, 240, 255),
+
+                clip_bg: Color32::from_rgb(18, 19, 36),
+                clip_bg_hidden: Color32::from_rgb(9, 10, 20),
+                clip_active_frame_bg: Color32::from_rgb(26, 28, 52),
+                clip_active_cell_bg: Color32::from_rgb(34, 38, 70),
+                clip_hdr_bg: Color32::from_rgb(30, 32, 58),
+                clip_hdr_active_layer_bg: Color32::from_rgb(42, 46, 82),
+                clip_hdr_active_cell_bg: Color32::from_rgb(0, 240, 255),
+                clip_hdr_text: Color32::from_rgb(200, 220, 240),
+                clip_hdr_active_text: Color32::from_rgb(9, 10, 20),
+
+                thumb_bg: Color32::from_rgb(9, 10, 20),
+                thumb_border: Some(Color32::from_rgb(42, 46, 82)),
+                clip_border: Color32::from_rgb(255, 0, 85),
+                clip_border_active_frame: Color32::from_rgb(0, 240, 255),
+                clip_border_active_cell: Color32::from_rgb(0, 240, 255),
+            },
+            Self::StudioLight => TimelineColors {
+                ruler_hdr_bg: Color32::from_rgb(238, 240, 246),
+                ruler_hdr_stroke: Color32::from_rgb(195, 202, 215),
+                ruler_cell_bg: Color32::from_rgb(232, 236, 244),
+                ruler_cell_active_bg: Color32::from_rgb(212, 224, 244),
+                ruler_playhead_bg: Color32::from_rgb(60, 100, 210),
+                ruler_tick_stroke: Color32::from_rgb(205, 210, 220),
+                ruler_text: Color32::from_rgb(60, 65, 80),
+                ruler_text_active: Color32::from_rgb(10, 20, 50),
+
+                track_hdr_bg: Color32::from_rgb(238, 242, 248),
+                track_hdr_active_bg: Color32::from_rgb(220, 230, 246),
+                track_border: Color32::from_rgb(195, 202, 215),
+                track_border_active: Color32::from_rgb(60, 100, 210),
+                track_active_stripe: Color32::from_rgb(60, 100, 210),
+
+                clip_bg: Color32::from_rgb(244, 246, 250),
+                clip_bg_hidden: Color32::from_rgb(228, 232, 238),
+                clip_active_frame_bg: Color32::from_rgb(226, 234, 248),
+                clip_active_cell_bg: Color32::from_rgb(216, 228, 250),
+                clip_hdr_bg: Color32::from_rgb(212, 218, 230),
+                clip_hdr_active_layer_bg: Color32::from_rgb(180, 195, 225),
+                clip_hdr_active_cell_bg: Color32::from_rgb(60, 100, 210),
+                clip_hdr_text: Color32::from_rgb(40, 45, 60),
+                clip_hdr_active_text: Color32::WHITE,
+
+                thumb_bg: Color32::WHITE,
+                thumb_border: Some(Color32::from_rgb(195, 202, 215)),
+                clip_border: Color32::from_rgb(195, 202, 215),
+                clip_border_active_frame: Color32::from_rgb(120, 150, 210),
+                clip_border_active_cell: Color32::from_rgb(60, 100, 210),
+            },
+            Self::StudioDark | Self::System => TimelineColors {
+                ruler_hdr_bg: Color32::from_rgb(24, 24, 24),
+                ruler_hdr_stroke: Color32::from_rgb(48, 48, 48),
+                ruler_cell_bg: Color32::from_rgb(24, 24, 24),
+                ruler_cell_active_bg: Color32::from_rgb(44, 44, 44),
+                ruler_playhead_bg: Color32::from_rgb(215, 140, 45),
+                ruler_tick_stroke: Color32::from_rgb(48, 48, 48),
+                ruler_text: Color32::from_rgb(175, 180, 190),
+                ruler_text_active: Color32::WHITE,
+
+                track_hdr_bg: Color32::from_rgb(28, 28, 28),
+                track_hdr_active_bg: Color32::from_rgb(40, 40, 40),
+                track_border: Color32::from_rgb(54, 54, 54),
+                track_border_active: Color32::from_rgb(215, 140, 45),
+                track_active_stripe: Color32::from_rgb(215, 140, 45),
+
+                clip_bg: Color32::from_rgb(24, 24, 24),
+                clip_bg_hidden: Color32::from_rgb(18, 18, 18),
+                clip_active_frame_bg: Color32::from_rgb(36, 36, 36),
+                clip_active_cell_bg: Color32::from_rgb(48, 48, 48),
+                clip_hdr_bg: Color32::from_rgb(44, 44, 44),
+                clip_hdr_active_layer_bg: Color32::from_rgb(58, 58, 58),
+                clip_hdr_active_cell_bg: Color32::from_rgb(215, 140, 45),
+                clip_hdr_text: Color32::from_rgb(220, 220, 220),
+                clip_hdr_active_text: Color32::from_rgb(18, 18, 18),
+
+                thumb_bg: Color32::from_rgb(18, 18, 18),
+                thumb_border: None,
+                clip_border: Color32::from_rgb(54, 54, 54),
+                clip_border_active_frame: Color32::from_rgb(130, 130, 130),
+                clip_border_active_cell: Color32::from_rgb(250, 195, 80),
+            },
+            _ => {
+                let p = self.palette();
+                let is_light = p.is_light;
+
+                let clip_hdr_text = contrast_fg(p.bg_widget_inactive, p.text_primary);
+                let clip_hdr_active_text = contrast_fg(p.selection_bg, Color32::WHITE);
+                let ruler_text = contrast_fg(p.bg_panel, p.text_primary);
+                let ruler_cell_active_bg = p.selection_bg;
+                let ruler_text_active = contrast_fg(ruler_cell_active_bg, Color32::WHITE);
+
+                TimelineColors {
+                    ruler_hdr_bg: p.bg_panel,
+                    ruler_hdr_stroke: p.border_subtle,
+                    ruler_cell_bg: p.bg_panel,
+                    ruler_cell_active_bg,
+                    ruler_playhead_bg: p.border_focused,
+                    ruler_tick_stroke: p.border_subtle,
+                    ruler_text,
+                    ruler_text_active,
+
+                    track_hdr_bg: p.bg_panel,
+                    track_hdr_active_bg: p.bg_widget_inactive,
+                    track_border: p.border_subtle,
+                    track_border_active: p.border_focused,
+                    track_active_stripe: p.border_focused,
+
+                    clip_bg: if is_light { p.bg_widget_inactive } else { p.bg_panel },
+                    clip_bg_hidden: p.bg_backdrop,
+                    clip_active_frame_bg: p.bg_widget_hovered,
+                    clip_active_cell_bg: if is_light { Color32::WHITE } else { p.bg_widget_hovered },
+                    clip_hdr_bg: p.bg_widget_inactive,
+                    clip_hdr_active_layer_bg: p.bg_widget_hovered,
+                    clip_hdr_active_cell_bg: p.selection_bg,
+                    clip_hdr_text,
+                    clip_hdr_active_text,
+
+                    thumb_bg: if is_light { Color32::WHITE } else { p.bg_backdrop },
+                    thumb_border: if is_light { Some(p.border_subtle) } else { None },
+                    clip_border: p.border_subtle,
+                    clip_border_active_frame: p.border_focused,
+                    clip_border_active_cell: p.selection_bg,
+                }
+            }
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct TimelineColors {
+    pub ruler_hdr_bg: Color32,
+    pub ruler_hdr_stroke: Color32,
+    pub ruler_cell_bg: Color32,
+    pub ruler_cell_active_bg: Color32,
+    pub ruler_playhead_bg: Color32,
+    pub ruler_tick_stroke: Color32,
+    pub ruler_text: Color32,
+    pub ruler_text_active: Color32,
+
+    pub track_hdr_bg: Color32,
+    pub track_hdr_active_bg: Color32,
+    pub track_border: Color32,
+    pub track_border_active: Color32,
+    pub track_active_stripe: Color32,
+
+    pub clip_bg: Color32,
+    pub clip_bg_hidden: Color32,
+    pub clip_active_frame_bg: Color32,
+    pub clip_active_cell_bg: Color32,
+    pub clip_hdr_bg: Color32,
+    pub clip_hdr_active_layer_bg: Color32,
+    pub clip_hdr_active_cell_bg: Color32,
+    pub clip_hdr_text: Color32,
+    pub clip_hdr_active_text: Color32,
+
+    pub thumb_bg: Color32,
+    pub thumb_border: Option<Color32>,
+    pub clip_border: Color32,
+    pub clip_border_active_frame: Color32,
+    pub clip_border_active_cell: Color32,
 }
 
 /// Returns true if the slice starts with a valid TrueType or OpenType header magic.
@@ -930,6 +1315,34 @@ mod tests {
             let key = theme.i18n_key();
             assert!(!key.is_empty());
             theme.apply(&ctx);
+
+            // Verify strong text color contrasts with panel background across all themes
+            let is_panel_dark = is_dark_color(ctx.style().visuals.panel_fill);
+            let is_strong_dark = is_dark_color(ctx.style().visuals.strong_text_color());
+            assert_ne!(
+                is_panel_dark, is_strong_dark,
+                "Theme {:?} strong text color has insufficient contrast with panel background!",
+                theme
+            );
+
+            let tc = theme.timeline_colors();
+            // Verify active cell header text contrasts with active cell header background
+            let is_hdr_dark = is_dark_color(tc.clip_hdr_active_cell_bg);
+            let is_text_dark = is_dark_color(tc.clip_hdr_active_text);
+            assert_ne!(
+                is_hdr_dark, is_text_dark,
+                "Theme {:?} active clip header text has insufficient contrast with header background!",
+                theme
+            );
+
+            // Verify active frame text in ruler contrasts with cell
+            let is_ruler_dark = is_dark_color(tc.ruler_cell_active_bg);
+            let is_ruler_text_dark = is_dark_color(tc.ruler_text_active);
+            assert_ne!(
+                is_ruler_dark, is_ruler_text_dark,
+                "Theme {:?} active ruler text has insufficient contrast with ruler cell background!",
+                theme
+            );
         }
     }
 }

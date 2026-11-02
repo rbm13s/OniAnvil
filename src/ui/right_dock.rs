@@ -1358,20 +1358,33 @@ pub fn show_right_dock(
                                 total_f
                             ),
                         };
+                        let is_light = !ui.visuals().dark_mode;
+                        let badge_fill = if is_light {
+                            Color32::from_rgb(222, 234, 252)
+                        } else {
+                            Color32::from_rgba_unmultiplied(60, 130, 210, 45)
+                        };
+                        let badge_stroke = if is_light {
+                            Color32::from_rgb(140, 180, 240)
+                        } else {
+                            Color32::from_rgba_unmultiplied(90, 165, 245, 140)
+                        };
+                        let badge_text_col = if is_light {
+                            Color32::from_rgb(20, 65, 150)
+                        } else {
+                            Color32::from_rgb(160, 215, 255)
+                        };
                         ui.horizontal(|ui| {
                             egui::Frame::NONE
-                                .fill(Color32::from_rgba_unmultiplied(60, 130, 210, 45))
-                                .stroke(Stroke::new(
-                                    1.0,
-                                    Color32::from_rgba_unmultiplied(90, 165, 245, 140),
-                                ))
+                                .fill(badge_fill)
+                                .stroke(Stroke::new(1.0, badge_stroke))
                                 .corner_radius(3.0)
                                 .inner_margin(egui::Margin::symmetric(6, 2))
                                 .show(ui, |ui| {
                                     ui.small(
                                         egui::RichText::new(badge_label)
                                             .strong()
-                                            .color(Color32::from_rgb(160, 215, 255)),
+                                            .color(badge_text_col),
                                     );
                                 });
                         });

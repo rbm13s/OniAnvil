@@ -1337,6 +1337,25 @@ impl eframe::App for OniAnvilApp {
     }
 
     fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let is_minimized = ctx.input(|i| i.viewport().minimized.unwrap_or(false));
+            if !is_minimized {
+                let current_size = ctx
+                    .input(|i| i.viewport().inner_rect)
+                    .map(|r| r.size())
+                    .unwrap_or_else(|| ctx.screen_rect().size());
+
+                if (current_size.x < 900.0 || current_size.y < 560.0)
+                    && current_size.x > 0.0
+                    && current_size.y > 0.0
+                {
+                    ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(1360.0, 820.0)));
+                    ctx.send_viewport_cmd(egui::ViewportCommand::MinInnerSize(egui::vec2(900.0, 560.0)));
+                }
+            }
+        }
+
         if ctx.input(|i| i.viewport().close_requested()) && !self.confirmed_exit {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
             let dirty_opt = self
@@ -1494,12 +1513,17 @@ impl eframe::App for OniAnvilApp {
                                                             "{}  {}",
                                                             doc.project.metadata.project_name, metrics
                                                         );
+                                                        let text_color = if is_active {
+                                                            ui.visuals().widgets.active.fg_stroke.color
+                                                        } else {
+                                                            ui.visuals().text_color()
+                                                        };
                                                         let resp = ui.selectable_label(
                                                             is_active,
                                                             if is_active {
-                                                                egui::RichText::new(tab_label).strong()
+                                                                egui::RichText::new(tab_label).strong().color(text_color)
                                                             } else {
-                                                                egui::RichText::new(tab_label).weak()
+                                                                egui::RichText::new(tab_label).color(text_color)
                                                             },
                                                         );
                                                         if resp.clicked() {
@@ -1513,8 +1537,20 @@ impl eframe::App for OniAnvilApp {
                                                         }
                                                     }
 
+                                                    let close_color = if is_active {
+                                                        ui.visuals().widgets.active.fg_stroke.color
+                                                    } else {
+                                                        ui.visuals().text_color()
+                                                    };
                                                     let close_resp = ui
-                                                        .small_button(egui::RichText::new(FA_CLOSE).size(10.0))
+                                                        .add(
+                                                            egui::Button::new(
+                                                                egui::RichText::new(FA_CLOSE)
+                                                                    .size(10.0)
+                                                                    .color(close_color),
+                                                            )
+                                                            .frame(false),
+                                                        )
                                                         .on_hover_text(self.i18n.tr("tabs.close"));
                                                     if close_resp.clicked() {
                                                         close_idx = Some(idx);
@@ -1551,16 +1587,27 @@ impl eframe::App for OniAnvilApp {
 
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if let Some(doc) = self.documents.get(self.active_doc_idx) {
+                            let is_light = !ui.visuals().dark_mode;
                             if doc.project.has_unsaved_changes {
+                                let unsaved_col = if is_light {
+                                    Color32::from_rgb(195, 95, 20)
+                                } else {
+                                    Color32::from_rgb(235, 160, 75)
+                                };
                                 ui.label(
                                     egui::RichText::new(self.i18n.tr("status.unsaved"))
-                                        .color(Color32::from_rgb(230, 160, 80))
+                                        .color(unsaved_col)
                                         .small(),
                                 );
                             } else {
+                                let saved_col = if is_light {
+                                    Color32::from_rgb(25, 130, 45)
+                                } else {
+                                    Color32::from_rgb(110, 200, 110)
+                                };
                                 ui.label(
                                     egui::RichText::new(self.i18n.tr("status.saved"))
-                                        .color(Color32::from_rgb(110, 180, 110))
+                                        .color(saved_col)
                                         .small(),
                                 );
                             }
@@ -1569,7 +1616,7 @@ impl eframe::App for OniAnvilApp {
                             let (aw, ah) = doc.project.metadata.atlas_dimensions();
                             ui.label(
                                 egui::RichText::new(format!("{}: {}×{} px", self.i18n.tr("status.atlas"), aw, ah))
-                                    .weak()
+                                    .color(ui.visuals().text_color())
                                     .small(),
                             );
                             ui.separator();
@@ -1583,14 +1630,14 @@ impl eframe::App for OniAnvilApp {
                                     "{}: {}/{} ({}×{})",
                                     self.i18n.tr("status.frame"), f_idx, f_total, fw, fh
                                 ))
-                                .weak()
+                                .color(ui.visuals().text_color())
                                 .small(),
                             );
                             ui.separator();
 
                             ui.label(
                                 egui::RichText::new(format!("{:.0}%", doc.viewport.zoom * 100.0))
-                                    .weak()
+                                    .color(ui.visuals().text_color())
                                     .small(),
                             );
                             ui.separator();
@@ -1602,19 +1649,24 @@ impl eframe::App for OniAnvilApp {
                             };
                             ui.label(
                                 egui::RichText::new(cursor_str)
-                                    .weak()
+                                    .color(ui.visuals().text_color())
                                     .small(),
                             );
 
                             if !doc.renderer.selection.is_empty() {
                                 ui.separator();
+                                let sel_col = if is_light {
+                                    Color32::from_rgb(25, 105, 205)
+                                } else {
+                                    Color32::from_rgb(100, 180, 240)
+                                };
                                 ui.label(
                                     egui::RichText::new(format!(
                                         "{}: {} px",
                                         self.i18n.tr("status.selection"),
                                         doc.renderer.selection.pixels.len()
                                     ))
-                                    .color(Color32::from_rgb(100, 180, 240))
+                                    .color(sel_col)
                                     .small(),
                                 );
                             }
@@ -1990,6 +2042,7 @@ impl eframe::App for OniAnvilApp {
                         &mut doc.history,
                         &mut doc.preview,
                         &doc.renderer,
+                        self.app_theme,
                     );
                     if let Some(f_idx) = bottom_actions.trigger_import_single_frame {
                         self.io.trigger_import_single_frame_dialog(f_idx, ctx.clone());

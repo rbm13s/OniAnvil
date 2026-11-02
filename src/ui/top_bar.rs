@@ -720,14 +720,18 @@ pub fn show_top_bars(
 
             ui.label(
                 egui::RichText::new(i18n.tr("context.active_tool"))
-                    .color(Color32::from_rgb(160, 160, 160))
+                    .color(ui.visuals().text_color())
                     .small(),
             );
-            ui.strong(format!(
-                "{} {}",
-                tools.active_tool.icon(),
-                i18n.tr(tools.active_tool.i18n_title_key())
-            ))
+            ui.label(
+                egui::RichText::new(format!(
+                    "{} {}",
+                    tools.active_tool.icon(),
+                    i18n.tr(tools.active_tool.i18n_title_key())
+                ))
+                .strong()
+                .color(ui.visuals().text_color()),
+            )
             .on_hover_text(i18n.tr(tools.active_tool.i18n_name_key()));
             ui.separator();
 

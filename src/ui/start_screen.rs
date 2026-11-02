@@ -56,17 +56,24 @@ pub fn show_start_screen(
                                 );
                                 ui.add_space(4.0);
                             }
+                            let is_light = !ui.visuals().dark_mode;
+                            let sub_text_color = if is_light {
+                                Color32::from_rgb(85, 90, 105)
+                            } else {
+                                Color32::from_rgb(170, 175, 185)
+                            };
+
                             ui.label(
                                 RichText::new(format!("OniAnvil v{}", env!("CARGO_PKG_VERSION")))
                                     .strong()
                                     .size(26.0)
-                                    .color(Color32::from_rgb(240, 240, 240)),
+                                    .color(ui.visuals().text_color()),
                             );
                             ui.add_space(2.0);
                             ui.label(
                                 RichText::new(i18n.tr("start.subtitle"))
                                     .size(13.5)
-                                    .color(Color32::from_rgb(160, 160, 160)),
+                                    .color(sub_text_color),
                             );
 
                             ui.add_space(16.0);
@@ -182,12 +189,12 @@ pub fn show_start_screen(
                                     ui.label(
                                         RichText::new(credit_prefix)
                                             .size(11.0)
-                                            .color(Color32::from_rgb(140, 140, 140)),
+                                            .color(sub_text_color),
                                     );
                                     ui.hyperlink_to(
                                         RichText::new(author_text)
                                             .size(11.0)
-                                            .color(Color32::from_rgb(110, 175, 235)),
+                                            .color(if is_light { Color32::from_rgb(30, 95, 205) } else { Color32::from_rgb(110, 175, 235) }),
                                         "https://xzany.itch.io/cat-2d-pixel-art",
                                     );
                                 },
@@ -214,7 +221,7 @@ pub fn show_start_screen(
                                 ui.label(
                                     RichText::new(i18n.tr("start.recent_empty"))
                                         .size(12.5)
-                                        .color(Color32::from_rgb(140, 140, 140)),
+                                        .color(sub_text_color),
                                 );
                             } else {
                                 for (idx, rpath) in recent_projects.iter().take(10).enumerate() {
@@ -246,14 +253,18 @@ pub fn show_start_screen(
                                             let del_btn_w = 26.0;
                                             let file_btn_w = btn_w - del_btn_w - ui.spacing().item_spacing.x;
 
+                                            let text_color = if exists {
+                                                ui.visuals().text_color()
+                                            } else if is_light {
+                                                Color32::from_rgb(180, 80, 20)
+                                            } else {
+                                                Color32::from_rgb(230, 160, 90)
+                                            };
+
                                             let btn = egui::Button::new(
                                                 RichText::new(label)
                                                     .font(FontId::proportional(12.0))
-                                                    .color(if exists {
-                                                        Color32::from_rgb(220, 220, 220)
-                                                    } else {
-                                                        Color32::from_rgb(220, 160, 100)
-                                                    }),
+                                                    .color(text_color),
                                             )
                                             .truncate();
 
@@ -300,7 +311,7 @@ pub fn show_start_screen(
                             ui.label(
                                 RichText::new(settings_msg)
                                     .size(11.5)
-                                    .color(Color32::from_rgb(140, 140, 140)),
+                                    .color(sub_text_color),
                             );
                         });
                     });

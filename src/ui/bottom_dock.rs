@@ -24,9 +24,11 @@ pub fn show_bottom_dock(
     history: &mut HistoryStack,
     preview: &mut PreviewState,
     renderer: &CanvasRenderer,
+    theme: AppTheme,
 ) -> BottomDockActions {
     let mut actions = BottomDockActions::default();
     project.ensure_layers_initialized();
+    let colors = theme.timeline_colors();
 
     TopBottomPanel::bottom("onianvil_bottom_timeline_dock")
         .resizable(true)
@@ -37,7 +39,11 @@ pub fn show_bottom_dock(
 
             // Row 1: Playback transport, FPS, Frame & Layer operations, and Hold multiplier
             ui.horizontal(|ui| {
-                ui.strong(i18n.tr("timeline.title"));
+                ui.label(
+                    egui::RichText::new(i18n.tr("timeline.title"))
+                        .strong()
+                        .color(ui.visuals().text_color()),
+                );
                 ui.separator();
 
                 if ui
@@ -96,7 +102,7 @@ pub fn show_bottom_dock(
                         current_time,
                         total_duration
                     ))
-                    .weak(),
+                    .color(colors.ruler_text),
                 );
 
                 if !project.metadata.tags.is_empty() {
@@ -391,19 +397,13 @@ pub fn show_bottom_dock(
 
                     ui.spacing_mut().item_spacing = Vec2::new(3.0, 3.0);
 
-                    let is_dark = ui.visuals().dark_mode;
-
                     // 1. Timecode Ruler Row
                     ui.horizontal(|ui| {
                         let (hdr_rect, _) = ui.allocate_exact_size(
                             Vec2::new(TRACK_HEADER_W, RULER_H),
                             egui::Sense::hover(),
                         );
-                        let (ruler_hdr_bg, ruler_hdr_stroke) = if is_dark {
-                            (Color32::from_rgb(24, 26, 31), Color32::from_rgb(48, 52, 62))
-                        } else {
-                            (Color32::from_rgb(230, 233, 240), Color32::from_rgb(195, 202, 215))
-                        };
+                        let (ruler_hdr_bg, ruler_hdr_stroke) = (colors.ruler_hdr_bg, colors.ruler_hdr_stroke);
                         ui.painter().rect_filled(hdr_rect, 2.0, ruler_hdr_bg);
                         ui.painter().rect_stroke(
                             hdr_rect,
@@ -416,6 +416,7 @@ pub fn show_bottom_dock(
                                 .max_rect(hdr_rect.shrink2(Vec2::new(6.0, 2.0)))
                                 .layout(egui::Layout::left_to_right(egui::Align::Center)),
                         );
+                        let layers_text_col = crate::theme::contrast_fg(colors.ruler_hdr_bg, colors.ruler_text_active);
                         hdr_child.label(
                             egui::RichText::new(format!(
                                 "{FA_LAYER_GROUP} {} ({})",
@@ -423,7 +424,7 @@ pub fn show_bottom_dock(
                                 layer_count
                             ))
                             .small()
-                            .strong(),
+                            .color(layers_text_col),
                         );
                         hdr_child.with_layout(
                             egui::Layout::right_to_left(egui::Align::Center),
@@ -464,23 +465,11 @@ pub fn show_bottom_dock(
                                 egui::Sense::click(),
                             );
                             let r_bg = if is_playhead {
-                                if is_dark {
-                                    Color32::from_rgb(58, 34, 34)
-                                } else {
-                                    Color32::from_rgb(255, 215, 215)
-                                }
+                                colors.ruler_playhead_bg
                             } else if is_active {
-                                if is_dark {
-                                    Color32::from_rgb(42, 46, 56)
-                                } else {
-                                    Color32::from_rgb(210, 222, 240)
-                                }
+                                colors.ruler_cell_active_bg
                             } else {
-                                if is_dark {
-                                    Color32::from_rgb(24, 26, 31)
-                                } else {
-                                    Color32::from_rgb(232, 236, 244)
-                                }
+                                colors.ruler_cell_bg
                             };
                             ui.painter().rect_filled(r_rect, 2.0, r_bg);
 
@@ -506,11 +495,7 @@ pub fn show_bottom_dock(
                             }
 
                             // Ruler tick lines
-                            let tick_stroke = if is_dark {
-                                Color32::from_rgb(48, 52, 60)
-                            } else {
-                                Color32::from_rgb(205, 210, 220)
-                            };
+                            let tick_stroke = colors.ruler_tick_stroke;
                             ui.painter().line_segment(
                                 [r_rect.left_bottom(), r_rect.left_top()],
                                 Stroke::new(1.0, tick_stroke),
@@ -523,17 +508,9 @@ pub fn show_bottom_dock(
                                 (false, false) => format!("#{}", idx + 1),
                             };
                             let ruler_text_col = if is_playhead || is_active {
-                                if is_dark {
-                                    Color32::WHITE
-                                } else {
-                                    Color32::from_rgb(25, 30, 42)
-                                }
+                                crate::theme::contrast_fg(r_bg, colors.ruler_text_active)
                             } else {
-                                if is_dark {
-                                    Color32::from_rgb(175, 180, 190)
-                                } else {
-                                    Color32::from_rgb(95, 105, 120)
-                                }
+                                crate::theme::contrast_fg(r_bg, colors.ruler_text)
                             };
                             ui.painter().text(
                                 r_rect.center(),
@@ -586,17 +563,9 @@ pub fn show_bottom_dock(
                             }
 
                             let hdr_bg = if is_active_layer {
-                                if is_dark {
-                                    Color32::from_rgb(38, 44, 56)
-                                } else {
-                                    Color32::from_rgb(218, 228, 244)
-                                }
+                                colors.track_hdr_active_bg
                             } else {
-                                if is_dark {
-                                    Color32::from_rgb(26, 29, 35)
-                                } else {
-                                    Color32::from_rgb(238, 242, 248)
-                                }
+                                colors.track_hdr_bg
                             };
                             ui.painter().rect_filled(track_hdr_rect, 3.0, hdr_bg);
 
@@ -606,13 +575,9 @@ pub fn show_bottom_dock(
                                 egui::pos2(track_hdr_rect.min.x + 4.0, track_hdr_rect.max.y),
                             );
                             let stripe_col = if is_active_layer {
-                                Color32::from_rgb(235, 155, 50)
+                                colors.track_active_stripe
                             } else {
-                                if is_dark {
-                                    Color32::from_rgb(65, 75, 90)
-                                } else {
-                                    Color32::from_rgb(180, 188, 200)
-                                }
+                                colors.track_border
                             };
                             ui.painter().rect_filled(
                                 stripe_rect,
@@ -620,17 +585,9 @@ pub fn show_bottom_dock(
                                 stripe_col,
                             );
                             let track_border_col = if is_active_layer {
-                                if is_dark {
-                                    Color32::from_rgb(95, 120, 160)
-                                } else {
-                                    Color32::from_rgb(140, 170, 220)
-                                }
+                                colors.track_border_active
                             } else {
-                                if is_dark {
-                                    Color32::from_rgb(48, 52, 62)
-                                } else {
-                                    Color32::from_rgb(205, 212, 224)
-                                }
+                                colors.track_border
                             };
                             ui.painter().rect_stroke(
                                 track_hdr_rect,
@@ -656,10 +613,15 @@ pub fn show_bottom_dock(
                             // Track header top row: V-badge, layer name, Eye, Lock
                             hdr_ui.horizontal(|ui| {
                                 let v_badge = format!("V{}", layer_idx + 1);
+                                let badge_text_col = if is_active_layer {
+                                    crate::theme::contrast_fg(colors.track_hdr_active_bg, colors.clip_hdr_active_text)
+                                } else {
+                                    crate::theme::contrast_fg(colors.track_hdr_bg, colors.clip_hdr_text)
+                                };
                                 if ui
                                     .selectable_label(
                                         is_active_layer,
-                                        egui::RichText::new(v_badge).small().strong(),
+                                        egui::RichText::new(v_badge).small().color(badge_text_col),
                                     )
                                     .clicked()
                                 {
@@ -813,29 +775,13 @@ pub fn show_bottom_dock(
 
                                 // Track clip body & header bar
                                 let clip_bg = if !layer_visible {
-                                    if is_dark {
-                                        Color32::from_rgb(20, 20, 24)
-                                    } else {
-                                        Color32::from_rgb(230, 233, 238)
-                                    }
+                                    colors.clip_bg_hidden
                                 } else if is_active_cell {
-                                    if is_dark {
-                                        Color32::from_rgb(48, 54, 66)
-                                    } else {
-                                        Color32::from_rgb(212, 226, 248)
-                                    }
+                                    colors.clip_active_cell_bg
                                 } else if is_active_frame {
-                                    if is_dark {
-                                        Color32::from_rgb(34, 38, 46)
-                                    } else {
-                                        Color32::from_rgb(224, 232, 244)
-                                    }
+                                    colors.clip_active_frame_bg
                                 } else {
-                                    if is_dark {
-                                        Color32::from_rgb(24, 27, 33)
-                                    } else {
-                                        Color32::from_rgb(242, 245, 250)
-                                    }
+                                    colors.clip_bg
                                 };
                                 ui.painter().rect_filled(rect, 3.0, clip_bg);
 
@@ -844,25 +790,13 @@ pub fn show_bottom_dock(
                                     egui::pos2(rect.max.x, rect.min.y + 11.0),
                                 );
                                 let clip_hdr_col = if !layer_visible {
-                                    if is_dark {
-                                        Color32::from_rgb(45, 45, 52)
-                                    } else {
-                                        Color32::from_rgb(180, 185, 195)
-                                    }
+                                    colors.clip_hdr_bg
                                 } else if is_active_cell {
-                                    Color32::from_rgb(215, 140, 45)
+                                    colors.clip_hdr_active_cell_bg
                                 } else if is_active_layer {
-                                    if is_dark {
-                                        Color32::from_rgb(62, 112, 168)
-                                    } else {
-                                        Color32::from_rgb(72, 130, 200)
-                                    }
+                                    colors.clip_hdr_active_layer_bg
                                 } else {
-                                    if is_dark {
-                                        Color32::from_rgb(46, 76, 114)
-                                    } else {
-                                        Color32::from_rgb(112, 146, 186)
-                                    }
+                                    colors.clip_hdr_bg
                                 };
                                 ui.painter().rect_filled(clip_hdr_rect, 2.0, clip_hdr_col);
 
@@ -873,12 +807,17 @@ pub fn show_bottom_dock(
                                 } else {
                                     format!("V{}:#{}", layer_idx + 1, idx + 1)
                                 };
+                                let clip_text_col = if is_active_cell {
+                                    crate::theme::contrast_fg(clip_hdr_col, colors.clip_hdr_active_text)
+                                } else {
+                                    crate::theme::contrast_fg(clip_hdr_col, colors.clip_hdr_text)
+                                };
                                 ui.painter().text(
                                     clip_hdr_rect.center(),
                                     egui::Align2::CENTER_CENTER,
                                     hdr_label,
                                     egui::FontId::proportional(9.5),
-                                    Color32::from_rgb(240, 244, 250),
+                                    clip_text_col,
                                 );
 
                                 // Thumbnail area inside the clip
@@ -886,21 +825,17 @@ pub fn show_bottom_dock(
                                     egui::pos2(rect.min.x + 3.0, rect.min.y + 13.0),
                                     egui::pos2(rect.max.x - 3.0, rect.max.y - 3.0),
                                 );
-                                let thumb_bg = if is_dark {
-                                    Color32::from_rgb(18, 19, 23)
-                                } else {
-                                    Color32::from_rgb(255, 255, 255)
-                                };
+                                let thumb_bg = colors.thumb_bg;
                                 ui.painter().rect_filled(
                                     thumb_area,
                                     2.0,
                                     thumb_bg,
                                 );
-                                if !is_dark {
+                                if let Some(border_col) = colors.thumb_border {
                                     ui.painter().rect_stroke(
                                         thumb_area,
                                         2.0,
-                                        Stroke::new(1.0, Color32::from_rgb(218, 222, 230)),
+                                        Stroke::new(1.0, border_col),
                                         egui::StrokeKind::Inside,
                                     );
                                 }
@@ -943,23 +878,11 @@ pub fn show_bottom_dock(
 
                                 // Clip border stroke
                                 let border_color = if is_active_cell {
-                                    if is_dark {
-                                        Color32::from_rgb(250, 195, 80)
-                                    } else {
-                                        Color32::from_rgb(225, 135, 25)
-                                    }
+                                    colors.clip_border_active_cell
                                 } else if is_active_frame {
-                                    if is_dark {
-                                        Color32::from_rgb(190, 200, 215)
-                                    } else {
-                                        Color32::from_rgb(95, 140, 205)
-                                    }
+                                    colors.clip_border_active_frame
                                 } else {
-                                    if is_dark {
-                                        Color32::from_rgb(52, 58, 68)
-                                    } else {
-                                        Color32::from_rgb(205, 212, 224)
-                                    }
+                                    colors.clip_border
                                 };
                                 ui.painter().rect_stroke(
                                     rect,
@@ -1007,12 +930,16 @@ pub fn show_bottom_dock(
                                     |ui| {
                                         ui.style_mut().wrap_mode =
                                             Some(egui::TextWrapMode::Extend);
-                                        ui.strong(format!(
-                                            "V{} — {} #{}",
-                                            layer_idx + 1,
-                                            i18n.tr("timeline.frame"),
-                                            idx + 1
-                                        ));
+                                        ui.label(
+                                            egui::RichText::new(format!(
+                                                "V{} — {} #{}",
+                                                layer_idx + 1,
+                                                i18n.tr("timeline.frame"),
+                                                idx + 1
+                                            ))
+                                            .strong()
+                                            .color(ui.visuals().text_color()),
+                                        );
                                         ui.separator();
                                         if ui
                                             .button(format!(
@@ -1303,6 +1230,7 @@ mod tests {
                 &mut history,
                 &mut preview,
                 &renderer,
+                AppTheme::StudioDark,
             );
             assert!(actions.request_delete_frame.is_none());
         });
@@ -1327,8 +1255,36 @@ mod tests {
                 &mut history,
                 &mut preview,
                 &renderer,
+                AppTheme::StudioLight,
             );
             assert!(actions.request_delete_frame.is_none());
         });
+    }
+
+    #[test]
+    fn test_bottom_dock_all_themes_render() {
+        let ctx = egui::Context::default();
+        let i18n = I18n::new(crate::i18n::Language::English);
+        let meta = ProjectMetadata::new_config("all_themes_test".to_string(), 16, 16, 4, 2, None);
+        let mut proj = Project::new(meta);
+        let mut history = HistoryStack::default();
+        let mut preview = PreviewState::default();
+        let renderer = CanvasRenderer::default();
+
+        for theme in AppTheme::ALL {
+            theme.apply(&ctx);
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                let actions = show_bottom_dock(
+                    ctx,
+                    &i18n,
+                    &mut proj,
+                    &mut history,
+                    &mut preview,
+                    &renderer,
+                    theme,
+                );
+                assert!(actions.request_delete_frame.is_none());
+            });
+        }
     }
 }
