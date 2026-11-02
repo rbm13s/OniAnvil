@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/icon.jpg" alt="OniAnvil Logo" width="128" height="128" style="border-radius: 24px;" />
+<img src="docs/assets/icon_256x256.jpg" alt="OniAnvil Logo" width="128" height="128" style="border-radius: 24px;" />
 
 # OniAnvil
 

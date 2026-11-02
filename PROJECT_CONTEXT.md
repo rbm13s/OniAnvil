@@ -60,7 +60,8 @@ OniAnvil/
 │   ├── fonts/                          # Font Awesome Free solid icons (.ttf)
 │   ├── locales/                        # 37 localized JSON dictionaries (en.json, ru.json, etc.)
 │   ├── samples/                        # Starter demo project (Cat 2D Pixel Art by xzany)
-│   └── icon_2048x2048.jpg, icon.ico    # High-resolution logos and icons
+│   ├── icon_256x256.jpg, icon_512x512.jpg, icon_1024x1024.jpg, icon_2048x2048.jpg
+│   └── icon.ico                        # Application icons and logos
 ├── docs/                               # GitHub Pages static site (HTML, CSS, screenshots)
 │   ├── app/                            # Deployed WebAssembly build (index.html, wasm, js, fonts)
 │   ├── screenshots/                    # UI showcase screenshots

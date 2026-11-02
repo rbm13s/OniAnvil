@@ -314,7 +314,7 @@ fn main() {
         // Based on README-ru.md structure
         let md_template = format!(r###"<div align="center">
 
-<img src="assets/icon.jpg" alt="OniAnvil Logo" width="128" height="128" style="border-radius: 24px;" />
+<img src="assets/icon_256x256.jpg" alt="OniAnvil Logo" width="128" height="128" style="border-radius: 24px;" />
 
 # OniAnvil
 
@@ -491,7 +491,7 @@ This project is licensed under the **[MIT License](../LICENSE)**.
   <header class="site-header">
     <div class="container nav-wrap">
       <a href="{code}.html" class="brand">
-        <img src="assets/icon.jpg" alt="OniAnvil Logo">
+        <img src="assets/icon_256x256.jpg" alt="OniAnvil Logo">
         <span>OniAnvil</span>
         <span class="badge-ver">v1.1.0</span>
       </a>
