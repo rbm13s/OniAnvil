@@ -112,7 +112,8 @@ Most existing sprite editors treat animation as a stack of disconnected image fi
 
 ### 1. Main Canvas & Studio Workspace
 *High-performance pixel workspace featuring hardware-accelerated viewport, multi-track timeline, real-time live preview, palette swatches, and precision toolbars.*
-<img src="docs/screenshots/main.png" alt="OniAnvil Main Workspace" width="950" />
+<img src="docs/screenshots/main.png" alt="OniAnvil Main Workspace Dark" width="950" /><br/><br/>
+<img src="docs/screenshots/main_light.png" alt="OniAnvil Main Workspace Light" width="950" />
 
 <br/><br/>
 
