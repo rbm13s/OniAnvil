@@ -127,8 +127,6 @@ Mevcut sprite düzenleyicilerin büyük kısmı animasyonları birbirinden bağ�
 <p align="center">
   <img src="screenshots/toolbar.png" alt="OniAnvil Hızlı Eylem Araç Çubuğu" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="OniAnvil Araçlar Standart" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="OniAnvil Araçlar Kompakt" width="300" />
 </p>
 
 <br/><br/>

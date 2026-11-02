@@ -127,8 +127,6 @@
 <p align="center">
   <img src="screenshots/toolbar.png" alt="OniAnvil Жылдам Әрекеттер Тақтасы" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="OniAnvil Құралдар Стандартты" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="OniAnvil Құралдар Ықшам" width="300" />
 </p>
 
 <br/><br/>

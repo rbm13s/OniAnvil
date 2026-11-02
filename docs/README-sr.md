@@ -127,8 +127,6 @@
 <p align="center">
   <img src="screenshots/toolbar.png" alt="Трака брзих радњи OniAnvil" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="Стандардна трака са алаткама OniAnvil" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="Компактна трака са алаткама OniAnvil" width="300" />
 </p>
 
 <br/><br/>

@@ -127,8 +127,6 @@ A maioria dos editores tradicionais trata a animação como uma coleção de arq
 <p align="center">
   <img src="screenshots/toolbar.png" alt="Barra de ações rápidas do OniAnvil" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="Ferramentas OniAnvil Padrão" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="Ferramentas OniAnvil Compactas" width="300" />
 </p>
 
 <br/><br/>

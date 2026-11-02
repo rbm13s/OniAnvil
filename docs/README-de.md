@@ -127,8 +127,6 @@ Die meisten herkömmlichen Sprite-Editoren betrachten Animationen als lose Samml
 <p align="center">
   <img src="screenshots/toolbar.png" alt="OniAnvil Schnellaktionsleiste" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="OniAnvil Werkzeuge Standard" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="OniAnvil Werkzeuge Kompakt" width="300" />
 </p>
 
 <br/><br/>

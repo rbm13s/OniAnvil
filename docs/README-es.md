@@ -127,8 +127,6 @@ La mayoría de editores tradicionales tratan la animación como una pila de arch
 <p align="center">
   <img src="screenshots/toolbar.png" alt="Barra de herramientas de OniAnvil" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="Herramientas de OniAnvil Estándar" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="Herramientas de OniAnvil Compacto" width="300" />
 </p>
 
 <br/><br/>

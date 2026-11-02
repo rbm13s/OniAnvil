@@ -127,8 +127,6 @@ Mövcud sprayt redaktorlarının böyük əksəriyyəti animasiyaya ayrı-ayrı 
 <p align="center">
   <img src="screenshots/toolbar.png" alt="OniAnvil Cəld Əməliyyat Paneli" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="OniAnvil Alətlər Standart" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="OniAnvil Alətlər Yığcam" width="300" />
 </p>
 
 <br/><br/>

@@ -127,8 +127,6 @@ Većina postojećih uređivača spriteova tretira animaciju kao skup nepovezanih
 <p align="center">
   <img src="screenshots/toolbar.png" alt="Alatna traka brzih radnji OniAnvil" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="Standardna traka alata OniAnvil" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="Kompaktna traka alata OniAnvil" width="300" />
 </p>
 
 <br/><br/>

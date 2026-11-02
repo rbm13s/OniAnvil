@@ -127,8 +127,6 @@ Większość tradycyjnych edytorów traktuje animację jako stos odizolowanych p
 <p align="center">
   <img src="screenshots/toolbar.png" alt="Pasek akcji OniAnvil" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="Narzędzia OniAnvil - standardowe" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="Narzędzia OniAnvil - kompaktowe" width="300" />
 </p>
 
 <br/><br/>

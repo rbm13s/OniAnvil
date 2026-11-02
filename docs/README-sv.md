@@ -127,8 +127,6 @@ De flesta befintliga sprite-redigerare betraktar animation som en samling frist�
 <p align="center">
   <img src="screenshots/toolbar.png" alt="OniAnvil Åtgärdsfält" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="OniAnvil Verktyg standard" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="OniAnvil Verktyg kompakt" width="300" />
 </p>
 
 <br/><br/>

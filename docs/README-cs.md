@@ -127,8 +127,6 @@ Většina dosavadních sprite editorů vnímá animaci jako hromadu oddělených
 <p align="center">
   <img src="screenshots/toolbar.png" alt="Lišta akcí OniAnvil" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="Nástroje OniAnvil - standardní" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="Nástroje OniAnvil - kompaktní" width="300" />
 </p>
 
 <br/><br/>

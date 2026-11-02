@@ -127,8 +127,6 @@
 <p align="center">
   <img src="screenshots/toolbar.png" alt="OniAnvil 顶部操作栏" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="OniAnvil 标准工具栏" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="OniAnvil 紧凑工具栏" width="300" />
 </p>
 
 <br/><br/>

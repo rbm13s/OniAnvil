@@ -127,8 +127,6 @@ Majoritatea programelor clasice de editare tratează animația ca pe un set de i
 <p align="center">
   <img src="screenshots/toolbar.png" alt="Bara de acțiuni rapide OniAnvil" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="Instrumente OniAnvil Standard" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="Instrumente OniAnvil Compact" width="300" />
 </p>
 
 <br/><br/>

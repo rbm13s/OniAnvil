@@ -127,8 +127,6 @@
 <p align="center">
   <img src="screenshots/toolbar.png" alt="Лента с бързи действия" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="Стандартна лента с инструменти" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="Компактна лента с инструменти" width="300" />
 </p>
 
 <br/><br/>

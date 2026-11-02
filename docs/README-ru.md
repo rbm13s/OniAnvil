@@ -127,8 +127,6 @@
 <p align="center">
   <img src="screenshots/toolbar.png" alt="Панель быстрых настроек" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="Панель инструментов стандартная" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="Панель инструментов компактная" width="300" />
 </p>
 
 <br/><br/>

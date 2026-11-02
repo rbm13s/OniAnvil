@@ -127,8 +127,6 @@
 <p align="center">
   <img src="screenshots/toolbar.png" alt="Գործողությունների վահանակ" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="Գործիքների վահանակ ստանդարտ" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="Գործիքների վահանակ կոմպակտ" width="300" />
 </p>
 
 <br/><br/>

@@ -127,8 +127,6 @@ Most existing sprite editors treat animation as a stack of disconnected image fi
 <p align="center">
   <img src="docs/screenshots/toolbar.png" alt="OniAnvil Action Toolbar" width="600" /><br/><br/>
   <img src="docs/screenshots/tools.png" alt="OniAnvil Tools Standard" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="docs/screenshots/tools_compact.png" alt="OniAnvil Tools Compact" width="300" />
 </p>
 
 <br/><br/>

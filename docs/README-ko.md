@@ -127,8 +127,6 @@
 <p align="center">
   <img src="screenshots/toolbar.png" alt="OniAnvil 액션 툴바" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="OniAnvil 표준 도구 패널" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="OniAnvil 컴팩트 도구 패널" width="300" />
 </p>
 
 <br/><br/>

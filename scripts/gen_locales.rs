@@ -988,10 +988,6 @@ This project is licensed under the **[MIT License](../LICENSE)**.
             <img src="screenshots/toolbar.png" alt="Horizontal context toolbar">
             <div class="caption">Top toolbar with tool options, brush size, pixel-perfect toggle, and view modes.</div>
           </div>
-          <div class="gallery-item">
-            <img src="screenshots/tools_compact.png" alt="Compact 1-column slim dock">
-            <div class="caption">Compact 1-column slim dock for maximum canvas drawing area.</div>
-          </div>
         </div>
       </div>
 

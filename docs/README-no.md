@@ -127,8 +127,6 @@ De fleste eksisterende sprite-editorer behandler animasjoner som en stabel separ
 <p align="center">
   <img src="screenshots/toolbar.png" alt="OniAnvil Handlingslinje" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="OniAnvil Verktøy standard" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="OniAnvil Verktøy kompakt" width="300" />
 </p>
 
 <br/><br/>

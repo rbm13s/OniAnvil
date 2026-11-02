@@ -127,8 +127,6 @@ La majorité des éditeurs existants traitent l'animation comme un empilement de
 <p align="center">
   <img src="screenshots/toolbar.png" alt="Barre d'actions OniAnvil" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="Outils OniAnvil Standard" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="Outils OniAnvil Compact" width="300" />
 </p>
 
 <br/><br/>

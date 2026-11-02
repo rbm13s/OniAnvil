@@ -127,8 +127,6 @@ Večina obstoječih urejevalnikov spriteov obravnava animacijo kot sklad nepovez
 <p align="center">
   <img src="screenshots/toolbar.png" alt="Orodna vrstica za hitre nastavitve OniAnvil" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="Standardna orodna vrstica OniAnvil" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="Strnjena orodna vrstica OniAnvil" width="300" />
 </p>
 
 <br/><br/>

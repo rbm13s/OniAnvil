@@ -127,8 +127,6 @@ La maggior parte degli editor esistenti tratta l'animazione come una sequenza di
 <p align="center">
   <img src="screenshots/toolbar.png" alt="Barra delle azioni di OniAnvil" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="Strumenti OniAnvil Standard" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="Strumenti OniAnvil Compatti" width="300" />
 </p>
 
 <br/><br/>

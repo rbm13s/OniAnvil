@@ -127,8 +127,6 @@ A legtöbb hagyományos képszerkesztő az animációkra különálló képfájl
 <p align="center">
   <img src="screenshots/toolbar.png" alt="OniAnvil Gyorsműveleti eszköztár" width="600" /><br/><br/>
   <img src="screenshots/tools.png" alt="OniAnvil Normál eszköztár" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tools_compact.png" alt="OniAnvil Kompakt eszköztár" width="300" />
 </p>
 
 <br/><br/>
