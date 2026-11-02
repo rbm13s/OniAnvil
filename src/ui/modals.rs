@@ -3994,9 +3994,10 @@ fn render_keycap_pill(ui: &mut Ui, token: &str) {
 }
 
 fn render_key_combo(ui: &mut Ui, combo: &str) {
+    let adapted = crate::i18n::adapt_shortcuts(combo);
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 3.0;
-        let plus_parts: Vec<&str> = combo.split('+').collect();
+        let plus_parts: Vec<&str> = adapted.split('+').collect();
         for (pi, ppart) in plus_parts.iter().enumerate() {
             let slash_parts: Vec<&str> = ppart.split('/').collect();
             for (si, spart) in slash_parts.iter().enumerate() {

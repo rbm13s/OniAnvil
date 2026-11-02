@@ -243,7 +243,7 @@ OniAnvil includes 15 precision drawing, shape, selection, and metadata tools. Ic
 
 | Tool | Icon | Hotkey | Brush Size | Pixel Perfect | Description |
 |:---|:---:|:---:|:---:|:---:|:---|
-| **Pencil** | ✏️ | <kbd>B</kbd> | 1..32 px | Yes | Primary drawing tool. 1px mode supports **Pixel-Perfect** drawing (automatically eliminates ugly staircase L-corners). Supports custom selection stamp brushes (`Ctrl/Cmd+B`). |
+| **Pencil** | ✏️ | <kbd>B</kbd> | 1..32 px | Yes | Primary drawing tool. 1px mode supports **Pixel-Perfect** drawing (automatically eliminates ugly staircase L-corners). Supports custom selection stamp brushes (<kbd>Ctrl</kbd> on Windows/Linux, <kbd>Command (⌘)</kbd> on macOS + <kbd>B</kbd>). |
 | **Eraser** | 🧹 | <kbd>E</kbd> | 1..32 px | No | Erases pixels back to transparent (`[0, 0, 0, 0]`). Bounded by selection mask if active. |
 | **Eyedropper** | 💉 | <kbd>I</kbd> / <kbd>Alt</kbd> | 1 px | No | Left-click samples color to Primary (Foreground); Right-click samples to Secondary (Background). Can sample from canvas pixels, layers, or reference sketch. |
 | **Flood Fill** | 🪣 | <kbd>G</kbd> | N/A | No | High-speed queue-based BFS fill with configurable Color Tolerance (`0..=255`). Supports Contiguous vs Global fill and selection bounding. |
@@ -316,7 +316,7 @@ Accelerate your workflow by tracing hand-drawn sketches or reference photographs
 - **Animated Marching Ants**: Active selections display animated high-visibility dual-tone dashed perimeters.
 - **Solid Flood-Fill Lasso Selection**: Unlike naive ray-casting algorithms that create unselected holes when drawing overlapping loops, OniAnvil's lasso rasterizes a closed 8-connected boundary and flood-fills the exterior, guaranteeing 100% solid, hole-free selections.
 - **Selection Operations**: Expand, Contract, Border (with Circle, Square, and Diamond kernel shapes), Translate, Invert, Delete, Free Rotate, and System Clipboard Copy/Cut/Paste.
-- **Cross-Frame Copy & Paste**: Select regions on one frame, press <kbd>Ctrl/Cmd+C</kbd>, switch frames, and press <kbd>Ctrl/Cmd+V</kbd> to paste at identical relative coordinates across any keyboard layout.
+- **Cross-Frame Copy & Paste**: Select regions on one frame, press <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>C</kbd>, switch frames, and press <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>V</kbd> to paste at identical relative coordinates across any keyboard layout.
 
 ### 7. Live FX, Filters & RotSprite
 
@@ -325,10 +325,10 @@ All image effects include a real-time **Live Preview** checkbox that previews mo
   - Interactive Eyedropper: click the pipette icon and pick colors directly from frame pixels or the palette dock.
   - Quick-pick palette strip: left-click to pick "From" color, right-click to pick "To" color.
   - Tolerance slider and batch replacement across all animation frames.
-- **Color Adjust (`Ctrl/Cmd+U`)**: Real-time HSV Hue shift, Saturation, Value brightness, and Contrast adjustment.
+- **Color Adjust (<kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>U</kbd>)**: Real-time HSV Hue shift, Saturation, Value brightness, and Contrast adjustment.
 - **Auto-Outline Generator**: Create pixel-crisp character outlines (Outside, Inside, Centered) with Square or Diamond corner joins.
 - **3×3 Convolution Filters**: Blur, Sharpen, Edge Detect, and Emboss filters with preserve-alpha toggle.
-- **Arbitrary Rotation (`Ctrl/Cmd+R`)**: Rotate selected regions or full frames by any degree using the classic **RotSprite** or **Nearest Neighbor** algorithms.
+- **Arbitrary Rotation (<kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd>)**: Rotate selected regions or full frames by any degree using the classic **RotSprite** or **Nearest Neighbor** algorithms.
 - **Remap to Palette**: Dither canvas colors into active palette using Bayer 2x2, 4x4, 8x8, or Blue Noise.
 
 ### 8. Palette Management, Swapping & Character Skins
@@ -358,6 +358,9 @@ All image effects include a real-time **Live Preview** checkbox that previews mo
 
 ## Controls & Keyboard Shortcuts
 
+> [!NOTE]
+> On macOS, use **<kbd>Command (⌘)</kbd>** everywhere **<kbd>Ctrl</kbd>** is indicated below.
+
 | Shortcut | Tool / Action | Description |
 |:---|:---|:---|
 | <kbd>B</kbd> | **Pencil** | 1px precision drawing with optional Pixel-Perfect mode |
@@ -376,22 +379,22 @@ All image effects include a real-time **Live Preview** checkbox that previews mo
 | <kbd>P</kbd> | **Pivot Points** | Position sprite origin and action points |
 | <kbd>X</kbd> | **Swap Colors** | Swap Primary and Secondary colors |
 | <kbd>[</kbd> / <kbd>]</kbd> | **Brush Size** | Decrease / Increase brush size (`1..=32`) |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>C</kbd> | **Copy** | Copy selected pixels to system clipboard |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>X</kbd> | **Cut** | Cut selected pixels to system clipboard |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>V</kbd> | **Paste** | Paste clipboard pixels into active frame |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>C</kbd> | **Copy** | Copy selected pixels to system clipboard |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>X</kbd> | **Cut** | Cut selected pixels to system clipboard |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>V</kbd> | **Paste** | Paste clipboard pixels into active frame |
 | <kbd>Delete</kbd> / <kbd>Backspace</kbd> | **Delete** | Clear pixels inside active selection |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>A</kbd> | **Select All** | Select all pixels in the active frame |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>D</kbd> / <kbd>Esc</kbd> | **Deselect** | Clear active selection mask |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>Shift</kbd> + <kbd>I</kbd> | **Invert Selection** | Invert active selection mask |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd> | **Duplicate Frame** | Duplicate active frame in timeline |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>A</kbd> | **Select All** | Select all pixels in the active frame |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>D</kbd> / <kbd>Esc</kbd> | **Deselect** | Clear active selection mask |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>Shift</kbd> + <kbd>I</kbd> | **Invert Selection** | Invert active selection mask |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd> | **Duplicate Frame** | Duplicate active frame in timeline |
 | <kbd>Space</kbd> | **Play / Pause** | Toggle animation playback in timeline |
 | <kbd>Shift</kbd> + <kbd>R</kbd> | **Replace Color** | Open Color Replace modal with live preview |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>U</kbd> | **Color Adjust** | Open HSV Hue / Saturation / Contrast modal |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | **Free Rotate** | Open arbitrary angle rotation modal (RotSprite) |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>Z</kbd> | **Undo** | Undo last canvas stroke or tool action |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>Y</kbd> / <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> | **Redo** | Redo previously undone action |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>U</kbd> | **Color Adjust** | Open HSV Hue / Saturation / Contrast modal |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | **Free Rotate** | Open arbitrary angle rotation modal (RotSprite) |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>Z</kbd> | **Undo** | Undo last canvas stroke or tool action |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>Y</kbd> / <kbd>Ctrl</kbd>/<kbd>Command (⌘)</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> | **Redo** | Redo previously undone action |
 | <kbd>Space</kbd> + Drag / MMB | **Pan Canvas** | Smooth infinite panning across canvas coordinates |
-| <kbd>Ctrl/Cmd</kbd> + Wheel / <kbd>+</kbd> / <kbd>-</kbd> | **Zoom** | Pixel-crisp zoom centered around mouse cursor |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + Wheel / <kbd>+</kbd> / <kbd>-</kbd> | **Zoom** | Pixel-crisp zoom centered around mouse cursor |
 | <kbd>Num 1</kbd> / <kbd>Num 2</kbd> | **View Mode** | Toggle between Frame View (<kbd>1</kbd>) and Atlas View (<kbd>2</kbd>) |
 | <kbd>F</kbd> | **Fit Canvas** | Auto-fit active frame to workspace center |
 | <kbd>F1</kbd> | **Help** | Open Keyboard Shortcuts modal |

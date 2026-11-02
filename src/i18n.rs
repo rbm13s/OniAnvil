@@ -396,6 +396,58 @@ pub fn load_locale_json(lang: Language) -> &'static str {
     }
 }
 
+/// Returns true if the application is running on macOS (either desktop binary or web in a macOS browser).
+pub fn is_macos_platform() -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        true
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        crate::web::is_macos_web()
+    }
+}
+
+/// Returns the primary modifier key label: "Command (⌘)" on macOS, or "Ctrl" on Windows/Linux.
+pub fn cmd_or_ctrl_name() -> &'static str {
+    if is_macos_platform() {
+        "Command (⌘)"
+    } else {
+        "Ctrl"
+    }
+}
+
+/// Dynamically adapts shortcut text from Windows/Linux (Ctrl) to macOS (Command (⌘)).
+pub fn adapt_shortcuts(text: &str) -> String {
+    if is_macos_platform() {
+        text.replace("Ctrl/Cmd", "Command (⌘)")
+            .replace("Ctrl+", "Command (⌘)+")
+            .replace("Ctrl +", "Command (⌘) + ")
+            .replace("Ctrl", "Command (⌘)")
+    } else {
+        text.replace("Ctrl/Cmd", "Ctrl")
+    }
+}
+
+fn adapt_locale_map(map: &mut HashMap<String, String>) {
+    if is_macos_platform() {
+        for val in map.values_mut() {
+            if val.contains("Ctrl/Cmd") || val.contains("Ctrl+") || val.contains("Ctrl +") {
+                *val = val
+                    .replace("Ctrl/Cmd", "Command (⌘)")
+                    .replace("Ctrl+", "Command (⌘)+")
+                    .replace("Ctrl +", "Command (⌘) + ");
+            }
+        }
+    } else {
+        for val in map.values_mut() {
+            if val.contains("Ctrl/Cmd") {
+                *val = val.replace("Ctrl/Cmd", "Ctrl");
+            }
+        }
+    }
+}
+
 pub struct I18n {
     current: Language,
     en_map: HashMap<String, String>,
@@ -410,14 +462,18 @@ impl Default for I18n {
 
 impl I18n {
     pub fn new(initial: Language) -> Self {
-        let en_map: HashMap<String, String> =
+        let mut en_map: HashMap<String, String> =
             serde_json::from_str(include_str!("../assets/locales/en.json"))
                 .expect("Failed to parse assets/locales/en.json");
+        adapt_locale_map(&mut en_map);
 
         let active_map = if initial == Language::En {
             en_map.clone()
         } else {
-            serde_json::from_str(load_locale_json(initial)).unwrap_or_else(|_| en_map.clone())
+            let mut map: HashMap<String, String> =
+                serde_json::from_str(load_locale_json(initial)).unwrap_or_else(|_| en_map.clone());
+            adapt_locale_map(&mut map);
+            map
         };
 
         Self {
@@ -437,8 +493,11 @@ impl I18n {
             if language == Language::En {
                 self.active_map = self.en_map.clone();
             } else {
-                self.active_map = serde_json::from_str(load_locale_json(language))
-                    .unwrap_or_else(|_| self.en_map.clone());
+                let mut map: HashMap<String, String> =
+                    serde_json::from_str(load_locale_json(language))
+                        .unwrap_or_else(|_| self.en_map.clone());
+                adapt_locale_map(&mut map);
+                self.active_map = map;
             }
         }
     }
@@ -481,6 +540,19 @@ mod tests {
                     key
                 );
             }
+        }
+    }
+
+    #[test]
+    fn test_adapt_shortcuts_logic() {
+        let input = "Undo (Ctrl/Cmd+Z), Save (Ctrl+S), Redo (Ctrl + Y)";
+        let adapted = adapt_shortcuts(input);
+        if is_macos_platform() {
+            assert_eq!(adapted, "Undo (Command (⌘)+Z), Save (Command (⌘)+S), Redo (Command (⌘) + Y)");
+            assert_eq!(cmd_or_ctrl_name(), "Command (⌘)");
+        } else {
+            assert_eq!(adapted, "Undo (Ctrl+Z), Save (Ctrl+S), Redo (Ctrl + Y)");
+            assert_eq!(cmd_or_ctrl_name(), "Ctrl");
         }
     }
 }

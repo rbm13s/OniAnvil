@@ -122,6 +122,9 @@ Rust ile yazılmış yüksek performanslı çapraz platform piksel sanatı iş i
 
 ## Keyboard Shortcuts
 
+> [!NOTE]
+> On macOS, use **<kbd>Command (⌘)</kbd>** everywhere **<kbd>Ctrl</kbd>** is indicated below.
+
 | Shortcut | Tool / Action | Description |
 |:---:|:---|:---|
 | <kbd>P</kbd> | Pencil | 1px precision raster drawing |
@@ -140,14 +143,14 @@ Rust ile yazılmış yüksek performanslı çapraz platform piksel sanatı iş i
 | <kbd>W</kbd> | Magic Wand | Select color-contiguous pixels |
 | <kbd>Y</kbd> | Pivot & Sockets | Rotation center and socket points |
 | <kbd>X</kbd> | Swap Swatches | Swap Primary and Secondary color swatches |
-| <kbd>Ctrl+C / X / V</kbd> | Clipboard | Copy, cut, and paste pixel clusters |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>C / X / V</kbd> | Clipboard | Copy, cut, and paste pixel clusters |
 | <kbd>Space</kbd> | Play / Pause | Toggle animation playback |
 | <kbd>A / D</kbd> | Step Frames | Step to Previous / Next frame |
 | <kbd>Shift+R</kbd> | Replace Color | Interactive color replacement dialog |
-| <kbd>Ctrl+U</kbd> | Color Adjust | HSV hue shift and contrast adjustment |
-| <kbd>Ctrl+R</kbd> | Free Rotate | Arbitrary angle rotation via RotSprite |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>U</kbd> | Color Adjust | HSV hue shift and contrast adjustment |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>R</kbd> | Free Rotate | Arbitrary angle rotation via RotSprite |
 | <kbd>Space+Drag</kbd> | Pan Canvas | Smooth infinite panning |
-| <kbd>Ctrl+Wheel</kbd> | Zoom | Pixel-crisp cursor-centered zoom |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>Wheel</kbd> | Zoom | Pixel-crisp cursor-centered zoom |
 
 ---
 

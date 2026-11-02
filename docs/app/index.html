@@ -6,8 +6,8 @@
     <title>OniAnvil — Pixel Sprites &amp; Onion-Skin Animation Studio</title>
     
 <script type="module">
-import init, * as bindings from './onianvil-f1561de4b52dec0c.js';
-const wasm = await init({ module_or_path: './onianvil-f1561de4b52dec0c_bg.wasm' });
+import init, * as bindings from './onianvil-9fea8ad21f6129fb.js';
+const wasm = await init({ module_or_path: './onianvil-9fea8ad21f6129fb_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -39,7 +39,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             height: 100%;
         }
     </style>
-<link rel="modulepreload" href="./onianvil-f1561de4b52dec0c.js" crossorigin="anonymous" integrity="sha384-otAxleenSVTRwltV5arEkC/l2M2q0liUaeS3MHDl3fLhGFrxASU16bwgnWlV8+zv"><link rel="preload" href="./onianvil-f1561de4b52dec0c_bg.wasm" crossorigin="anonymous" integrity="sha384-flCpDxmHOGHVkUaOP2lc06Y3B1supuoUxylbEkjtOqp5ZmgM02VYmcNBP+MNCZr+" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="./onianvil-9fea8ad21f6129fb.js" crossorigin="anonymous" integrity="sha384-fnwK5hsUwtBgYPNzjDToXWIG5gtZXs21q7j70TWW6AW81ejyoFDcTYDto6AZbt+Y"><link rel="preload" href="./onianvil-9fea8ad21f6129fb_bg.wasm" crossorigin="anonymous" integrity="sha384-JofAO8jNDgp4Ok7O3pQ9Ek+lTtu+iQNEocFFWeC0Td7Rl+JqT8T1XBN5ogVVP8qf" as="fetch" type="application/wasm"></head>
 <body>
     <canvas id="onianvil_canvas"></canvas>
 </body>

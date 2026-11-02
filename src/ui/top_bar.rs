@@ -72,6 +72,7 @@ pub fn show_top_bars(
 ) -> TopBarActions {
     let mut actions = TopBarActions::default();
     let has_doc = active_doc.is_some();
+    let mod_name = crate::i18n::cmd_or_ctrl_name();
 
     TopBottomPanel::top("onianvil_main_menu_bar").show(ctx, |ui: &mut Ui| {
         egui::menu::bar(ui, |ui| {
@@ -80,11 +81,23 @@ pub fn show_top_bars(
             // File Menu
             ui.menu_button(i18n.tr("menu.file"), |ui| {
                 ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
-                if ui.button(format!("{FA_PLUS} {}", i18n.tr("menu.file.new"))).clicked() {
+                if ui
+                    .add(
+                        egui::Button::new(format!("{FA_PLUS} {}", i18n.tr("menu.file.new")))
+                            .shortcut_text(format!("{mod_name}+N")),
+                    )
+                    .clicked()
+                {
                     actions.open_new_project_wizard = true;
                     ui.close_menu();
                 }
-                if ui.button(format!("{FA_FOLDER} {}", i18n.tr("menu.file.open"))).clicked() {
+                if ui
+                    .add(
+                        egui::Button::new(format!("{FA_FOLDER} {}", i18n.tr("menu.file.open")))
+                            .shortcut_text(format!("{mod_name}+O")),
+                    )
+                    .clicked()
+                {
                     actions.trigger_open_project = true;
                     ui.close_menu();
                 }
@@ -95,7 +108,8 @@ pub fn show_top_bars(
                 if ui
                     .add_enabled(
                         has_doc,
-                        egui::Button::new(format!("{FA_CLOSE} {}", i18n.tr("menu.file.close"))),
+                        egui::Button::new(format!("{FA_CLOSE} {}", i18n.tr("menu.file.close")))
+                            .shortcut_text(format!("{mod_name}+W")),
                     )
                     .clicked()
                 {
@@ -106,7 +120,8 @@ pub fn show_top_bars(
                 if ui
                     .add_enabled(
                         has_doc,
-                        egui::Button::new(format!("{FA_SAVE} {}", i18n.tr("menu.file.save"))),
+                        egui::Button::new(format!("{FA_SAVE} {}", i18n.tr("menu.file.save")))
+                            .shortcut_text(format!("{mod_name}+S")),
                     )
                     .clicked()
                 {
@@ -116,7 +131,8 @@ pub fn show_top_bars(
                 if ui
                     .add_enabled(
                         has_doc,
-                        egui::Button::new(format!("{FA_SAVE} {}", i18n.tr("menu.file.save_as"))),
+                        egui::Button::new(format!("{FA_SAVE} {}", i18n.tr("menu.file.save_as")))
+                            .shortcut_text(format!("{mod_name}+Shift+S")),
                     )
                     .clicked()
                 {
@@ -213,7 +229,8 @@ pub fn show_top_bars(
                 if ui
                     .add_enabled(
                         can_undo,
-                        egui::Button::new(format!("{FA_UNDO} {}", i18n.tr("menu.edit.undo"))),
+                        egui::Button::new(format!("{FA_UNDO} {}", i18n.tr("menu.edit.undo")))
+                            .shortcut_text(format!("{mod_name}+Z")),
                     )
                     .clicked()
                 {
@@ -223,7 +240,8 @@ pub fn show_top_bars(
                 if ui
                     .add_enabled(
                         can_redo,
-                        egui::Button::new(format!("{FA_REDO} {}", i18n.tr("menu.edit.redo"))),
+                        egui::Button::new(format!("{FA_REDO} {}", i18n.tr("menu.edit.redo")))
+                            .shortcut_text(format!("{mod_name}+Y")),
                     )
                     .clicked()
                 {
@@ -234,7 +252,8 @@ pub fn show_top_bars(
                 if ui
                     .add_enabled(
                         has_doc,
-                        egui::Button::new(format!("{FA_COPY} {}", i18n.tr("menu.edit.copy"))),
+                        egui::Button::new(format!("{FA_COPY} {}", i18n.tr("menu.edit.copy")))
+                            .shortcut_text(format!("{mod_name}+C")),
                     )
                     .clicked()
                 {
@@ -244,7 +263,8 @@ pub fn show_top_bars(
                 if ui
                     .add_enabled(
                         has_doc,
-                        egui::Button::new(format!("{FA_SCISSORS} {}", i18n.tr("menu.edit.cut"))),
+                        egui::Button::new(format!("{FA_SCISSORS} {}", i18n.tr("menu.edit.cut")))
+                            .shortcut_text(format!("{mod_name}+X")),
                     )
                     .clicked()
                 {
@@ -254,7 +274,8 @@ pub fn show_top_bars(
                 if ui
                     .add_enabled(
                         has_doc,
-                        egui::Button::new(format!("{FA_CLIPBOARD} {}", i18n.tr("menu.edit.paste"))),
+                        egui::Button::new(format!("{FA_CLIPBOARD} {}", i18n.tr("menu.edit.paste")))
+                            .shortcut_text(format!("{mod_name}+V")),
                     )
                     .clicked()
                 {
@@ -265,7 +286,8 @@ pub fn show_top_bars(
                 if ui
                     .add_enabled(
                         has_doc,
-                        egui::Button::new(i18n.tr("menu.edit.select_all")),
+                        egui::Button::new(i18n.tr("menu.edit.select_all"))
+                            .shortcut_text(format!("{mod_name}+A")),
                     )
                     .clicked()
                 {
@@ -275,7 +297,8 @@ pub fn show_top_bars(
                 if ui
                     .add_enabled(
                         has_doc,
-                        egui::Button::new(i18n.tr("menu.edit.invert_selection")),
+                        egui::Button::new(i18n.tr("menu.edit.invert_selection"))
+                            .shortcut_text(format!("{mod_name}+Shift+I")),
                     )
                     .clicked()
                 {
@@ -421,21 +444,33 @@ pub fn show_top_bars(
             ui.menu_button(i18n.tr("menu.select"), |ui| {
                 ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
                 if ui
-                    .add_enabled(has_doc, egui::Button::new(i18n.tr("menu.edit.select_all")))
+                    .add_enabled(
+                        has_doc,
+                        egui::Button::new(i18n.tr("menu.edit.select_all"))
+                            .shortcut_text(format!("{mod_name}+A")),
+                    )
                     .clicked()
                 {
                     actions.trigger_select_all = true;
                     ui.close_menu();
                 }
                 if ui
-                    .add_enabled(has_doc, egui::Button::new(i18n.tr("menu.edit.invert_selection")))
+                    .add_enabled(
+                        has_doc,
+                        egui::Button::new(i18n.tr("menu.edit.invert_selection"))
+                            .shortcut_text(format!("{mod_name}+Shift+I")),
+                    )
                     .clicked()
                 {
                     actions.trigger_invert_selection = true;
                     ui.close_menu();
                 }
                 if ui
-                    .add_enabled(has_doc, egui::Button::new(i18n.tr("menu.select.deselect")))
+                    .add_enabled(
+                        has_doc,
+                        egui::Button::new(i18n.tr("menu.select.deselect"))
+                            .shortcut_text(format!("Esc / {mod_name}+D")),
+                    )
                     .clicked()
                 {
                     actions.trigger_deselect = true;

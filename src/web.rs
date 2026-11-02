@@ -17,6 +17,27 @@ static GEORGIAN_FETCH_STATE: AtomicU8 = AtomicU8::new(0);
 static ARMENIAN_FETCH_STATE: AtomicU8 = AtomicU8::new(0);
 static EXTENDED_FETCH_STATE: AtomicU8 = AtomicU8::new(0);
 
+/// Returns true if running in a web browser on macOS.
+pub fn is_macos_web() -> bool {
+    #[cfg(target_arch = "wasm32")]
+    {
+        if let Some(window) = web_sys::window() {
+            let nav = window.navigator();
+            if let Ok(ua) = nav.user_agent() {
+                if ua.contains("Macintosh") || ua.contains("Mac OS X") {
+                    return true;
+                }
+            }
+            if let Ok(platform) = nav.platform() {
+                if platform.contains("Mac") {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
 pub fn is_cjk_font_fetching_web() -> bool {
     CJK_FETCH_STATE.load(Ordering::SeqCst) == 1
 }

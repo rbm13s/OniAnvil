@@ -399,6 +399,9 @@ fn main() {
 
 ## Keyboard Shortcuts
 
+> [!NOTE]
+> On macOS, use **<kbd>Command (⌘)</kbd>** everywhere **<kbd>Ctrl</kbd>** is indicated below.
+
 | Shortcut | Tool / Action | Description |
 |:---:|:---|:---|
 | <kbd>P</kbd> | Pencil | 1px precision raster drawing |
@@ -417,14 +420,14 @@ fn main() {
 | <kbd>W</kbd> | Magic Wand | Select color-contiguous pixels |
 | <kbd>Y</kbd> | Pivot & Sockets | Rotation center and socket points |
 | <kbd>X</kbd> | Swap Swatches | Swap Primary and Secondary color swatches |
-| <kbd>Ctrl+C / X / V</kbd> | Clipboard | Copy, cut, and paste pixel clusters |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>C / X / V</kbd> | Clipboard | Copy, cut, and paste pixel clusters |
 | <kbd>Space</kbd> | Play / Pause | Toggle animation playback |
 | <kbd>A / D</kbd> | Step Frames | Step to Previous / Next frame |
 | <kbd>Shift+R</kbd> | Replace Color | Interactive color replacement dialog |
-| <kbd>Ctrl+U</kbd> | Color Adjust | HSV hue shift and contrast adjustment |
-| <kbd>Ctrl+R</kbd> | Free Rotate | Arbitrary angle rotation via RotSprite |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>U</kbd> | Color Adjust | HSV hue shift and contrast adjustment |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>R</kbd> | Free Rotate | Arbitrary angle rotation via RotSprite |
 | <kbd>Space+Drag</kbd> | Pan Canvas | Smooth infinite panning |
-| <kbd>Ctrl+Wheel</kbd> | Zoom | Pixel-crisp cursor-centered zoom |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>Wheel</kbd> | Zoom | Pixel-crisp cursor-centered zoom |
 
 ---
 
@@ -1161,7 +1164,7 @@ This project is licensed under the **[MIT License](../LICENSE)**.
     <div class="container">
       <div class="section-head">
         <h2 class="section-title">{nav_keys}</h2>
-        <p class="section-desc">Optimized for rapid one-handed muscle memory.</p>
+        <p class="section-desc">Optimized for rapid one-handed muscle memory (use <kbd>Command (⌘)</kbd> on macOS in place of <kbd>Ctrl</kbd>).</p>
       </div>
 
       <table class="shortcuts-table">
@@ -1254,7 +1257,7 @@ This project is licensed under the **[MIT License](../LICENSE)**.
             <td>Swap Primary and Secondary active color swatches</td>
           </tr>
           <tr>
-            <td><kbd>Ctrl+C / X / V</kbd></td>
+            <td><kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd></td>
             <td>Clipboard</td>
             <td>Copy, Cut, and Paste selected pixel clusters across frames</td>
           </tr>
@@ -1274,12 +1277,12 @@ This project is licensed under the **[MIT License](../LICENSE)**.
             <td>Modal to swap colors with live preview and pipette</td>
           </tr>
           <tr>
-            <td><kbd>Ctrl+U</kbd></td>
+            <td><kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>U</kbd></td>
             <td>Color Adjust</td>
             <td>HSV hue shift, saturation, and contrast adjustment</td>
           </tr>
           <tr>
-            <td><kbd>Ctrl+R</kbd></td>
+            <td><kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>R</kbd></td>
             <td>Free Rotate</td>
             <td>Arbitrary angle rotation using RotSprite algorithm</td>
           </tr>
@@ -1289,7 +1292,7 @@ This project is licensed under the **[MIT License](../LICENSE)**.
             <td>Smooth infinite panning across canvas coordinates</td>
           </tr>
           <tr>
-            <td><kbd>Ctrl+Wheel</kbd></td>
+            <td><kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>Wheel</kbd></td>
             <td>Zoom</td>
             <td>Pixel-crisp zoom centered around mouse cursor</td>
           </tr>
