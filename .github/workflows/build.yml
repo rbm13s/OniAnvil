@@ -291,7 +291,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Generate structured changelog
-        run: cargo run --bin generate_changelog -- --repo "rbm13s/OniAnvil" --tag "${{ github.ref_name }}" --output release_notes.md
+        run: cargo run --manifest-path tools/generate_changelog/Cargo.toml -- --repo "rbm13s/OniAnvil" --tag "${{ github.ref_name }}" --output release_notes.md
 
       - name: Download all build artifacts
         uses: actions/download-artifact@v4

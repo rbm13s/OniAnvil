@@ -1,9 +1,11 @@
 # Rust build artifacts
-/target/
+target/
+**/target/
 **/*.rs.bk
 *.pdb
 
 # Release archives & packages
+release_notes.md
 *.zip
 *.tar.gz
 *.deb

@@ -66,14 +66,14 @@ OniAnvil/
 │   ├── screenshots/                    # UI showcase screenshots
 │   ├── index.html, ru.html, etc.       # 37 localized landing pages
 │   └── README-*.md                     # 36 localized README translations
+├── tools/
+│   └── generate_changelog/             # Standalone lightweight CI tool for structured release notes (0 external deps)
 ├── src/
 │   ├── main.rs                         # Application entry point, window init & font loading
 │   ├── app.rs                          # OniAnvilApp state, docking layout, hotkey bindings
 │   ├── i18n.rs                         # 37-language i18n manager with 100% dictionary key parity
 │   ├── theme.rs                        # 35 ergonomic, console & CRT themes
 │   ├── web.rs                          # WASM dynamic font loading queue and browser bindings
-│   ├── bin/
-│   │   └── generate_changelog.rs       # Categorized GitHub release notes generator
 │   ├── canvas/
 │   │   ├── mod.rs
 │   │   ├── viewport.rs                 # Pan, zoom, coordinate space conversions
@@ -271,7 +271,7 @@ flowchart TD
     - macOS Universal (`OniAnvil-macos-universal.zip` with Apple Silicon + Intel binary)
     - Windows (`OniAnvil-windows-x86_64.zip` with embedded icon)
     - WebAssembly build deployed to GitHub Pages (`docs/app/`)
-  - Automated categorized release notes via `src/bin/generate_changelog.rs`.
+  - Automated categorized release notes via `tools/generate_changelog/src/main.rs`.
   - Production Release `v1.0.0` tagged and published.
 
 ---
