@@ -33,6 +33,7 @@ fn main() -> eframe::Result<()> {
     let mut viewport = egui::ViewportBuilder::default()
         .with_inner_size([1360.0, 820.0])
         .with_min_inner_size([900.0, 560.0])
+        .with_resizable(true)
         .with_title(&app_title);
 
     if let Some(icon) = load_app_icon() {
@@ -41,11 +42,25 @@ fn main() -> eframe::Result<()> {
 
     let native_options = eframe::NativeOptions {
         viewport,
+        centered: true,
+        window_builder: Some(Box::new(|mut builder| {
+            const MIN_W: f32 = 900.0;
+            const MIN_H: f32 = 560.0;
+            const DEF_W: f32 = 1360.0;
+            const DEF_H: f32 = 820.0;
+
+            if let Some(inner_size) = builder.inner_size {
+                if inner_size.x < MIN_W || inner_size.y < MIN_H {
+                    builder = builder.with_inner_size([DEF_W, DEF_H]);
+                }
+            }
+            builder.with_min_inner_size([MIN_W, MIN_H])
+        })),
         ..Default::default()
     };
 
     eframe::run_native(
-        &app_title,
+        "OniAnvil",
         native_options,
         Box::new(|cc| Ok(Box::new(OniAnvilApp::new(cc)))),
     )
