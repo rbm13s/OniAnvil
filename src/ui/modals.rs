@@ -118,7 +118,9 @@ impl NewProjectWizardState {
             .open(&mut window_open)
             .collapsible(false)
             .resizable(false)
-            .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(ctx.screen_rect().center())
+            .constrain(true)
             .show(ctx, |ui: &mut Ui| {
                 ui.set_min_width(380.0);
 
@@ -309,7 +311,9 @@ impl ReGridModalState {
             .open(&mut window_open)
             .collapsible(false)
             .resizable(false)
-            .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(ctx.screen_rect().center())
+            .constrain(true)
             .show(ctx, |ui| {
                 ui.set_min_width(300.0);
                 ui.horizontal(|ui| {
@@ -437,7 +441,9 @@ impl Resize9GridModalState {
             .open(&mut window_open)
             .collapsible(false)
             .resizable(false)
-            .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(ctx.screen_rect().center())
+            .constrain(true)
             .show(ctx, |ui| {
                 ui.set_min_width(310.0);
                 ui.horizontal(|ui| {
@@ -746,7 +752,9 @@ impl SheetSlicerModalState {
             .open(&mut window_open)
             .collapsible(false)
             .resizable(false)
-            .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(ctx.screen_rect().center())
+            .constrain(true)
             .show(ctx, |ui| {
                 ui.set_min_width(520.0);
                 ui.horizontal(|ui| {
@@ -1054,7 +1062,9 @@ impl UnsavedChangesModalState {
             .open(&mut window_open)
             .collapsible(false)
             .resizable(false)
-            .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(ctx.screen_rect().center())
+            .constrain(true)
             .show(ctx, |ui| {
                 ui.set_min_width(390.0);
                 ui.vertical_centered(|ui| {
@@ -1155,7 +1165,9 @@ impl ExportScaledPngModalState {
             .open(&mut window_open)
             .collapsible(false)
             .resizable(false)
-            .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(ctx.screen_rect().center())
+            .constrain(true)
             .show(ctx, |ui| {
                 ui.set_min_width(320.0);
                 ui.horizontal(|ui| {
@@ -1280,7 +1292,9 @@ impl ExportGifModalState {
             .open(&mut window_open)
             .collapsible(false)
             .resizable(false)
-            .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(ctx.screen_rect().center())
+            .constrain(true)
             .show(ctx, |ui| {
                 ui.set_min_width(320.0);
                 ui.horizontal(|ui| {
@@ -1435,7 +1449,9 @@ impl ExportPackedAtlasModalState {
             .open(&mut window_open)
             .collapsible(false)
             .resizable(false)
-            .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(ctx.screen_rect().center())
+            .constrain(true)
             .show(ctx, |ui| {
                 ui.set_min_width(340.0);
                 ui.label(i18n.tr("modal.pack_atlas.prompt"));
@@ -1610,7 +1626,9 @@ impl ReplaceColorModalState {
             .collapsible(false)
             .resizable(false)
             .default_width(340.0)
-            .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(ctx.screen_rect().center())
+            .constrain(true)
             .show(ctx, |ui| {
                 ui.set_width(340.0);
                 ui.label(i18n.tr("modal.replace_color.prompt"));
@@ -1897,7 +1915,9 @@ impl ColorAdjustModalState {
             .collapsible(false)
             .resizable(false)
             .default_width(360.0)
-            .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(ctx.screen_rect().center())
+            .constrain(true)
             .show(ctx, |ui| {
                 ui.set_width(360.0);
                 ui.label(i18n.tr("modal.color_adjust.prompt"));
@@ -2039,7 +2059,9 @@ impl ModifySelectionModalState {
             .collapsible(false)
             .resizable(false)
             .default_width(340.0)
-            .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(ctx.screen_rect().center())
+            .constrain(true)
             .show(ctx, |ui| {
                 ui.set_width(340.0);
                 ui.label(i18n.tr("modal.modify_sel.prompt"));
@@ -2211,7 +2233,9 @@ impl OutlineFxModalState {
             .collapsible(false)
             .resizable(false)
             .default_width(340.0)
-            .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(ctx.screen_rect().center())
+            .constrain(true)
             .show(ctx, |ui| {
                 ui.set_width(340.0);
                 ui.label(i18n.tr("modal.outline_fx.prompt"));
@@ -2401,7 +2425,9 @@ impl ConvolutionModalState {
             .collapsible(false)
             .resizable(false)
             .default_width(340.0)
-            .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(ctx.screen_rect().center())
+            .constrain(true)
             .show(ctx, |ui| {
                 ui.set_width(340.0);
                 ui.label(i18n.tr("modal.convolution.prompt"));
@@ -2584,7 +2610,9 @@ impl RemapPaletteModalState {
             .collapsible(false)
             .resizable(false)
             .default_width(340.0)
-            .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(ctx.screen_rect().center())
+            .constrain(true)
             .show(ctx, |ui| {
                 ui.set_width(340.0);
                 ui.label(i18n.tr("modal.remap_palette.prompt"));
@@ -2745,7 +2773,9 @@ impl BakeSketchModalState {
             .collapsible(false)
             .resizable(false)
             .default_width(380.0)
-            .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(ctx.screen_rect().center())
+            .constrain(true)
             .show(ctx, |ui| {
                 ui.set_width(380.0);
                 ui.label(i18n.tr("modal.bake_sketch.prompt"));
@@ -3040,7 +3070,9 @@ impl RotateModalState {
             .collapsible(false)
             .resizable(false)
             .default_width(340.0)
-            .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(ctx.screen_rect().center())
+            .constrain(true)
             .show(ctx, |ui| {
                 ui.set_width(340.0);
                 ui.label(i18n.tr("modal.rotate.prompt"));
@@ -3157,7 +3189,9 @@ pub fn show_recovery_modal(
     Window::new(i18n.tr("modal.recovery.title"))
         .collapsible(false)
         .resizable(false)
-        .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+        .pivot(egui::Align2::CENTER_CENTER)
+        .default_pos(ctx.screen_rect().center())
+        .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(340.0);
             ui.vertical_centered(|ui| {
@@ -3217,7 +3251,9 @@ pub fn show_confirm_delete_frame_modal(
     Window::new(i18n.tr("timeline.confirm_delete.title"))
         .collapsible(false)
         .resizable(false)
-        .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+        .pivot(egui::Align2::CENTER_CENTER)
+        .default_pos(ctx.screen_rect().center())
+        .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(340.0);
             ui.vertical_centered(|ui| {
@@ -3286,7 +3322,9 @@ pub fn show_confirm_delete_layer_modal(
     Window::new(i18n.tr("timeline.confirm_delete_layer.title"))
         .collapsible(false)
         .resizable(false)
-        .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+        .pivot(egui::Align2::CENTER_CENTER)
+        .default_pos(ctx.screen_rect().center())
+        .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(340.0);
             ui.vertical_centered(|ui| {
@@ -3361,7 +3399,9 @@ pub fn show_confirm_delete_skin_modal(
     Window::new(i18n.tr("panel.palette.confirm_del_skin.title"))
         .collapsible(false)
         .resizable(false)
-        .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+        .pivot(egui::Align2::CENTER_CENTER)
+        .default_pos(ctx.screen_rect().center())
+        .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(340.0);
             ui.vertical_centered(|ui| {
@@ -3438,7 +3478,9 @@ pub fn show_confirm_delete_recent_modal(
     Window::new(i18n.tr("start.confirm_delete.title"))
         .collapsible(false)
         .resizable(false)
-        .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+        .pivot(egui::Align2::CENTER_CENTER)
+        .default_pos(ctx.screen_rect().center())
+        .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(340.0);
             ui.vertical_centered(|ui| {
@@ -3509,7 +3551,9 @@ pub fn show_confirm_delete_palette_slot_modal(
     Window::new(i18n.tr("panel.palette.confirm_del_slot.title"))
         .collapsible(false)
         .resizable(false)
-        .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+        .pivot(egui::Align2::CENTER_CENTER)
+        .default_pos(ctx.screen_rect().center())
+        .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(340.0);
             ui.vertical_centered(|ui| {
@@ -3582,7 +3626,9 @@ pub fn show_confirm_delete_pivot_point_modal(
     Window::new(i18n.tr("panel.pivot.confirm_del.title"))
         .collapsible(false)
         .resizable(false)
-        .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+        .pivot(egui::Align2::CENTER_CENTER)
+        .default_pos(ctx.screen_rect().center())
+        .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(340.0);
             ui.vertical_centered(|ui| {
@@ -3654,7 +3700,9 @@ pub fn show_confirm_delete_tag_modal(
     Window::new(i18n.tr("timeline.confirm_del_tag.title"))
         .collapsible(false)
         .resizable(false)
-        .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+        .pivot(egui::Align2::CENTER_CENTER)
+        .default_pos(ctx.screen_rect().center())
+        .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(340.0);
             ui.vertical_centered(|ui| {
@@ -3725,7 +3773,9 @@ pub fn show_about_modal(ctx: &Context, i18n: &I18n, open: &mut bool) {
         .open(&mut window_open)
         .collapsible(false)
         .resizable(false)
-        .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
+        .pivot(egui::Align2::CENTER_CENTER)
+        .default_pos(ctx.screen_rect().center())
+        .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(320.0);
             ui.label(i18n.tr("modal.about.description"));
@@ -3786,7 +3836,9 @@ pub fn show_confirm_close_doc_modal(
     Window::new(i18n.tr("modal.close_doc.title"))
         .collapsible(false)
         .resizable(false)
-        .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+        .pivot(egui::Align2::CENTER_CENTER)
+        .default_pos(ctx.screen_rect().center())
+        .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(360.0);
             ui.vertical_centered(|ui| {
@@ -3872,7 +3924,9 @@ pub fn show_confirm_exit_app_modal(
     Window::new(i18n.tr("modal.confirm_exit.title"))
         .collapsible(false)
         .resizable(false)
-        .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+        .pivot(egui::Align2::CENTER_CENTER)
+        .default_pos(ctx.screen_rect().center())
+        .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(320.0);
             ui.vertical_centered(|ui| {
@@ -4073,7 +4127,9 @@ pub fn show_hotkeys_modal(ctx: &Context, open: &mut bool, i18n: &I18n) {
         .open(&mut window_open)
         .collapsible(false)
         .resizable(false)
-        .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+        .pivot(egui::Align2::CENTER_CENTER)
+        .default_pos(ctx.screen_rect().center())
+        .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(640.0);
             ui.set_max_width(680.0);
