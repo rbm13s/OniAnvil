@@ -432,7 +432,7 @@ impl Project {
     }
 
     /// Advanced rasterization of the sketch with palette selection, configurable dithering,
-    /// dominant/mode filtering for AI pixel art noise elimination, and line/edge protection.
+    /// background removal, color pre-adjustments, crisp line enhancement, and post-processing outlines.
     pub fn bake_sketch_advanced(
         &mut self,
         frame_index: usize,
@@ -457,6 +457,7 @@ impl Project {
             BakePaletteSource::OriginalColors => None,
         };
 
+        // Step 1: Sample raw sketch grid
         let mut sampled_grid: Vec<Option<[u8; 4]>> = vec![None; (fw * fh) as usize];
         for ly in 0..(fh as i32) {
             for lx in 0..(fw as i32) {
@@ -469,13 +470,410 @@ impl Project {
                     ly,
                     settings.pixel_precision,
                     settings.alpha_threshold,
-                    palette_buf.as_deref(),
+                    None,
+                    settings.crisp_pixels_and_lines,
                 );
             }
         }
 
-        let mut changed = false;
+        // Step 2: Pre-Bake Color Adjustments (Brightness, Contrast, Saturation)
+        if settings.brightness != 0 || settings.contrast != 0 || settings.saturation != 0 {
+            for col in sampled_grid.iter_mut().flatten() {
+                *col = crate::model::sketch::adjust_rgba_color(
+                    *col,
+                    settings.brightness,
+                    settings.contrast,
+                    settings.saturation,
+                );
+            }
+        }
 
+        // Step 2.5: Background Removal on ORIGINAL sampled sketch (if chosen)
+        if settings.remove_background && settings.bg_target == crate::model::sketch::BackgroundRemovalTarget::Original {
+            let bg = settings.bg_color;
+            let tol = settings.bg_tolerance as u32;
+
+            if settings.bg_contiguous_only {
+                let mut is_bg = vec![false; (fw * fh) as usize];
+                let mut queue = std::collections::VecDeque::new();
+
+                for lx in 0..(fw as i32) {
+                    for &ly in &[0, fh as i32 - 1] {
+                        let idx = (ly as u32 * fw + lx as u32) as usize;
+                        let matches = match sampled_grid[idx] {
+                            None => true,
+                            Some(c) => crate::model::sketch::color_distance_rgb([c[0], c[1], c[2]], bg) <= tol,
+                        };
+                        if matches && !is_bg[idx] {
+                            is_bg[idx] = true;
+                            queue.push_back((lx, ly));
+                        }
+                    }
+                }
+                for ly in 0..(fh as i32) {
+                    for &lx in &[0, fw as i32 - 1] {
+                        let idx = (ly as u32 * fw + lx as u32) as usize;
+                        let matches = match sampled_grid[idx] {
+                            None => true,
+                            Some(c) => crate::model::sketch::color_distance_rgb([c[0], c[1], c[2]], bg) <= tol,
+                        };
+                        if matches && !is_bg[idx] {
+                            is_bg[idx] = true;
+                            queue.push_back((lx, ly));
+                        }
+                    }
+                }
+
+                while let Some((cx, cy)) = queue.pop_front() {
+                    for (nx, ny) in [
+                        (cx - 1, cy),
+                        (cx + 1, cy),
+                        (cx, cy - 1),
+                        (cx, cy + 1),
+                    ] {
+                        if nx >= 0 && nx < fw as i32 && ny >= 0 && ny < fh as i32 {
+                            let n_idx = (ny as u32 * fw + nx as u32) as usize;
+                            if !is_bg[n_idx] {
+                                let matches = match sampled_grid[n_idx] {
+                                    None => true,
+                                    Some(c) => crate::model::sketch::color_distance_rgb([c[0], c[1], c[2]], bg) <= tol,
+                                };
+                                if matches {
+                                    is_bg[n_idx] = true;
+                                    queue.push_back((nx, ny));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                for idx in 0..sampled_grid.len() {
+                    if is_bg[idx] {
+                        sampled_grid[idx] = None;
+                    }
+                }
+            } else {
+                for entry in sampled_grid.iter_mut() {
+                    if let Some(c) = entry {
+                        if crate::model::sketch::color_distance_rgb([c[0], c[1], c[2]], bg) <= tol {
+                            *entry = None;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Step 3: Detect Edges & Outlines for Protection
+        let mut is_edge_map = vec![false; (fw * fh) as usize];
+        for ly in 0..(fh as i32) {
+            for lx in 0..(fw as i32) {
+                let idx = (ly as u32 * fw + lx as u32) as usize;
+                let Some(base_col) = sampled_grid[idx] else {
+                    continue;
+                };
+
+                for (nx, ny) in [
+                    (lx - 1, ly),
+                    (lx + 1, ly),
+                    (lx, ly - 1),
+                    (lx, ly + 1),
+                ] {
+                    if nx < 0 || ny < 0 || nx >= fw as i32 || ny >= fh as i32 {
+                        is_edge_map[idx] = true;
+                        break;
+                    }
+                    let n_idx = (ny as u32 * fw + nx as u32) as usize;
+                    match sampled_grid[n_idx] {
+                        None => {
+                            is_edge_map[idx] = true;
+                            break;
+                        }
+                        Some(ncol) => {
+                            let dr = (base_col[0] as i32 - ncol[0] as i32).abs();
+                            let dg = (base_col[1] as i32 - ncol[1] as i32).abs();
+                            let db = (base_col[2] as i32 - ncol[2] as i32).abs();
+                            if dr + dg + db > 80 {
+                                is_edge_map[idx] = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Step 4: Quantize to Palette with Advanced Dithering
+        let use_diffusion = settings.dither_mode.is_diffusion();
+        let bg_target = if settings.remove_background {
+            if let Some(pal) = palette_buf.as_deref() {
+                let snapped = nearest_palette_color([settings.bg_color[0], settings.bg_color[1], settings.bg_color[2], 255], pal);
+                [snapped[0], snapped[1], snapped[2]]
+            } else {
+                settings.bg_color
+            }
+        } else {
+            settings.bg_color
+        };
+
+        let mut err_buf: Vec<[f32; 3]> = if use_diffusion {
+            vec![[0.0, 0.0, 0.0]; (fw * fh) as usize]
+        } else {
+            Vec::new()
+        };
+
+        let mut quantized_grid: Vec<Option<[u8; 4]>> = vec![None; (fw * fh) as usize];
+
+        for ly in 0..(fh as i32) {
+            for lx in 0..(fw as i32) {
+                let idx = (ly as u32 * fw + lx as u32) as usize;
+                let Some(base_col) = sampled_grid[idx] else {
+                    continue;
+                };
+
+                let is_edge = is_edge_map[idx];
+
+                let final_col = if let Some(pal) = palette_buf.as_deref() {
+                    if is_edge && settings.edge_protection {
+                        nearest_palette_color(base_col, pal)
+                    } else {
+                        match settings.dither_mode {
+                            PaletteDitherMode::None => nearest_palette_color(base_col, pal),
+                            PaletteDitherMode::Bayer2x2 => {
+                                let d = (crate::model::palette::BAYER_2X2[(ly as usize) % 2][(lx as usize) % 2] - 0.5)
+                                    * settings.dither_strength;
+                                let pr = (base_col[0] as f32 + d).clamp(0.0, 255.0) as u8;
+                                let pg = (base_col[1] as f32 + d).clamp(0.0, 255.0) as u8;
+                                let pb = (base_col[2] as f32 + d).clamp(0.0, 255.0) as u8;
+                                nearest_palette_color([pr, pg, pb, base_col[3]], pal)
+                            }
+                            PaletteDitherMode::Bayer4x4 => {
+                                let d = (crate::tools::fill::BAYER_4X4[(ly as usize) % 4][(lx as usize) % 4] - 0.5)
+                                    * settings.dither_strength;
+                                let pr = (base_col[0] as f32 + d).clamp(0.0, 255.0) as u8;
+                                let pg = (base_col[1] as f32 + d).clamp(0.0, 255.0) as u8;
+                                let pb = (base_col[2] as f32 + d).clamp(0.0, 255.0) as u8;
+                                nearest_palette_color([pr, pg, pb, base_col[3]], pal)
+                            }
+                            PaletteDitherMode::Bayer8x8 => {
+                                let d = (crate::tools::fill::BAYER_8X8[(ly as usize) % 8][(lx as usize) % 8] - 0.5)
+                                    * settings.dither_strength;
+                                let pr = (base_col[0] as f32 + d).clamp(0.0, 255.0) as u8;
+                                let pg = (base_col[1] as f32 + d).clamp(0.0, 255.0) as u8;
+                                let pb = (base_col[2] as f32 + d).clamp(0.0, 255.0) as u8;
+                                nearest_palette_color([pr, pg, pb, base_col[3]], pal)
+                            }
+                            PaletteDitherMode::BlueNoise => {
+                                let d = (crate::model::palette::BLUE_NOISE_8X8[(ly as usize) % 8][(lx as usize) % 8] - 0.5)
+                                    * settings.dither_strength;
+                                let pr = (base_col[0] as f32 + d).clamp(0.0, 255.0) as u8;
+                                let pg = (base_col[1] as f32 + d).clamp(0.0, 255.0) as u8;
+                                let pb = (base_col[2] as f32 + d).clamp(0.0, 255.0) as u8;
+                                nearest_palette_color([pr, pg, pb, base_col[3]], pal)
+                            }
+                            PaletteDitherMode::Scanline => {
+                                let d = if (ly % 2) == 0 {
+                                    0.25 * settings.dither_strength
+                                } else {
+                                    -0.25 * settings.dither_strength
+                                };
+                                let pr = (base_col[0] as f32 + d).clamp(0.0, 255.0) as u8;
+                                let pg = (base_col[1] as f32 + d).clamp(0.0, 255.0) as u8;
+                                let pb = (base_col[2] as f32 + d).clamp(0.0, 255.0) as u8;
+                                nearest_palette_color([pr, pg, pb, base_col[3]], pal)
+                            }
+                            mode if mode.is_diffusion() => {
+                                let err = err_buf[idx];
+                                let pr = (base_col[0] as f32 + err[0]).clamp(0.0, 255.0);
+                                let pg = (base_col[1] as f32 + err[1]).clamp(0.0, 255.0);
+                                let pb = (base_col[2] as f32 + err[2]).clamp(0.0, 255.0);
+                                let cand = [pr.round() as u8, pg.round() as u8, pb.round() as u8, base_col[3]];
+                                let chosen = nearest_palette_color(cand, pal);
+
+                                let strength_factor = (settings.dither_strength / 32.0).clamp(0.0, 2.0);
+                                let diff_r = (pr - chosen[0] as f32) * strength_factor;
+                                let diff_g = (pg - chosen[1] as f32) * strength_factor;
+                                let diff_b = (pb - chosen[2] as f32) * strength_factor;
+                                let diff = [diff_r, diff_g, diff_b];
+
+                                let is_candidate_bg = settings.remove_background
+                                    && (crate::model::sketch::color_distance_rgb(
+                                        [base_col[0], base_col[1], base_col[2]],
+                                        settings.bg_color,
+                                    ) <= settings.bg_tolerance as u32
+                                    || crate::model::sketch::color_distance_rgb(
+                                        [chosen[0], chosen[1], chosen[2]],
+                                        bg_target,
+                                    ) <= settings.bg_tolerance as u32);
+
+                                if !is_candidate_bg {
+                                    for &(dx, dy, w) in mode.diffusion_weights() {
+                                        let nx = lx + dx;
+                                        let ny = ly + dy;
+                                        if nx >= 0 && nx < fw as i32 && ny >= 0 && ny < fh as i32 {
+                                            let n_idx = (ny as u32 * fw + nx as u32) as usize;
+                                            if !settings.edge_protection || !is_edge_map[n_idx] {
+                                                err_buf[n_idx][0] += diff[0] * w;
+                                                err_buf[n_idx][1] += diff[1] * w;
+                                                err_buf[n_idx][2] += diff[2] * w;
+                                            }
+                                        }
+                                    }
+                                }
+                                chosen
+                            }
+                            _ => nearest_palette_color(base_col, pal),
+                        }
+                    }
+                } else {
+                    base_col
+                };
+
+                quantized_grid[idx] = Some(final_col);
+            }
+        }
+
+        // Step 5: Background Removal (Chroma Key with edge-flood or global) on PIXELATED grid
+        if settings.remove_background && settings.bg_target == crate::model::sketch::BackgroundRemovalTarget::Pixelated {
+            let tol = settings.bg_tolerance as u32;
+            let matches_bg = |c: [u8; 4]| -> bool {
+                crate::model::sketch::color_distance_rgb([c[0], c[1], c[2]], bg_target) <= tol
+                    || crate::model::sketch::color_distance_rgb([c[0], c[1], c[2]], settings.bg_color) <= tol
+            };
+
+            if settings.bg_contiguous_only {
+                let mut is_bg = vec![false; (fw * fh) as usize];
+                let mut queue = std::collections::VecDeque::new();
+
+                for lx in 0..(fw as i32) {
+                    for &ly in &[0, fh as i32 - 1] {
+                        let idx = (ly as u32 * fw + lx as u32) as usize;
+                        let matches = match quantized_grid[idx] {
+                            None => true,
+                            Some(c) => matches_bg(c),
+                        };
+                        if matches && !is_bg[idx] {
+                            is_bg[idx] = true;
+                            queue.push_back((lx, ly));
+                        }
+                    }
+                }
+                for ly in 0..(fh as i32) {
+                    for &lx in &[0, fw as i32 - 1] {
+                        let idx = (ly as u32 * fw + lx as u32) as usize;
+                        let matches = match quantized_grid[idx] {
+                            None => true,
+                            Some(c) => matches_bg(c),
+                        };
+                        if matches && !is_bg[idx] {
+                            is_bg[idx] = true;
+                            queue.push_back((lx, ly));
+                        }
+                    }
+                }
+
+                while let Some((cx, cy)) = queue.pop_front() {
+                    for (nx, ny) in [
+                        (cx - 1, cy),
+                        (cx + 1, cy),
+                        (cx, cy - 1),
+                        (cx, cy + 1),
+                    ] {
+                        if nx >= 0 && nx < fw as i32 && ny >= 0 && ny < fh as i32 {
+                            let n_idx = (ny as u32 * fw + nx as u32) as usize;
+                            if !is_bg[n_idx] {
+                                let matches = match quantized_grid[n_idx] {
+                                    None => true,
+                                    Some(c) => matches_bg(c),
+                                };
+                                if matches {
+                                    is_bg[n_idx] = true;
+                                    queue.push_back((nx, ny));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                for idx in 0..quantized_grid.len() {
+                    if is_bg[idx] {
+                        quantized_grid[idx] = None;
+                    }
+                }
+            } else {
+                for entry in quantized_grid.iter_mut() {
+                    if let Some(c) = entry {
+                        if matches_bg(*c) {
+                            *entry = None;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Step 6: Clean Orphan Pixels (Noise reduction on pixelated sprite)
+        if settings.clean_orphan_pixels {
+            let copy = quantized_grid.clone();
+            for ly in 0..(fh as i32) {
+                for lx in 0..(fw as i32) {
+                    let idx = (ly as u32 * fw + lx as u32) as usize;
+                    if copy[idx].is_some() {
+                        let mut neighbor_count = 0;
+                        for (nx, ny) in [
+                            (lx - 1, ly),
+                            (lx + 1, ly),
+                            (lx, ly - 1),
+                            (lx, ly + 1),
+                        ] {
+                            if nx >= 0 && nx < fw as i32 && ny >= 0 && ny < fh as i32 {
+                                let n_idx = (ny as u32 * fw + nx as u32) as usize;
+                                if copy[n_idx].is_some() {
+                                    neighbor_count += 1;
+                                }
+                            }
+                        }
+                        if neighbor_count == 0 {
+                            quantized_grid[idx] = None;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Step 7: Auto 1px Silhouette Outline Generator
+        if settings.generate_outline {
+            let mut outline_cells = Vec::new();
+            for ly in 0..(fh as i32) {
+                for lx in 0..(fw as i32) {
+                    let idx = (ly as u32 * fw + lx as u32) as usize;
+                    if quantized_grid[idx].is_none() {
+                        let mut has_neighbor = false;
+                        for (nx, ny) in [
+                            (lx - 1, ly),
+                            (lx + 1, ly),
+                            (lx, ly - 1),
+                            (lx, ly + 1),
+                        ] {
+                            if nx >= 0 && nx < fw as i32 && ny >= 0 && ny < fh as i32 {
+                                let n_idx = (ny as u32 * fw + nx as u32) as usize;
+                                if quantized_grid[n_idx].is_some() {
+                                    has_neighbor = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if has_neighbor {
+                            outline_cells.push(idx);
+                        }
+                    }
+                }
+            }
+            for idx in outline_cells {
+                quantized_grid[idx] = Some(settings.outline_color);
+            }
+        }
+
+        // Step 8: Blit to Canvas Layer
+        let mut changed = false;
         for ly in 0..(fh as i32) {
             for lx in 0..(fw as i32) {
                 if settings.in_selection_only && !selection.contains(lx, ly) {
@@ -490,64 +888,9 @@ impl Project {
                     continue;
                 }
 
-                let grid_idx = (ly as u32 * fw + lx as u32) as usize;
-                let Some(base_col) = sampled_grid[grid_idx] else {
+                let idx = (ly as u32 * fw + lx as u32) as usize;
+                let Some(final_col) = quantized_grid[idx] else {
                     continue;
-                };
-
-                let mut is_edge = false;
-                if settings.edge_protection && settings.crisp_pixels_and_lines {
-                    for (nx, ny) in [
-                        (lx - 1, ly),
-                        (lx + 1, ly),
-                        (lx, ly - 1),
-                        (lx, ly + 1),
-                    ] {
-                        if nx < 0 || ny < 0 || nx >= fw as i32 || ny >= fh as i32 {
-                            is_edge = true;
-                            break;
-                        }
-                        let n_idx = (ny as u32 * fw + nx as u32) as usize;
-                        match sampled_grid[n_idx] {
-                            None => {
-                                is_edge = true;
-                                break;
-                            }
-                            Some(ncol) => {
-                                let dr = (base_col[0] as i32 - ncol[0] as i32).abs();
-                                let dg = (base_col[1] as i32 - ncol[1] as i32).abs();
-                                let db = (base_col[2] as i32 - ncol[2] as i32).abs();
-                                if dr + dg + db > 80 {
-                                    is_edge = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                let final_col = if let Some(pal) = palette_buf.as_deref() {
-                    if is_edge || settings.dither_mode == PaletteDitherMode::None {
-                        nearest_palette_color(base_col, pal)
-                    } else {
-                        let d = match settings.dither_mode {
-                            PaletteDitherMode::None => 0.0,
-                            PaletteDitherMode::Bayer4x4 => {
-                                (crate::tools::fill::BAYER_4X4[(ly as usize) % 4][(lx as usize) % 4] - 0.5)
-                                    * settings.dither_strength
-                            }
-                            PaletteDitherMode::Bayer8x8 => {
-                                (crate::tools::fill::BAYER_8X8[(ly as usize) % 8][(lx as usize) % 8] - 0.5)
-                                    * settings.dither_strength
-                            }
-                        };
-                        let pr = (base_col[0] as f32 + d).clamp(0.0, 255.0) as u8;
-                        let pg = (base_col[1] as f32 + d).clamp(0.0, 255.0) as u8;
-                        let pb = (base_col[2] as f32 + d).clamp(0.0, 255.0) as u8;
-                        nearest_palette_color([pr, pg, pb, base_col[3]], pal)
-                    }
-                } else {
-                    base_col
                 };
 
                 let cur = self.atlas_rgba.get_pixel(ax, ay);
@@ -1727,6 +2070,65 @@ mod tests {
         };
         assert!(proj.bake_sketch_advanced(0, &settings, &sel));
         assert_ne!(*proj.atlas_rgba.get_pixel(4, 4), Rgba([0, 0, 0, 0]));
+    }
+
+    #[test]
+    fn test_bake_sketch_background_removal_and_atkinson() {
+        let meta = ProjectMetadata::new_config("bake_bg_test".to_string(), 8, 8, 1, 1, None);
+        let mut proj = Project::new(meta);
+        let mut sketch = RgbaImage::from_pixel(32, 32, Rgba([0, 0, 0, 255])); // black bg
+        for y in 10..22 {
+            for x in 10..22 {
+                sketch.put_pixel(x, y, Rgba([255, 0, 0, 255]));
+            }
+        }
+        proj.set_sketch_image(Some(sketch), None, None);
+
+        let sel = SelectionMask::default();
+        let settings = BakeSketchSettings {
+            remove_background: true,
+            bg_color: [0, 0, 0],
+            bg_tolerance: 10,
+            bg_contiguous_only: true,
+            dither_mode: PaletteDitherMode::Atkinson,
+            ..Default::default()
+        };
+        assert!(proj.bake_sketch_advanced(0, &settings, &sel));
+        assert_eq!(*proj.atlas_rgba.get_pixel(0, 0), Rgba([0, 0, 0, 0]));
+        assert_ne!(*proj.atlas_rgba.get_pixel(4, 4), Rgba([0, 0, 0, 0]));
+    }
+
+    #[test]
+    fn test_bake_sketch_background_removal_on_pixelated_quantized_grid() {
+        let meta = ProjectMetadata::new_config("bake_quant_bg_test".to_string(), 4, 4, 1, 1, None);
+        let mut proj = Project::new(meta);
+        // Palette with pure black and pure red
+        proj.metadata.palette.colors = vec![[0, 0, 0, 255], [255, 0, 0, 255]];
+
+        // Sketch has noisy dark grey background [12, 10, 14] and red center [250, 5, 5]
+        let mut sketch = RgbaImage::from_pixel(16, 16, Rgba([12, 10, 14, 255]));
+        for y in 4..12 {
+            for x in 4..12 {
+                sketch.put_pixel(x, y, Rgba([250, 5, 5, 255]));
+            }
+        }
+        proj.set_sketch_image(Some(sketch), None, None);
+
+        let sel = SelectionMask::default();
+        let settings = BakeSketchSettings {
+            palette_source: BakePaletteSource::ActivePalette,
+            remove_background: true,
+            bg_color: [0, 0, 0], // exact black
+            bg_tolerance: 0,     // 0 tolerance! on original sketch [12, 10, 14] wouldn't match, but on quantized grid it's [0, 0, 0]!
+            bg_contiguous_only: true,
+            dither_mode: PaletteDitherMode::None,
+            ..Default::default()
+        };
+        assert!(proj.bake_sketch_advanced(0, &settings, &sel));
+        // Outer pixel was quantized to [0, 0, 0, 255] then removed by background removal
+        assert_eq!(*proj.atlas_rgba.get_pixel(0, 0), Rgba([0, 0, 0, 0]));
+        // Inner pixel was quantized to red and preserved
+        assert_eq!(*proj.atlas_rgba.get_pixel(2, 2), Rgba([255, 0, 0, 255]));
     }
 
     #[test]

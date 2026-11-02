@@ -613,8 +613,93 @@ pub enum PaletteSortCriterion {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PaletteDitherMode {
     None,
+    Bayer2x2,
     Bayer4x4,
     Bayer8x8,
+    FloydSteinberg,
+    Atkinson,
+    Burkes,
+    SierraLite,
+    Stucki,
+    BlueNoise,
+    Scanline,
+}
+
+pub const BAYER_2X2: [[f32; 2]; 2] = [
+    [0.0 / 4.0, 2.0 / 4.0],
+    [3.0 / 4.0, 1.0 / 4.0],
+];
+
+pub const BLUE_NOISE_8X8: [[f32; 8]; 8] = [
+    [0.0 / 64.0, 48.0 / 64.0, 12.0 / 64.0, 60.0 / 64.0, 3.0 / 64.0, 51.0 / 64.0, 15.0 / 64.0, 63.0 / 64.0],
+    [32.0 / 64.0, 16.0 / 64.0, 44.0 / 64.0, 28.0 / 64.0, 35.0 / 64.0, 19.0 / 64.0, 47.0 / 64.0, 31.0 / 64.0],
+    [8.0 / 64.0, 56.0 / 64.0, 4.0 / 64.0, 52.0 / 64.0, 11.0 / 64.0, 59.0 / 64.0, 7.0 / 64.0, 55.0 / 64.0],
+    [40.0 / 64.0, 24.0 / 64.0, 36.0 / 64.0, 20.0 / 64.0, 43.0 / 64.0, 27.0 / 64.0, 39.0 / 64.0, 23.0 / 64.0],
+    [2.0 / 64.0, 50.0 / 64.0, 14.0 / 64.0, 62.0 / 64.0, 1.0 / 64.0, 49.0 / 64.0, 13.0 / 64.0, 61.0 / 64.0],
+    [34.0 / 64.0, 18.0 / 64.0, 46.0 / 64.0, 30.0 / 64.0, 33.0 / 64.0, 17.0 / 64.0, 45.0 / 64.0, 29.0 / 64.0],
+    [10.0 / 64.0, 58.0 / 64.0, 6.0 / 64.0, 54.0 / 64.0, 9.0 / 64.0, 57.0 / 64.0, 5.0 / 64.0, 53.0 / 64.0],
+    [42.0 / 64.0, 26.0 / 64.0, 38.0 / 64.0, 22.0 / 64.0, 41.0 / 64.0, 25.0 / 64.0, 37.0 / 64.0, 21.0 / 64.0],
+];
+
+impl PaletteDitherMode {
+    pub fn is_diffusion(self) -> bool {
+        matches!(
+            self,
+            PaletteDitherMode::FloydSteinberg
+                | PaletteDitherMode::Atkinson
+                | PaletteDitherMode::Burkes
+                | PaletteDitherMode::SierraLite
+                | PaletteDitherMode::Stucki
+        )
+    }
+
+    pub fn diffusion_weights(self) -> &'static [(i32, i32, f32)] {
+        match self {
+            PaletteDitherMode::FloydSteinberg => &[
+                (1, 0, 7.0 / 16.0),
+                (-1, 1, 3.0 / 16.0),
+                (0, 1, 5.0 / 16.0),
+                (1, 1, 1.0 / 16.0),
+            ],
+            PaletteDitherMode::Atkinson => &[
+                (1, 0, 1.0 / 8.0),
+                (2, 0, 1.0 / 8.0),
+                (-1, 1, 1.0 / 8.0),
+                (0, 1, 1.0 / 8.0),
+                (1, 1, 1.0 / 8.0),
+                (0, 2, 1.0 / 8.0),
+            ],
+            PaletteDitherMode::Burkes => &[
+                (1, 0, 8.0 / 32.0),
+                (2, 0, 4.0 / 32.0),
+                (-2, 1, 2.0 / 32.0),
+                (-1, 1, 4.0 / 32.0),
+                (0, 1, 8.0 / 32.0),
+                (1, 1, 4.0 / 32.0),
+                (2, 1, 2.0 / 32.0),
+            ],
+            PaletteDitherMode::SierraLite => &[
+                (1, 0, 2.0 / 4.0),
+                (-1, 1, 1.0 / 4.0),
+                (0, 1, 1.0 / 4.0),
+            ],
+            PaletteDitherMode::Stucki => &[
+                (1, 0, 8.0 / 42.0),
+                (2, 0, 4.0 / 42.0),
+                (-2, 1, 2.0 / 42.0),
+                (-1, 1, 4.0 / 42.0),
+                (0, 1, 8.0 / 42.0),
+                (1, 1, 4.0 / 42.0),
+                (2, 1, 2.0 / 42.0),
+                (-2, 2, 1.0 / 42.0),
+                (-1, 2, 2.0 / 42.0),
+                (0, 2, 4.0 / 42.0),
+                (1, 2, 2.0 / 42.0),
+                (2, 2, 1.0 / 42.0),
+            ],
+            _ => &[],
+        }
+    }
 }
 
 /// Converts RGB [0..255] to HSL (Hue: 0..360°, Saturation: 0..1, Lightness: 0..1).
@@ -653,6 +738,45 @@ pub fn rgb_to_hsl(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
     }
 
     (h, s, l)
+}
+
+/// Converts HSL (Hue: 0..360°, Saturation: 0..1, Lightness: 0..1) to RGB [0..255].
+pub fn hsl_to_rgb(h: f32, s: f32, l: f32) -> (u8, u8, u8) {
+    if s <= 0.0 {
+        let val = (l * 255.0).round().clamp(0.0, 255.0) as u8;
+        return (val, val, val);
+    }
+    let q = if l < 0.5 {
+        l * (1.0 + s)
+    } else {
+        l + s - l * s
+    };
+    let p = 2.0 * l - q;
+    let h_norm = (h / 360.0).rem_euclid(1.0);
+
+    let hue_to_rgb = |mut t: f32| -> f32 {
+        if t < 0.0 {
+            t += 1.0;
+        }
+        if t > 1.0 {
+            t -= 1.0;
+        }
+        if t < 1.0 / 6.0 {
+            return p + (q - p) * 6.0 * t;
+        }
+        if t < 1.0 / 2.0 {
+            return q;
+        }
+        if t < 2.0 / 3.0 {
+            return p + (q - p) * (2.0 / 3.0 - t) * 6.0;
+        }
+        p
+    };
+
+    let r = (hue_to_rgb(h_norm + 1.0 / 3.0) * 255.0).round().clamp(0.0, 255.0) as u8;
+    let g = (hue_to_rgb(h_norm) * 255.0).round().clamp(0.0, 255.0) as u8;
+    let b = (hue_to_rgb(h_norm - 1.0 / 3.0) * 255.0).round().clamp(0.0, 255.0) as u8;
+    (r, g, b)
 }
 
 /// Perceptual luminance calculation (ITU-R BT.601).
@@ -753,6 +877,13 @@ pub fn remap_pixels_to_palette(
     let atlas_h = atlas_rgba.height();
     let mut changed = false;
 
+    let use_diffusion = dither.is_diffusion();
+    let mut err_buf: Vec<[f32; 3]> = if use_diffusion {
+        vec![[0.0, 0.0, 0.0]; (width * height) as usize]
+    } else {
+        Vec::new()
+    };
+
     for ly in 0..height {
         let gy = origin_y + ly;
         if gy >= atlas_h {
@@ -774,22 +905,76 @@ pub fn remap_pixels_to_palette(
                 continue;
             }
             let cur_arr = [cur[0], cur[1], cur[2], cur[3]];
+            let mut pr = cur_arr[0] as f32;
+            let mut pg = cur_arr[1] as f32;
+            let mut pb = cur_arr[2] as f32;
+            if use_diffusion {
+                let err_idx = (ly * width + lx) as usize;
+                let err = err_buf[err_idx];
+                pr = (pr + err[0]).clamp(0.0, 255.0);
+                pg = (pg + err[1]).clamp(0.0, 255.0);
+                pb = (pb + err[2]).clamp(0.0, 255.0);
+            }
+            let candidate = [pr as u8, pg as u8, pb as u8, cur_arr[3]];
+
             let mapped = match dither {
                 PaletteDitherMode::None => nearest_palette_color_rgb(cur_arr, palette),
+                PaletteDitherMode::Bayer2x2 => {
+                    let d = (BAYER_2X2[(ly % 2) as usize][(lx % 2) as usize] - 0.5) * dither_strength;
+                    let r = (cur_arr[0] as f32 + d).clamp(0.0, 255.0) as u8;
+                    let g = (cur_arr[1] as f32 + d).clamp(0.0, 255.0) as u8;
+                    let b = (cur_arr[2] as f32 + d).clamp(0.0, 255.0) as u8;
+                    nearest_palette_color_rgb([r, g, b, cur_arr[3]], palette)
+                }
                 PaletteDitherMode::Bayer4x4 => {
                     let d = (crate::tools::fill::BAYER_4X4[(ly % 4) as usize][(lx % 4) as usize] - 0.5) * dither_strength;
-                    let pr = (cur_arr[0] as f32 + d).clamp(0.0, 255.0) as u8;
-                    let pg = (cur_arr[1] as f32 + d).clamp(0.0, 255.0) as u8;
-                    let pb = (cur_arr[2] as f32 + d).clamp(0.0, 255.0) as u8;
-                    nearest_palette_color_rgb([pr, pg, pb, cur_arr[3]], palette)
+                    let r = (cur_arr[0] as f32 + d).clamp(0.0, 255.0) as u8;
+                    let g = (cur_arr[1] as f32 + d).clamp(0.0, 255.0) as u8;
+                    let b = (cur_arr[2] as f32 + d).clamp(0.0, 255.0) as u8;
+                    nearest_palette_color_rgb([r, g, b, cur_arr[3]], palette)
                 }
                 PaletteDitherMode::Bayer8x8 => {
                     let d = (crate::tools::fill::BAYER_8X8[(ly % 8) as usize][(lx % 8) as usize] - 0.5) * dither_strength;
-                    let pr = (cur_arr[0] as f32 + d).clamp(0.0, 255.0) as u8;
-                    let pg = (cur_arr[1] as f32 + d).clamp(0.0, 255.0) as u8;
-                    let pb = (cur_arr[2] as f32 + d).clamp(0.0, 255.0) as u8;
-                    nearest_palette_color_rgb([pr, pg, pb, cur_arr[3]], palette)
+                    let r = (cur_arr[0] as f32 + d).clamp(0.0, 255.0) as u8;
+                    let g = (cur_arr[1] as f32 + d).clamp(0.0, 255.0) as u8;
+                    let b = (cur_arr[2] as f32 + d).clamp(0.0, 255.0) as u8;
+                    nearest_palette_color_rgb([r, g, b, cur_arr[3]], palette)
                 }
+                PaletteDitherMode::BlueNoise => {
+                    let d = (BLUE_NOISE_8X8[(ly % 8) as usize][(lx % 8) as usize] - 0.5) * dither_strength;
+                    let r = (cur_arr[0] as f32 + d).clamp(0.0, 255.0) as u8;
+                    let g = (cur_arr[1] as f32 + d).clamp(0.0, 255.0) as u8;
+                    let b = (cur_arr[2] as f32 + d).clamp(0.0, 255.0) as u8;
+                    nearest_palette_color_rgb([r, g, b, cur_arr[3]], palette)
+                }
+                PaletteDitherMode::Scanline => {
+                    let d = if (ly % 2) == 0 { 0.5 } else { -0.5 } * dither_strength;
+                    let r = (cur_arr[0] as f32 + d).clamp(0.0, 255.0) as u8;
+                    let g = (cur_arr[1] as f32 + d).clamp(0.0, 255.0) as u8;
+                    let b = (cur_arr[2] as f32 + d).clamp(0.0, 255.0) as u8;
+                    nearest_palette_color_rgb([r, g, b, cur_arr[3]], palette)
+                }
+                mode if mode.is_diffusion() => {
+                    let chosen = nearest_palette_color_rgb(candidate, palette);
+                    let strength_factor = (dither_strength / 32.0).clamp(0.0, 2.0);
+                    let diff_r = (pr - chosen[0] as f32) * strength_factor;
+                    let diff_g = (pg - chosen[1] as f32) * strength_factor;
+                    let diff_b = (pb - chosen[2] as f32) * strength_factor;
+                    let diff = [diff_r, diff_g, diff_b];
+
+                    for &(dx, dy, w) in mode.diffusion_weights() {
+                        let nx = lx as i32 + dx;
+                        let ny = ly as i32 + dy;
+                        if nx >= 0 && nx < width as i32 && ny >= 0 && ny < height as i32 {
+                            let n_idx = (ny as u32 * width + nx as u32) as usize;
+                            err_buf[n_idx][0] += diff[0] * w;
+                            err_buf[n_idx][1] += diff[1] * w;
+                            err_buf[n_idx][2] += diff[2] * w;
+                        }
+                    }
+                    chosen
+                }
+                _ => nearest_palette_color_rgb(cur_arr, palette),
             };
             if mapped != cur_arr {
                 atlas_rgba.put_pixel(gx, gy, Rgba(mapped));

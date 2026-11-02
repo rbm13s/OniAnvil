@@ -147,9 +147,28 @@ Most existing sprite editors treat animation as a stack of disconnected image fi
 
 <br/><br/>
 
-### 6. Reference Sketch Tracing & Configurable Onion Skinning
+### 6. Reference Sketch Tracing & Advanced "Bake Sketch to Sprite"
 *Load concept sketches or photographs as an underlay/overlay with transform controls, smart color sampling with palette snap, and multi-frame onion skin ghosting.*
 <img src="docs/screenshots/sketch_and_onion_skin.png" alt="OniAnvil Sketch and Onion Skin" width="950" />
+
+<br/>
+
+#### Bake Sketch to Sprite (Concept & AI Art Rasterizer)
+*Convert reference sketches and AI art directly into crisp pixel sprites with 7 precision sampling algorithms (Dominant, Median, Contrast Priority, Max Chroma, Gaussian, Area Average, Center Point), 10 dithering modes (Bayer 2×2/4×4/8×8, Floyd-Steinberg, Atkinson, Burkes, Sierra Lite, Stucki, Blue Noise, Scanlines) with outline edge protection, and Chroma Key background removal (supporting both pixelated sprite and original sketch sampling).*
+
+<p align="center">
+  <img src="docs/screenshots/Bake_sketch_to_sprite_1.png" alt="Bake Sketch to Sprite Modal" width="460" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/screenshots/Bake_sketch_to_sprite_2.png" alt="Bake Sketch Live Preview" width="460" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/Bake_sketch_to_sprite_sampling.png" alt="Sampling Modes" width="300" />
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/Bake_sketch_to_sprite_dithering.png" alt="10 Dithering Modes" width="300" />
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/Bake_sketch_to_sprite_background_removal_and_clolor_tuning.png" alt="Background Removal & Color Tuning" width="300" />
+</p>
 
 <br/><br/>
 

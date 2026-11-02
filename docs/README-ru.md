@@ -147,9 +147,28 @@
 
 <br/><br/>
 
-### 6. Слой эскизов (калька) и настраиваемый Onion Skinning
+### 6. Слой эскизов (калька) и продвинутая выпечка эскиза (Bake Sketch to Sprite)
 *Загрузка концепт-арта или фото-эскиза под холст с масштабированием, прозрачностью, пипеткой с автопривязкой к палитре и многокадровой подсветкой соседних фаз анимации.*
 <img src="screenshots/sketch_and_onion_skin.png" alt="Эскиз и Onion Skinning" width="950" />
+
+<br/>
+
+#### Превращение скетчей в пиксель-арт (Bake Sketch to Sprite)
+*Быстрое преобразование концепт-артов и сгенерированных AI изображений в чистый пиксель-арт: 7 алгоритмов сэмплирования (Dominant, Median, Contrast Priority, Max Chroma, Gaussian, Area Average, Center Point), 10 режимов дизеринга (Bayer 2×2/4×4/8×8, Floyd-Steinberg, Atkinson, Burkes, Sierra Lite, Stucki, Blue Noise, Scanlines) с защитой контуров от размытия и удаление фона (Chroma Key с заливкой по пикселизованному или исходному изображению).*
+
+<p align="center">
+  <img src="screenshots/Bake_sketch_to_sprite_1.png" alt="Выпечка эскиза в спрайт" width="460" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="screenshots/Bake_sketch_to_sprite_2.png" alt="Предпросмотр выпечки" width="460" />
+</p>
+
+<p align="center">
+  <img src="screenshots/Bake_sketch_to_sprite_sampling.png" alt="Режимы сэмплирования" width="300" />
+  &nbsp;&nbsp;
+  <img src="screenshots/Bake_sketch_to_sprite_dithering.png" alt="Режимы дизеринга" width="300" />
+  &nbsp;&nbsp;
+  <img src="screenshots/Bake_sketch_to_sprite_background_removal_and_clolor_tuning.png" alt="Удаление фона и цветокоррекция" width="300" />
+</p>
 
 <br/><br/>
 

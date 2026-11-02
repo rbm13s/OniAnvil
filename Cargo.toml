@@ -1,12 +1,20 @@
 [package]
 name = "onianvil"
-version = "1.1.0"
+version = "1.1.1"
 default-run = "onianvil"
 edition = "2021"
 authors = ["OniAnvil Contributors"]
 license = "MIT"
 description = "An open-source, cross-platform pixel sprite and onion-skin animation studio built around game-ready atlases."
 repository = "https://github.com/rbm13s/OniAnvil"
+
+[[bin]]
+name = "onianvil"
+path = "src/main.rs"
+
+[[bin]]
+name = "gen_locales"
+path = "scripts/gen_locales.rs"
 
 [dependencies]
 egui = "0.31"
