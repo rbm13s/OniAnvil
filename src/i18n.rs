@@ -417,32 +417,33 @@ pub fn cmd_or_ctrl_name() -> &'static str {
     }
 }
 
-/// Dynamically adapts shortcut text from Windows/Linux (Ctrl) to macOS (Command (⌘)).
-pub fn adapt_shortcuts(text: &str) -> String {
-    if is_macos_platform() {
+/// Dynamically adapts shortcut text given whether target platform is macOS.
+pub fn adapt_shortcuts_for_platform(text: &str, is_macos: bool) -> String {
+    if is_macos {
         text.replace("Ctrl/Cmd", "Command (⌘)")
-            .replace("Ctrl+", "Command (⌘)+")
-            .replace("Ctrl +", "Command (⌘) + ")
             .replace("Ctrl", "Command (⌘)")
     } else {
         text.replace("Ctrl/Cmd", "Ctrl")
     }
 }
 
+/// Dynamically adapts shortcut text from Windows/Linux (Ctrl) to macOS (Command (⌘)).
+pub fn adapt_shortcuts(text: &str) -> String {
+    adapt_shortcuts_for_platform(text, is_macos_platform())
+}
+
 fn adapt_locale_map(map: &mut HashMap<String, String>) {
-    if is_macos_platform() {
+    let is_mac = is_macos_platform();
+    if is_mac {
         for val in map.values_mut() {
-            if val.contains("Ctrl/Cmd") || val.contains("Ctrl+") || val.contains("Ctrl +") {
-                *val = val
-                    .replace("Ctrl/Cmd", "Command (⌘)")
-                    .replace("Ctrl+", "Command (⌘)+")
-                    .replace("Ctrl +", "Command (⌘) + ");
+            if val.contains("Ctrl") {
+                *val = adapt_shortcuts_for_platform(val, true);
             }
         }
     } else {
         for val in map.values_mut() {
             if val.contains("Ctrl/Cmd") {
-                *val = val.replace("Ctrl/Cmd", "Ctrl");
+                *val = adapt_shortcuts_for_platform(val, false);
             }
         }
     }
@@ -546,12 +547,28 @@ mod tests {
     #[test]
     fn test_adapt_shortcuts_logic() {
         let input = "Undo (Ctrl/Cmd+Z), Save (Ctrl+S), Redo (Ctrl + Y)";
-        let adapted = adapt_shortcuts(input);
+
+        // Test macOS transformation
+        let mac_adapted = adapt_shortcuts_for_platform(input, true);
+        assert_eq!(
+            mac_adapted,
+            "Undo (Command (⌘)+Z), Save (Command (⌘)+S), Redo (Command (⌘) + Y)"
+        );
+
+        // Test Windows/Linux transformation
+        let win_adapted = adapt_shortcuts_for_platform(input, false);
+        assert_eq!(
+            win_adapted,
+            "Undo (Ctrl+Z), Save (Ctrl+S), Redo (Ctrl + Y)"
+        );
+
+        // Test current host platform
+        let host_adapted = adapt_shortcuts(input);
         if is_macos_platform() {
-            assert_eq!(adapted, "Undo (Command (⌘)+Z), Save (Command (⌘)+S), Redo (Command (⌘) + Y)");
+            assert_eq!(host_adapted, mac_adapted);
             assert_eq!(cmd_or_ctrl_name(), "Command (⌘)");
         } else {
-            assert_eq!(adapted, "Undo (Ctrl+Z), Save (Ctrl+S), Redo (Ctrl + Y)");
+            assert_eq!(host_adapted, win_adapted);
             assert_eq!(cmd_or_ctrl_name(), "Ctrl");
         }
     }
