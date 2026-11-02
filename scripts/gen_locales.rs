@@ -493,7 +493,7 @@ This project is licensed under the **[MIT License](../LICENSE)**.
       <a href="{code}.html" class="brand">
         <img src="assets/icon.jpg" alt="OniAnvil Logo">
         <span>OniAnvil</span>
-        <span class="badge-ver">v1.0.0</span>
+        <span class="badge-ver">v1.1.0</span>
       </a>
 
       <nav class="main-nav">
@@ -519,7 +519,7 @@ This project is licensed under the **[MIT License](../LICENSE)**.
     <div class="container">
       <div class="hero-pill">
         <span class="dot"></span>
-        <span>v1.0.0 • Open Source MIT • Native Desktop &amp; WebAssembly</span>
+        <span>v1.1.0 • Open Source MIT • Native Desktop &amp; WebAssembly</span>
       </div>
 
       <h1 class="hero-title">

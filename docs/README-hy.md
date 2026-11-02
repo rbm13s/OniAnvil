@@ -1,24 +1,24 @@
 <div align="center">
 
-<img src="assets/icon.jpg" alt="OniAnvil լոգո" width="128" height="128" style="border-radius: 24px;" />
+<img src="assets/icon.jpg" alt="OniAnvil Logo" width="128" height="128" style="border-radius: 24px;" />
 
 # OniAnvil
 
-**Փիքսելային գրաֆիկայի (Pixel Art) և կադրային կալկայի (Onion-Skinning) ստուդիա՝ հիմնված խաղային ատլասների վրա**
+**Փիքսելային արվեստի և անիմացիայի ստուդիա՝ խաղային ատլասների հիման վրա**
 
-[![Կառուցում և թողարկում](https://github.com/rbm13s/OniAnvil/actions/workflows/build.yml/badge.svg)](https://github.com/rbm13s/OniAnvil/actions/workflows/build.yml)
-[![Ներբեռնումներ](https://img.shields.io/github/downloads/rbm13s/OniAnvil/total?logo=github&color=blue)](https://github.com/rbm13s/OniAnvil/releases)
+[![Build & Release](https://github.com/rbm13s/OniAnvil/actions/workflows/build.yml/badge.svg)](https://github.com/rbm13s/OniAnvil/actions/workflows/build.yml)
+[![Downloads](https://img.shields.io/github/downloads/rbm13s/OniAnvil/total?logo=github&color=blue)](https://github.com/rbm13s/OniAnvil/releases)
 [![Rust](https://img.shields.io/badge/Rust-2021_Edition-orange?logo=rust)](https://www.rust-lang.org/)
 [![GUI](https://img.shields.io/badge/GUI-egui_%2F_eframe_0.31-blue)](https://github.com/emilk/egui)
-[![Ռենդերեր](https://img.shields.io/badge/Renderer-wgpu-green)](https://wgpu.rs/)
-[![Լեզուներ](https://img.shields.io/badge/Լեզուներ-37_լեզու-purple)](#10-35-էրգոնոմիկ-թեմաներ-և-ամբողջական-տեղայնացում)
-[![Հարթակներ](https://img.shields.io/badge/Հարթակներ-Windows_%7C_Linux_%7C_macOS_%7C_Web-0078D6)](#սկսել)
-[![Առցանց հավելված](https://img.shields.io/badge/Online_App-Փորձել_բրաուզերում_(Փորձարարական)-yellow?logo=webassembly)](https://rbm13s.github.io/OniAnvil/app/?lang=hy)
-[![Արտոնագիր: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../LICENSE)
+[![Renderer](https://img.shields.io/badge/Renderer-wgpu-green)](https://wgpu.rs/)
+[![Languages](https://img.shields.io/badge/Languages-37_Locales-purple)](#localization)
+[![Platform](https://img.shields.io/badge/Platform-Windows_%7C_Linux_%7C_macOS_%7C_Web-0078D6)](#getting-started)
+[![Web Demo](https://img.shields.io/badge/Online_App-Try_in_Browser_(Experimental)-yellow?logo=webassembly)](https://rbm13s.github.io/OniAnvil/app/?lang=hy)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../LICENSE)
 
 <br/>
 
-👉 **[🚀 Փորձեք OniAnvil-ը բրաուզերում (WebAssembly)](https://rbm13s.github.io/OniAnvil/app/?lang=hy)** *(⚠️ Փորձարարական վեբ-տարբերակ. հնարավոր են WebGL/WASM սահմանափակումներ և վրիպակներ)* • **[🌐 Փաստաթղթերի պաշտոնական կայք](https://rbm13s.github.io/OniAnvil/hy.html)**
+👉 **[🚀 Try OniAnvil in Browser (WebAssembly)](https://rbm13s.github.io/OniAnvil/app/?lang=hy)** *(⚠️ Experimental build: may contain WebGL/WASM limitations and bugs)* • **[🌐 Official Documentation Website](https://rbm13s.github.io/OniAnvil/hy.html)**
 
 <br/>
 
@@ -65,438 +65,110 @@
 
 ---
 
-## Բովանդակություն
+## Փիքսելային արվեստի և անիմացիայի ստուդիա՝ խաղային ատլասների հիման վրա
 
-- [Ներածություն](#ներածություն)
-- [Սքրինշոթեր և տեսողական շրջայց](#սքրինշոթեր-և-տեսողական-շրջայց)
-- [Գործիքների համապարփակ տեղեկատու](#գործիքների-համապարփակ-տեղեկատու)
-- [Ֆունկցիոնալ փաստաթղթեր](#ֆունկցիոնալ-փաստաթղթեր)
-  - [1. Կրկնակի ատլասակենտրոն ճարտարապետություն](#1-կրկնակի-ատլասակենտրոն-ճարտարապետություն)
-  - [2. Բազմաուղի շերտերի ժամանակացույց (Timeline)](#2-բազմաուղի-շերտերի-ժամանակացույց-timeline)
-  - [3. Անիմացիայի կենդանի նախադիտում իրական ժամանակում](#3-անիմացիայի-կենդանի-նախադիտում-իրական-ժամանակում)
-  - [4. Կալկայի առաջադեմ շարժիչ (Onion Skinning)](#4-կալկայի-առաջադեմ-շարժիչ-onion-skinning)
-  - [5. Ռեֆերենսի խելացի էսքիզի և ուրվագծման շերտ](#5-ռեֆերենսի-խելացի-էսքիզի-և-ուրվագծման-շերտ)
-  - [6. Ճշգրիտ ընտրության գործիքներ և «վազող մրջյուններ»](#6-ճշգրիտ-ընտրության-գործիքներ-և-վազող-մրջյուններ)
-  - [7. Կենդանի էֆեկտներ, ֆիլտրեր և RotSprite](#7-կենդանի-էֆեկտներ-ֆիլտրեր-և-rotsprite)
-  - [8. Ներկապնակների կառավարում, փոխարինում և կերպարի սկիներ](#8-ներկապնակների-կառավարում-փոխարինում-և-կերպարի-սկիներ)
-  - [9. Սփրայթ-թերթի կտրիչ, 9-Grid միջերես և արտահանում խաղային շարժիչների համար](#9-սփրայթ-թերթի-կտրիչ-9-grid-միջերես-և-արտահանում-խաղային-շարժիչների-համար)
-  - [10. 35 էրգոնոմիկ թեմաներ և ամբողջական տեղայնացում](#10-35-էրգոնոմիկ-թեմաներ-և-ամբողջական-տեղայնացում)
-- [Կառավարում և արագ ստեղներ](#կառավարում-և-արագ-ստեղներ)
-- [Սկսել](#սկսել)
-  - [Պատրաստի երկուական ֆայլեր (Binaries)](#պատրաստի-երկուական-ֆայլեր-binaries)
-  - [Կառուցում ելակետային կոդից](#կառուցում-ելակետային-կոդից)
-- [Ֆայլի ձևաչափ և ուղեկցող ճարտարապետություն](#ֆայլի-ձևաչափ-և-ուղեկցող-ճարտարապետություն)
-- [Ներդրում և երախտագիտություն](#ներդրում-և-երախտագիտություն)
-- [Արտոնագիր և պատասխանատվության սահմանափակում](#արտոնագիր-և-պատասխանատվության-սահմանափակում)
+Բարձր արտադրողականությամբ պիքսել-արտի աշխատանքային կայան Rust-ով: Բազմաշերտ թայմլայն, ճկուն կալկա (Onion Skinning), էսքիզների շերտ և արտահանում խաղային շարժիչների համար:
+
+### Visual Tour
+
+| Workspace | Timeline & Layers | Palette & Color Swaps |
+|:---:|:---:|:---:|
+| [![Workspace](screenshots/main.png)](screenshots/main.png) | [![Timeline](screenshots/timeline.png)](screenshots/timeline.png) | [![Palette](screenshots/palette_and_swaps.png)](screenshots/palette_and_swaps.png) |
+| **Workspace & Canvas** | **Multi-Track Studio Timeline** | **Palette Editor & Swaps** |
+
+| Sheet Slicer | 3x3 UI Margins | Rotation Pivot & Sockets |
+|:---:|:---:|:---:|
+| [![Slicer](screenshots/slicer.png)](screenshots/slicer.png) | [![3x3](screenshots/3x3.png)](screenshots/3x3.png) | [![Pivot](screenshots/pivot_and_action_points.png)](screenshots/pivot_and_action_points.png) |
+| **Automatic Sheet Slicer** | **9-Slice Scalable UI** | **Origin Pivot & Custom Sockets** |
 
 ---
 
-## Ներածություն
+## Comprehensive Tools Reference
 
-**OniAnvil**-ը (*անվանումը ծագել է **Oni**on-Skinning (կադրային կալկա) + **Anvil** (սփրայթների կռման սալ) բառերից*) բաց կոդով, գերարագ փիքսել-արտ խմբագիր և անիմացիոն փաթեթ է՝ գրված Rust լեզվով։ Այն աշխատում է նատիվ կերպով՝ ապարատային արագացմամբ Windows, Linux և macOS համակարգերում, ինչպես նաև անմիջապես ժամանակակից վեբ-բրաուզերներում WebAssembly-ի միջոցով՝ առանց տեղադրման անհրաժեշտության։
-
-Ավանդական խմբագիրների մեծ մասը անիմացիան դիտարկում է որպես առանձին պատկերային ֆայլերի կույտ, ինչը ծրագրավորողներին ստիպում է կատարել արտահանման, կտրատման և վերափաթեթավորման ձանձրալի քայլեր։ **OniAnvil-ը փոխում է այս պարադիգմը.** խաղային սփրայթ-թերթի ատլասային տեքստուրան (`atlas_rgba`) հանդիսանում է ճշմարտության առաջնային և միակ աղբյուրը (source of truth)։ Կադրերի բջիջները, շերտերի ուղիները, անիմացիոն թեգերը և բախման/կենտրոնի կետերը մշտապես և անկորուստ համաժամեցված են մնում ատլասի հետ։
-
-### Ինչու՞ OniAnvil:
-- 🚀 **Rust-ի կայծակնային արագագործություն**. ակնթարթային մեկնարկ միլիվայրկյանից պակաս ժամանակում, հստակ ռենդերինգ `wgpu`-ի և `egui 0.31`-ի շնորհիվ, զրոյական ուշացում երկար ժամանակացույցերը թերթելիս։
-- 🎬 **Բազմաուղի շերտերի ժամանակացույց**. տեսամոնտաժային ծրագրերից ոգեշնչված շերտերի ուղիներ (`V1, V2, V3...`) վերևից ներքև կոմպոզիտավորմամբ, շերտերի միաձուլմամբ դեպի ներքև, կապակցված կադրերով և պահպանման բազմապատկիչներով։
-- 🧅 **Առաջնակարգ կալկա (Onion Skinning)**. բազմակադր ուրվականային պատկերներ՝ նախորդ և հաջորդ կադրերի անկախ երանգավորմամբ, կարգավորվող թափանցիկության կորերով և անընդհատ ցիկլով։
-- 🎨 **Կերպարի գունապնակի ակնթարթային սկիներ**. ստեղծեք ցերեկային/գիշերային տարբերակներ, թիմային կամ տարերային սկիներ՝ ատլասի իրական ժամանակում վերահաշվարկով և GPL, PAL, HEX ձևաչափերի ներմուծմամբ ու արտահանմամբ։
-- 📦 **Ուղիղ արտահանում խաղային շարժիչների համար**. արտահանեք մասշտաբավորված PNG ֆայլեր ընդլայնված (էքստրուդացված) եզրերով՝ 2D շարժիչներում (Godot, Bevy, Raylib, Defold) տեքստուրաների միաձուլման թերությունները (bleeding) բացառելու համար, ստանդարտ Sprite Sheet JSON մետատվյալների և անիմացիոն GIF-երի հետ միասին։
-
----
-
-## Սքրինշոթեր և տեսողական շրջայց
-
-<div align="center">
-
-### 1. Հիմնական կտավ և ստուդիական աշխատանքային տարածք
-*Բարձր արտադրողականությամբ փիքսելային աշխատանքային միջավայր՝ ապարատային արագացմամբ տեսադաշտով, բազմաուղի ժամանակացույցով, իրական ժամանակում նախադիտմամբ, ներկապնակով և ճշգրիտ գործիքների վահանակներով։*
-<img src="screenshots/main.png" alt="OniAnvil հիմնական աշխատանքային տարածք" width="950" />
-
-<br/><br/>
-
-### 2. Անիմացիայի բազմաուղի ժամանակացույց
-*Ոչ գծային ժամանակացույց՝ շերտերի շարքերով (`V1, V2...`), կապակցված կադրերի օրինակներով (`🔗`), տևողության բազմապատկիչներով և գունավոր անիմացիոն թեգերով։*
-<img src="screenshots/timeline.png" alt="OniAnvil բազմաուղի ժամանակացույց" width="950" />
-
-<br/><br/>
-
-### 3. Ճշգրիտ գործիքներ և արագ գործողությունների վահանակ
-*15 պրոֆեսիոնալ գործիքների ամբողջական հավաքածու ստանդարտ և կոմպակտ ամրացման ռեժիմներով, վերևի արագ գործողությունների գոտիով՝ վրձնի չափի, սիմետրիայի, փաթաթման և Pixel-Perfect-ի համար։*
-<p align="center">
-  <img src="screenshots/toolbar.png" alt="Գործողությունների վահանակ" width="600" /><br/><br/>
-  <img src="screenshots/tools.png" alt="Գործիքների վահանակ ստանդարտ" width="300" />
-</p>
-
-<br/><br/>
-
-### 4. Անիմացիայի կենդանի նախադիտում իրական ժամանակում
-*Առանձին նվագարկման վահանակ՝ թեգերի զտմամբ, FPS արագության կարգավորմամբ, մասշտաբի սահիչով և ֆոնի փոխարկիչներով (շախմատային, մուգ, բաց)։*
-<p align="center">
-  <img src="screenshots/live_preview.png" alt="Կենդանի նախադիտում" width="460" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/live_preview_scroll_test.png" alt="Նախադիտման մասշտաբավորում" width="460" />
-</p>
-
-<br/><br/>
-
-### 5. Ներկապնակների կառավարում, փոխարինում և գունային անցումներ
-*Գույների ամբողջական շարժիչ՝ առաջնապլանի և ետնապլանի ընտրության դաշտերով, երկու կետով գրադիենտի ավտոմատ գեներացմամբ և կերպարի անվանական սկիներով։*
-<img src="screenshots/palette_and_swaps.png" alt="Ներկապնակներ և սկիներ" width="950" />
-
-<br/><br/>
-
-### 6. Ռեֆերենսի էսքիզի կալկայում և կարգավորվող Onion Skinning
-*Էսքիզների կամ լուսանկարների բեռնում որպես ստորին/վերին շերտ տրանսֆորմացիայի կառավարմամբ, ներկապնակին ավտոմատ ձգտող կաթոցիկով և բազմակադր կալկայով։*
-<img src="screenshots/sketch_and_onion_skin.png" alt="Էսքիզ և Onion Skinning" width="950" />
-
-<br/><br/>
-
-### 7. Առանցքային կետեր և խաղային գործողության կետեր
-*Սփրայթի կենտրոնի (Origin) և խաղային նշանակության կետերի (զենքի ամրացում, կրակոցի արտանետում, գլուխ, քայլեր) ինտերակտիվ նշում կտավի վրա և JSON արտահանում։*
-<img src="screenshots/pivot_and_action_points.png" alt="Առանցքային և գործողության կետեր" width="950" />
-
-<br/><br/>
-
-### 8. Սփրայթ-թերթի կտրիչ (Sheet Slicer) և 9-Grid մասշտաբավորում
-*Կադրերի սահմանների ավտոմատ ճանաչում ավտոկոռելյացիայի միջոցով (օրինակ՝ քայլող կատվի ցիկլ), ինչպես նաև 9-Grid միջերեսի լուսանցքների կարգավորում։*
-<p align="center">
-  <img src="screenshots/slicer.png" alt="Սփրայթ-թերթի կտրիչ" width="460" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/3x3.png" alt="9-Grid մասշտաբավորում" width="460" />
-</p>
-
-<br/><br/>
-
-### 9. Պատկերի կենդանի էֆեկտներ և ֆիլտրեր (նախադիտմամբ)
-*Էֆեկտների բոլոր երկխոսության պատուհաններն ունեն կտավի վրա իրական ժամանակում նախադիտում, ինտերակտիվ կաթոցիկ և անկորուստ չեղարկման հնարավորություն։*
-<p align="center">
-  <img src="screenshots/outline_generator.png" alt="Եզրագծի գեներատոր" width="460" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/replace_color.png" alt="Գույնի փոխարինում" width="460" />
-</p>
-<p align="center">
-  <img src="screenshots/hue_saturation_contrast.png" alt="Երանգ, հագեցվածություն, կոնտրաստ" width="460" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/matrix_filter.png" alt="Մատրիցային ֆիլտր" width="460" />
-</p>
-<p align="center">
-  <img src="screenshots/remap_to_palette.png" alt="Հարմարեցում ներկապնակին" width="460" />
-</p>
-
-<br/><br/>
-
-### 10. Կտավի ցանց և ֆոնային ռեժիմներ
-*Անմիջապես փոխարկեք փիքսելային ցանցի, թայլերի ցանցի, մուգ շախմատային, բաց շախմատային և օգտատիրոջ միագույն ֆոների միջև։*
-<p align="center">
-  <img src="screenshots/grid_and_dark_checkerboard.png" alt="Ցանց և մուգ շախմատ" width="300" />
-  &nbsp;&nbsp;
-  <img src="screenshots/no_grid_light_checkerboard.png" alt="Բաց շախմատ առանց ցանցի" width="300" />
-  &nbsp;&nbsp;
-  <img src="screenshots/custom_solid_background.png" alt="Միագույն ֆոն" width="300" />
-</p>
-
-<br/><br/>
-
-### 11. Նոր նախագծի ստեղծման հրաշագործ
-*Կադրի չափսերի, կադրերի քանակի, ատլասի սյուների բաշխման կարգավորում և ավելի քան 20 ռետրո ներկապնակներից ընտրություն մեկնարկի պահին։*
-<p align="center">
-  <img src="screenshots/new_project.png" alt="Նոր նախագծի վարպետ" width="460" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/new_project_palettes.png" alt="Նախագծի ներկապնակներ" width="460" />
-</p>
-
-<br/><br/>
-
-### 12. 35 ռետրո և ժամանակակից թեմաներ
-*Ներառում է Studio Dark, Studio Light, CRT ֆոսֆորներ (սաթագույն, կանաչ, ցիան), ռետրո կոնսոլներ (PlayStation 1, Game Boy, SNES, Dreamcast, Genesis) և դիզայներական թեմաներ։*
-<p align="center">
-  <img src="screenshots/themes.png" alt="Թեմաների մենյու" width="300" />
-  &nbsp;&nbsp;
-  <img src="screenshots/crt_orange_theme.png" alt="CRT սաթագույն թեմա" width="300" />
-  &nbsp;&nbsp;
-  <img src="screenshots/psx_theme.png" alt="PSX թեմա" width="300" />
-</p>
-
-<br/><br/>
-
-### 13. Մենյուի համակարգ և ստեղնաշարի ներկառուցված օգնություն
-<p align="center">
-  <img src="screenshots/file_menu.png" alt="Ֆայլ մենյու" width="180" />
-  <img src="screenshots/edit_menu.png" alt="Խմբագրել մենյու" width="180" />
-  <img src="screenshots/select_menu.png" alt="Ընտրել մենյու" width="180" />
-  <img src="screenshots/view_menu.png" alt="Տեսք մենյու" width="180" />
-  <img src="screenshots/project_menu.png" alt="Նախագիծ մենյու" width="180" />
-</p>
-<p align="center">
-  <img src="screenshots/help.png" alt="Արագ ստեղների օգնության պատուհան" width="700" />
-</p>
-
-</div>
+| Icon | Tool | Shortcut | Options | Description |
+|:---:|:---|:---:|:---|:---|
+| `\u{f303}` | **Pencil** | <kbd>P</kbd> | 1–64 px, Pixel-Perfect | 1px precision raster drawing. Pixel-Perfect algorithm eliminates unwanted staircase corners. |
+| `\u{f12d}` | **Eraser** | <kbd>E</kbd> | 1–64 px | Removes pixel color data back to pure alpha transparency on active layer. |
+| `\u{f1fb}` | **Eyedropper** | <kbd>I</kbd> / <kbd>Alt</kbd> | Canvas / Sketch | Real-time pixel color sampling. Left-click sets Primary color; Right-click sets Secondary color. |
+| `\u{f576}` | **Paint Bucket** | <kbd>G</kbd> | Tolerance 0–255, 4/8-way | Flood fills connected color regions or all matching pixels on the canvas. |
+| `\u{f5c3}` | **Gradient** | <kbd>U</kbd> | Linear / Radial, Dither | Interactive two-point gradient interpolation with optional retro Bayer pattern dithering. |
+| `\u{f715}` | **Line** | <kbd>V</kbd> | 1–64 px, Shift-Snap | Bresenham straight line rasterizer with live rubber-banding preview. |
+| `\u{f55b}` | **Bézier Curve** | <kbd>C</kbd> | 1–64 px, 3-point | Three-point quadratic Bézier curve: start point, end point, and middle control node. |
+| `\u{f0c8}` | **Rectangle** | <kbd>R</kbd> | Outline / Solid / Both | Geometric box tool. Holding <kbd>Shift</kbd> constrains to a 1:1 square. |
+| `\u{f111}` | **Ellipse** | <kbd>O</kbd> | Outline / Solid / Both | Midpoint ellipse and circle rasterizer. Holding <kbd>Shift</kbd> forces an equidistant circle. |
+| `\u{f43c}` | **Dither Brush** | <kbd>D</kbd> | Bayer 2×2 / 4×4 / 8×8 | Authentic retro hardware shading alternating primary and secondary pixels. |
+| `\u{f042}` | **Shading** | <kbd>H</kbd> | Lighten / Darken | Steps pixel colors up or down within color ramps defined in the current palette. |
+| `\u{f5cb}` | **Rect Select** | <kbd>M</kbd> | Marching Ants, Clipboard | Defines rectangular pixel bounding boxes with animated marching ants boundary. |
+| `\u{f5ee}` | **Lasso Select** | <kbd>L</kbd> | Freehand Polygon | Freeform polygonal selection tool to isolate complex silhouettes. |
+| `\u{f0d0}` | **Magic Wand** | <kbd>W</kbd> | Tolerance 0–255 | Selects color-contiguous or canvas-wide pixel clusters matching clicked pixel color. |
+| `\u{f05b}` | **Pivot & Sockets** | <kbd>Y</kbd> | Center, Named Sockets | Sets frame rotation pivot center and assigns custom named socket points (`muzzle`, `grip`). |
 
 ---
 
-## Գործիքների համապարփակ տեղեկատու
+## Key Features
 
-OniAnvil-ը ներառում է 15 ճշգրիտ գործիք նկարչության, երկրաչափության, ընտրության և մետատվյալների համար։ Իկոնկաները ցուցադրվում են բաց կոդով **Font Awesome Free** փաթեթի միջոցով *(Իկոնկաներ՝ CC BY 4.0, Տառատեսակներ՝ SIL OFL 1.1)*։
-
-| Գործիք | Իկոնկա | Արագ ստեղն | Վրձնի չափ | Pixel Perfect | Նկարագրություն |
-|:---|:---:|:---:|:---:|:---:|:---|
-| **Մատիտ** | ✏️ | <kbd>B</kbd> | 1..32 px | Այո | Հիմնական նկարչական գործիք։ 1px ռեժիմն աջակցում է **Pixel-Perfect** նկարչություն (ավտոմատ վերացնում է L-աձև անկյունային թերությունները)։ Աջակցում է ընտրությունից կնիքային վրձիններ (`Ctrl/Cmd+B`)։ |
-| **Ռետին** | 🧹 | <kbd>E</kbd> | 1..32 px | Ոչ | Ջնջում է փիքսելները մինչև լրիվ թափանցիկություն (`[0, 0, 0, 0]`)։ Ակտիվ ընտրության առկայության դեպքում գործում է խստորեն դրա ներսում։ |
-| **Կաթոցիկ** | 💉 | <kbd>I</kbd> / <kbd>Alt</kbd> | 1 px | Ոչ | Ձախ կոճակը վերցնում է գույնը Առաջնապլան (Foreground), աջ կոճակը՝ Ետնապլան (Background)։ Գույնը վերցնում է կտավից, շերտերից կամ էսքիզից։ |
-| **Լցնել** | 🪣 | <kbd>G</kbd> | N/A | Ոչ | Բարձր արագությամբ հերթի վրա հիմնված BFS լցնում՝ կարգավորվող գունային տոլերանտությամբ (`0..=255`)։ Աջակցում է հարակից և գլոբալ ռեժիմներ։ |
-| **Գրադիենտ** | 🌈 | <kbd>G</kbd> *(փոխարկել)* | N/A | Ոչ | Գծային և շառավղային գրադիենտներ առաջնապլանի և ետնապլանի միջև։ Աջակցում է Բայերի (2x2, 4x4, 8x8) և Blue Noise դիզերինգ՝ ուժգնության վերահսկմամբ։ |
-| **Գիծ** | 📏 | <kbd>L</kbd> | 1..32 px | Այո | Բրեզենհեմի գծային ալգորիթմ կենդանի նախադիտմամբ։ Պահեք <kbd>Shift</kbd>-ը անկյունները 45°/90° քայլերով ֆիքսելու համար։ |
-| **Կոր** | 〰️ | <kbd>C</kbd> | 1..32 px | Այո | 3-կտտոցով Բեզյեի քառակուսային կոր։ 1-ին կտտոց՝ սկիզբ, 2-րդ կտտոց՝ վերջ, մկնիկի շարժում՝ կորություն, 3-րդ կտտոց՝ կորի հաստատում։ |
-| **Ուղղանկյուն** | ⬜ | <kbd>U</kbd> | 1..32 px | Ոչ | Եզրագծված կամ լցված երկրաչափական ուղղանկյուններ։ Պահեք <kbd>Shift</kbd>-ը 1:1 քառակուսի ստանալու համար։ |
-| **Էլիպս** | ⭕ | <kbd>O</kbd> | 1..32 px | Ոչ | Եզրագծված կամ լցված էլիպսներ միջնակետային ռաստերացմամբ։ Պահեք <kbd>Shift</kbd>-ը կատարյալ շրջանագծի համար։ |
-| **Դիզերինգի վրձին** | 🏁 | <kbd>D</kbd> | 1..32 px | Ոչ | Նկարում է շախմատային դիզերինգի մատրիցային նախշեր առաջնապլանի և ետնապլանի միջև առանց ներկապնակում ավելորդ գույներ ավելացնելու։ |
-| **Ստվերագծման գործիք** | 🌓 | <kbd>S</kbd> | 1..32 px | Ոչ | Աստիճանական լուսավորում (Dodge) և մգացում (Burn) ըստ ակտիվ ներկապնակի գույների դասավորության։ |
-| **Ուղղանկյուն ընտրություն** | ⬚ | <kbd>M</kbd> | N/A | Ոչ | Ուղղանկյուն տիրույթի ընտրություն անիմացված վազող մրջյունների շրջանակով։ Ավելացում (<kbd>Shift</kbd>) և հանում (<kbd>Alt</kbd>)։ |
-| **Լասո ընտրություն** | ➰ | <kbd>Q</kbd> | N/A | Ոչ | Բազմանկյուն ընտրություն ազատ ձեռքով։ Օգտագործում է 8-միացված եզրագծային ռաստերացում 4-միացված արտաքին լցնումով՝ երաշխավորելով 100% հոծ ընտրություն առանց անցքերի։ |
-| **Կախարդական փայտիկ** | 🪄 | <kbd>W</kbd> | N/A | Ոչ | Միատարր (կամ գլոբալ) նույն գույնի շրջանների ընտրություն կարգավորվող տոլերանտության շեմով։ |
-| **Առանցքային և գործողություն** | 🎯 | <kbd>P</kbd> | N/A | Ոչ | Սփրայթի կենտրոնի (Origin) և խաղային գործողության կետերի (`weapon`, `head`, `feet`, `hitbox`) ինտերակտիվ տեղադրում կտավին և JSON արտահանում։ |
+1. **Dual Atlas-Centric Architecture**: The game sprite atlas texture is the single source of truth.
+2. **Multi-Track Layer Timeline**: Independent tracks (`V1, V2, V3...`), duration multipliers, linked frames, and loop tags.
+3. **Real-Time Live Preview**: Floating preview window with FPS control, playback loop, and zoom.
+4. **Configurable Onion Skinning**: Multi-frame ghosting with independent red/blue tinting and opacity falloff.
+5. **Reference Sketch Underlay**: Load PNG/JPEG/WebP concept art as an underlay with free pan, zoom, and eyedropper sampling.
+6. **Live FX & RotSprite**: HSV adjustment, automatic pixel outline generator, 3x3 convolution filters, and RotSprite rotation.
+7. **Palette Management & Skins**: Day/Night variants, team colors, and GPL/HEX palette import/export.
+8. **Sheet Slicer & 9-Slice UI**: Auto-detect sprite boundaries and configure 9-slice scalable UI margins.
+9. **Game Engine Ready Export**: Scaled PNGs with extruded borders, animated GIFs, and JSON metadata (Godot, Bevy, Raylib).
+10. **35 Retro & Modern Themes**: CRT Amber, CRT Green, Famicom, Mega Drive, Game Boy, PSX, and sleek studio dark/light themes.
 
 ---
 
-## Ֆունկցիոնալ փաստաթղթեր
+## Keyboard Shortcuts
 
-### 1. Կրկնակի ատլասակենտրոն ճարտարապետություն
-
-OniAnvil-ում գլխավոր տեքստուրային ատլասը (`atlas_rgba`) ներկայացնում է սփրայթ-թերթի իրական տեքստուրան, ինչպես այն բեռնվում է խաղային շարժիչի կողմից։
-- **Կադրի ռեժիմ (Frame Mode)**. Կենտրոնանում է մեկ ակտիվ անիմացիոն կադրի վրա՝ ապահովելով հարմարավետ աշխատանքային կտավ։ Փոփոխություններն անմիջապես թարմացնում են համապատասխան բջիջը ատլասի տեքստուրայում։
-- **Ատլասի ռեժիմ (Atlas Mode)**. Ցուցադրում է ամբողջ սփրայթ-թերթի ցանցը՝ հնարավորություն տալով կատարել մակրո-կարգավորումներ, ստուգել կադրերի համահարթեցումը և կատարել խմբային խմբագրումներ։
-- **Ուղեկցող ֆայլ (Companion File)**. Նախագծերը պահպանում են մաքուր `.png` սփրայթ-թերթեր թեթև `.onianvil.json` ուղեկցող ֆայլի հետ միասին, որը պարունակում է շերտերի հիերարխիան, թեգերը, պահպանման բազմապատկիչները և գունապնակի սկիները։
-
-### 2. Բազմաուղի շերտերի ժամանակացույց (Timeline)
-
-Ներքևի ժամանակացույցը կառուցված է պրոֆեսիոնալ տեսամոնտաժային ծրագրերի սկզբունքներով.
-- **Շերտերի ուղիներ (`V1, V2, V3...`)**. Շերտերը դասավորված են վերևից ներքև։ Ժամանակացույցում ավելի վերև գտնվող ուղին (`V1`) կադրի կտավի վրա պատկերվում է ամենավերևում։
-- **Ուղու կառավարում**.
-  - Սեղմեք `V1` / `V2` կրծքանշաններին՝ նկարչության ակտիվ շերտը արագ փոխելու համար։
-  - Փոխարկեք շերտի տեսանելիությունը (աչքի իկոնկա) և կողպումը (կողպեքի իկոնկա)։
-  - Կարգավորեք առանձին շերտի անթափանցիկությունը (`0%..=100%`)։
-  - Շարժեք շերտը վեր/վար հիերարխիայում, կրկնօրինակեք շերտը և միաձուլեք ներքևի շերտի հետ (Merge Down)։
-  - Շերտի անվտանգ հեռացում հաստատման պատուհանով։
-- **Կադրային կլիպեր**.
-  - Պահպանման բազմապատկիչ (Hold). կադրի տևողության նշանակում (օրինակ՝ `2×`, `3×` դադարների կամ հարվածի պահերի համար)։
-  - Կապակցված կադրեր. կրկնվող փուլերի կապակցում, որտեղ մեկի խմբագրումը ավտոմատ թարմացնում է մյուս բոլոր կապակցված կադրերը։
-  - Թեգերի ցիկլեր. անիմացիաների կազմակերպում անվանական թեգերով (`idle`, `walk`, `attack`) և նվագարկման ընթացքում դրանց ցիկլային կրկնություն։
-  - Նվագարկման կառավարում. Առաջ, Հետ, Պինգ-Պոնգ և Ցիկլային նվագարկում կարգավորվող կադրերի հաճախականությամբ (`1..=120` FPS)։
-
-### 3. Անիմացիայի կենդանի նախադիտում իրական ժամանակում
-
-Աջակողմյան նախադիտման վահանակը նվագարկում է ձեր անիմացիաները իրական ժամանակում՝ կտավի մասշտաբից կամ դիրքից լիովին անկախ.
-- **Թեգերի զտում**. Նվագարկման մեկուսացում որոշակի թեգերի համար (`walk`, `jump`) կամ ամբողջ շղթայի դիտում։
-- **Նվագարկման կոճակներ**. Play, Pause, նախորդ քայլ, հաջորդ քայլ, ցիկլի փոխարկիչ և նվագարկման արագություն (`0.25x..=4.0x`)։
-- **Ցուցադրման ռեժիմներ**. Փոխարկում մուգ շախմատի, բաց շախմատի, մաքուր սպիտակի, մաքուր սևի կամ հատուկ ֆոների միջև։
-
-### 4. Կալկայի առաջադեմ շարժիչ (Onion Skinning)
-
-Ստեղծեք սահուն անիմացիաներ մասնագիտացված կալկայի համակարգով.
-- **Հատուկ երանգավորում**. Անկախ երանգներ նախորդ կադրերի համար (լռելյայն՝ Կարմիր) և հաջորդ կադրերի համար (լռելյայն՝ Կապույտ)։
-- **Թափանցիկության նվազում**. Կարգավորվող բազային թափանցիկություն և աստիճանական մարման կորեր յուրաքանչյուր քայլի համար։
-- **Ցիկլային միացում**. Առաջին և վերջին կադրերի փոխադարձ լուսավորում անընդհատ ցիկլեր ստեղծելիս։
-- **Արագ հայացք (Quick-Peek)**. Պահեք <kbd>Space</kbd> ստեղնը առանց մկնիկը շարժելու՝ հարևան կադրերն ակնթարթորեն տեսնելու համար։
-
-### 5. Ռեֆերենսի խելացի էսքիզի և ուրվագծման շերտ
-
-Արագացրեք ձեր աշխատանքը՝ ուրվագծելով ձեռքով արված էսքիզները կամ ռեֆերենս-լուսանկարները.
-- **Ձևաչափեր**. PNG, JPEG և WebP պատկերների բեռնում։
-- **Խառնման ռեժիմներ**. Ստորին շերտ (փիքսելային շերտերի տակ) կամ Վերին շերտ (փիքսելների վրա)։
-- **Տրանսֆորմացիայի կառավարում**. Անկախ մասշտաբավորում, դիրքի տեղաշարժ, պտույտ և թափանցիկության սահիչ։
-- **Խելացի կաթոցիկ**. Գույնի ընտրություն էսքիզից՝ ակտիվ նախագծի գունապնակի մոտակա գույնին ավտոմատ ձգտմամբ։
-- **Թխում 1 կտտոցով (1-Click Bake)**. Չափափոխված ռեֆերենսի վերածում մաքուր փիքսել-արտի ակտիվ կադրի վրա։
-
-### 6. Ճշգրիտ ընտրության գործիքներ և «վազող մրջյուններ»
-
-- **Անիմացված վազող մրջյուններ**. Ակտիվ ընտրությունը ցուցադրվում է բարձր կոնտրաստային երկգույն շարժվող գծիկներով։
-- **Հոծ լասո լցնումով**. Ի տարբերություն պարզ ճառագայթային ալգորիթմների, որոնք հատվող հանգույցներում անցքեր են թողնում, OniAnvil-ի լասոն ռաստերացնում է փակ 8-միացված սահմանը և լցնում արտաքին տարածքը՝ ապահովելով 100% հոծ ընտրություն։
-- **Ընտրության գործողություններ**. Ընդլայնել, Սեղմել, Եզրագիծ (շրջանի, քառակուսու, շեղանկյան ձևերով), Տեղաշարժել, Շրջել, Ջնջել, Ազատ պտտել և Պատճենել/Կտրել/Տեղադրել համակարգային բուֆերի միջոցով։
-- **Պատճենում և տեղադրում կադրերի միջև**. Ընտրեք տիրույթը մեկ կադրի վրա, սեղմեք <kbd>Ctrl/Cmd+C</kbd>, անցեք այլ կադր և սեղմեք <kbd>Ctrl/Cmd+V</kbd>՝ փիքսելները կտեղադրվեն նույն կոորդինատներով ցանկացած լեզվական դասավորության դեպքում։
-
-### 7. Կենդանի էֆեկտներ, ֆիլտրեր և RotSprite
-
-Բոլոր էֆեկտներն ունեն **Կենդանի նախադիտում (Live Preview)** վանդակ, որն արտացոլում է փոփոխությունները կտավին և թույլ է տալիս չեղարկել գործողությունն առանց պատմությունը ծանրաբեռնելու.
-- **Գույնի փոխարինում (`Shift+R`)**.
-  - Ինտերակտիվ կաթոցիկ. ընտրեք փոխարինվող և նոր գույները անմիջապես կտավից կամ ներկապնակից։
-  - Արագ ընտրության գոտի. ձախ կոճակը ընտրում է փոխարինվող գույնը, աջ կոճակը՝ նոր գույնը։
-  - Տոլերանտության սահիչ և գույնի փոխարինում միանգամից բոլոր կադրերում։
-- **Գույների ճշգրտում (`Ctrl/Cmd+U`)**. HSV երանգի (Hue), հագեցվածության (Saturation), պայծառության (Value) և կոնտրաստի կարգավորում։
-- **Եզրագծի ավտո-գեներատոր**. Կերպարի հստակ եզրագծի ստեղծում (Արտաքին, Ներքին, Կենտրոնական) ուղիղ կամ շեղանկյուն անկյուններով։
-- **3×3 մատրիցային ֆիլտրեր**. Լղոզում, Սրացում, Եզրերի հայտնաբերում և Ռելիեֆ՝ ալֆա-ալիքի պահպանմամբ։
-- **Ազատ պտույտ (`Ctrl/Cmd+R`)**. Ընտրված տիրույթի կամ կադրի պտույտ ցանկացած անկյան տակ դասական **RotSprite** կամ Nearest Neighbor ալգորիթմով։
-- **Հարմարեցում ներկապնակին**. Կտավի գույների վերահաշվարկ ակտիվ ներկապնակի գույներով Bayer 2x2, 4x4, 8x8 կամ Blue Noise դիզերինգով։
-
-### 8. Ներկապնակների կառավարում, փոխարինում և կերպարի սկիներ
-
-- **Ներկառուցված գունապնակներ**. 20-ից ավելի իսկական ռետրո ներկապնակներ (Game Boy, PICO-8, Commodore 64, NES, Endesga 32, Solarized, Sweetie 16)։
-- **Ներմուծում և արտահանում**. GIMP Palette (`.gpl`), PAL (`.pal`), Hex (`.hex`) և պատկերների շերտերի (`.png`) աջակցություն։
-- **Գունապնակի փոխարինում (Սկիներ)**. Մեկ կերպարի համար մի քանի գունային տարբերակների ստեղծում (օրինակ՝ Հիմնական, Ոսկե զրահ, Ստվեր, Սառցե)։ Սկինի փոխումը վայրկյանապես թարմացնում է բոլոր կադրերի գույները ատլասում։
-- **Գրադիենտային անցումների գեներատոր**. Երկու գույների միջև սահուն գրադիենտի ավտոմատ կառուցում նշված քանակի քայլերով։
-
-### 9. Սփրայթ-թերթի կտրիչ, 9-Grid միջերես և արտահանում խաղային շարժիչների համար
-
-- **Թերթի կտրիչ (Sheet Slicer)**. Ավտոկոռելյացիոն ալգորիթմն ավտոմատ կերպով կտրատում է պատրաստի սփրայթ-թերթերը հավասար կամ ճշգրիտ սահմանափակված անիմացիոն կադրերի։
-- **9-Grid (9-Slice) մասշտաբավորում**. Ինտերֆեյսի տարրերի (պատուհաններ, կոճակներ) եզրերի կարգավորում՝ առանց անկյունների աղավաղման մասշտաբավորելու համար։
-- **Էքստրուդացված եզրերով PNG արտահանում**. Եզրային փիքսելների կրկնօրինակումը թափանցիկ լուսանցքներում բացառում է ֆիլտրման թերությունները OpenGL, DirectX, Vulkan և 2D շարժիչներում (օրինակ՝ Godot)։
-- **Անիմացիոն GIF արտահանում**. Օպտիմիզացված GIF գեներատոր ցիկլերի քանակի, կադրի ուշացման և թափանցիկության աջակցությամբ։
-- **Ստանդարտ Sprite Sheet JSON**. Կադրերի կոորդինատների, թեգերի, տևողությունների և առանցքային կետերի արտահանում ժամանակակից 2D խաղային շարժիչների ստանդարտ JSON ձևաչափով։
-
-### 10. 35 էրգոնոմիկ թեմաներ և ամբողջական տեղայնացում
-
-- **Թեմաների հավաքածու**. Studio Dark, Studio Light, Pitch Black, Cyberpunk Neon, Synthwave, Nord Frost, Dracula, Tokyo Night, Catppuccin Mocha, Gruvbox Dark, Monokai Pro, Solarized Dark, Solarized Light, CRT ֆոսֆորներ (Amber, Green, Cyan), ռետրո կոնսոլներ (Game Boy, Game Boy Light, Super Game Boy, NES/Famicom, SNES, Genesis/Mega Drive, PlayStation 1, PlayStation 2, Dreamcast) և ռետրո համակարգիչներ (C64, ZX Spectrum, Amiga Workbench, Atari ST, MSX, Apple II, DOS CGA, Mac Classic, Windows 98)։
-- **Ամբողջական տեղայնացում**. Անխափան փոխարկում 37 աջակցվող լեզուների միջև՝ բառարանային բանալիների 100% ճշգրտությամբ և բնական թարգմանությամբ։
+| Shortcut | Tool / Action | Description |
+|:---:|:---|:---|
+| <kbd>P</kbd> | Pencil | 1px precision raster drawing |
+| <kbd>E</kbd> | Eraser | Clear pixels back to transparency |
+| <kbd>I</kbd> / <kbd>Alt</kbd> | Eyedropper | Sample color from canvas or sketch |
+| <kbd>G</kbd> | Paint Bucket | Flood fill contiguous color region |
+| <kbd>U</kbd> | Gradient | Linear and radial gradients |
+| <kbd>V</kbd> | Line | Straight lines with angle snapping |
+| <kbd>C</kbd> | Bézier Curve | Smooth 3-point quadratic spline |
+| <kbd>R</kbd> | Rectangle | Outlined or solid rectangular shapes |
+| <kbd>O</kbd> | Ellipse | Outlined or solid circles and ellipses |
+| <kbd>D</kbd> | Dither Brush | Pattern dither drawing |
+| <kbd>H</kbd> | Shading | Step lighter or darker through palette ramps |
+| <kbd>M</kbd> | Rectangular Select | Select region with marching ants |
+| <kbd>L</kbd> | Lasso Select | Freehand polygon selection |
+| <kbd>W</kbd> | Magic Wand | Select color-contiguous pixels |
+| <kbd>Y</kbd> | Pivot & Sockets | Rotation center and socket points |
+| <kbd>X</kbd> | Swap Swatches | Swap Primary and Secondary color swatches |
+| <kbd>Ctrl+C / X / V</kbd> | Clipboard | Copy, cut, and paste pixel clusters |
+| <kbd>Space</kbd> | Play / Pause | Toggle animation playback |
+| <kbd>A / D</kbd> | Step Frames | Step to Previous / Next frame |
+| <kbd>Shift+R</kbd> | Replace Color | Interactive color replacement dialog |
+| <kbd>Ctrl+U</kbd> | Color Adjust | HSV hue shift and contrast adjustment |
+| <kbd>Ctrl+R</kbd> | Free Rotate | Arbitrary angle rotation via RotSprite |
+| <kbd>Space+Drag</kbd> | Pan Canvas | Smooth infinite panning |
+| <kbd>Ctrl+Wheel</kbd> | Zoom | Pixel-crisp cursor-centered zoom |
 
 ---
 
-## Կառավարում և արագ ստեղներ
+## Getting Started
 
-| Արագ ստեղն | Գործիք / Գործողություն | Նկարագրություն |
-|:---|:---|:---|
-| <kbd>B</kbd> | **Մատիտ** | 1px ճշգրիտ նկարչություն Pixel-Perfect ռեժիմով |
-| <kbd>E</kbd> | **Ռետին** | Փիքսելների ջնջում մինչև թափանցիկություն |
-| <kbd>I</kbd> / <kbd>Alt</kbd> | **Կաթոցիկ** | Գույնի ընտրություն կտավից կամ էսքիզից |
-| <kbd>G</kbd> | **Լցնել / Գրադիենտ** | Փոխարկում լցնելու և դիզերինգի գրադիենտի միջև |
-| <kbd>L</kbd> | **Գիծ** | Ուղիղ գծերի գծում կենդանի նախադիտմամբ և Shift ֆիքսմամբ |
-| <kbd>C</kbd> | **Կոր** | 3-կտտոցով Բեզյեի քառակուսային կորի գործիք |
-| <kbd>U</kbd> | **Ուղղանկյուն** | Երկրաչափական ուղղանկյուն և քառակուսի (եզրագիծ/լցնում) |
-| <kbd>O</kbd> | **Էլիպս** | Երկրաչափական էլիպս և շրջան (եզրագիծ/լցնում) |
-| <kbd>D</kbd> | **Դիզերինգի վրձին** | Շախմատային դիզերինգի մատրիցայի նկարում |
-| <kbd>S</kbd> | **Ստվերագծման գործիք** | Աստիճանական լուսավորում (Dodge) և մգացում (Burn) ներկապնակով |
-| <kbd>M</kbd> | **Ուղղանկյուն ընտրություն** | Տիրույթի ընտրություն վազող մրջյուններով |
-| <kbd>Q</kbd> | **Լասո ընտրություն** | Ազատ հոծ բազմանկյուն ընտրություն |
-| <kbd>W</kbd> | **Կախարդական փայտիկ** | Միևնույն գույնի հարակից շրջանների ընտրություն |
-| <kbd>P</kbd> | **Առանցքային կետեր** | Սփրայթի կենտրոնի (Origin) և գործողության կետերի տեղադրում |
-| <kbd>X</kbd> | **Գույների փոխանակում** | Առաջնապլանի և ետնապլանի գույների փոխանակում |
-| <kbd>[</kbd> / <kbd>]</kbd> | **Վրձնի չափ** | Փոքրացնել / մեծացնել վրձնի չափը (`1..=32`) |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>C</kbd> | **Պատճենել** | Ընտրված փիքսելների պատճենում բուֆերում |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>X</kbd> | **Կտրել** | Ընտրված փիքսելների կտրում բուֆերում |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>V</kbd> | **Տեղադրել** | Բուֆերի փիքսելների տեղադրում ակտիվ կադրում |
-| <kbd>Delete</kbd> / <kbd>Backspace</kbd> | **Ջնջել** | Փիքսելների մաքրում ընտրության ներսում |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>A</kbd> | **Ընտրել ամբողջը** | Ակտիվ կադրի բոլոր փիքսելների ընտրություն |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>D</kbd> / <kbd>Esc</kbd> | **Չեղարկել ընտրությունը** | Ակտիվ ընտրության դաշտի մաքրում |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>Shift</kbd> + <kbd>I</kbd> | **Շրջել ընտրությունը** | Ընտրության դաշտի ինվերսիա |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd> | **Կրկնօրինակել կադրը** | Ակտիվ կադրի կրկնօրինակում ժամանակացույցում |
-| <kbd>Space</kbd> | **Նվագարկել / Դադար** | Անիմացիայի նվագարկման միացում և կանգնեցում |
-| <kbd>Shift</kbd> + <kbd>R</kbd> | **Գույնի փոխարինում** | Գույնի փոխարինման պատուհան կենդանի նախադիտմամբ |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>U</kbd> | **Գույների ուղղում** | HSV երանգի, հագեցվածության և կոնտրաստի պատուհան |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | **Ազատ պտույտ** | Կամայական անկյան պտույտի պատուհան (RotSprite) |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>Z</kbd> | **Հետարկել (Undo)** | Վերջին գործողության կամ վրձնահարվածի չեղարկում |
-| <kbd>Ctrl/Cmd</kbd> + <kbd>Y</kbd> / <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> | **Կրկնել (Redo)** | Չեղարկված գործողության վերականգնում |
-| <kbd>Space</kbd> + Քաշել / Մկնիկի միջին | **Կտավի տեղաշարժ** | Սահուն անվերջ տեղաշարժ կտավի կոորդինատներով |
-| <kbd>Ctrl/Cmd</kbd> + Անիվ / <kbd>+</kbd> / <kbd>-</kbd> | **Մասշտաբ (Zoom)** | Հստակ զում մկնիկի սլաքի կենտրոնացմամբ |
-| <kbd>Num 1</kbd> / <kbd>Num 2</kbd> | **Տեսքի ռեժիմ** | Փոխարկում Կադրի (<kbd>1</kbd>) և Ատլասի (<kbd>2</kbd>) ռեժիմների միջև |
-| <kbd>F</kbd> | **Տեղավորել կտավը** | Ակտիվ կադրի ավտոմատ կենտրոնացում էկրանին |
-| <kbd>F1</kbd> | **Օգնություն** | Արագ ստեղների օգնության պատուհանի բացում |
-
----
-
-## Սկսել
-
-### Պատրաստի երկուական ֆայլեր (Binaries)
-
-Ներբեռնեք նախապես կառուցված ինքնաբավ ֆայլերը **[GitHub Releases էջից](https://github.com/rbm13s/OniAnvil/releases/latest)**.
-
-- **Windows**. Ներբեռնեք `OniAnvil-windows-x86_64.zip`-ը, արխիվացրեք և կրկնակի կտտացրեք `OniAnvil.exe`-ին։
-- **Linux**. Ներբեռնեք `OniAnvil-linux-x86_64.tar.gz` (պորտատիվ) արխիվը կամ տեղադրեք Debian/Ubuntu փաթեթը `onianvil_*_amd64.deb`.
-  ```bash
-  sudo dpkg -i onianvil_*_amd64.deb
-  ```
-- **macOS**. Ներբեռնեք `OniAnvil-macos-universal.zip`-ը, բացեք արխիվը և քաշեք `OniAnvil.app`-ը դեպի Applications պանակ։ Ունիվերսալ ֆայլը աշխատում է ինչպես Apple Silicon (M1/M2/M3/M4), այնպես էլ Intel Mac համակարգիչներում։
-- **Web**. Գործարկեք անմիջապես բրաուզերում առանց տեղադրման. **[Բացել WebAssembly հավելվածը](https://rbm13s.github.io/OniAnvil/app/?lang=hy)**։
+### Standalone Binaries
+- **Windows**: Download `OniAnvil-windows-x86_64.zip`, extract, and launch `onianvil.exe`.
+- **Linux**: Download `OniAnvil-linux-x86_64.tar.gz` (portable) or install `onianvil_*_amd64.deb`.
+- **macOS**: Download `OniAnvil-macos-universal.zip`, extract, and drag `OniAnvil.app` to Applications.
+- **Web**: Run directly in your browser without installing anything: **[Launch WebAssembly App](https://rbm13s.github.io/OniAnvil/app/?lang=hy)**.
   > [!WARNING]
-  > Վեբ-տարբերակն (WebAssembly) ունի **Փորձարարական (Experimental)** կարգավիճակ։ Բրաուզերի անվտանգության սահմանափակումների, WebGL/WebGPU տարբերությունների և բուֆերի սահմանափակումների պատճառով հնարավոր են գրաֆիկական աննշան շեղումներ կամ արտադրողականության նվազում դեսկտոպ տարբերակի համեմատ։ Լիարժեք և հարմարավետ աշխատանքի համար խորհուրդ է տրվում օգտագործել նատիվ դեսկտոպ տարբերակները։
+  > The WebAssembly (browser) build has an **Experimental** status. Due to browser sandbox constraints, WebGL/WebGPU differences, and clipboard limitations, you may encounter minor graphical glitches or performance bottlenecks. For production work, native desktop builds are strongly recommended.
 
 ---
 
-### Կառուցում ելակետային կոդից
+## License & Disclaimer
 
-#### Նախապայմաններ
-- **Rust Toolchain**. Տեղադրեք Rust-ը (խորհուրդ է տրվում 1.80+) [rustup.rs](https://rustup.rs/)-ի միջոցով.
-  ```bash
-  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-  ```
-- **Linux-ի կառուցման կախվածություններ** (Debian/Ubuntu).
-  ```bash
-  sudo apt-get update
-  sudo apt-get install -y build-essential pkg-config libxcb-render0-dev libxcb-shape0-dev \
-    libxcb-xfixes0-dev libxkbcommon-dev libxkbcommon-x11-dev libssl-dev libgtk-3-dev libgl1-mesa-dev
-  ```
+This project is licensed under the **[MIT License](../LICENSE)**.
 
-#### 1. Նատիվ տարբերակի կոմպիլյացիա և գործարկում
-```bash
-# Ռեպոզիտորիայի կլոնավորում
-git clone https://github.com/rbm13s/OniAnvil.git
-cd OniAnvil
-
-# Թեստերի գործարկում
-cargo test
-
-# Օպտիմիզացված տարբերակի կառուցում և գործարկում
-cargo run --release
-```
-
-#### 2. WebAssembly տարբերակի կոմպիլյացիա (Trunk-ի միջոցով)
-```bash
-# wasm32 նպատակակետի և Trunk գործիքի ավելացում
-rustup target add wasm32-unknown-unknown
-cargo install --locked trunk
-
-# Տեղական dev-սերվերի գործարկում ավտո-վերաբեռնմամբ
-trunk serve
-
-# Պատրաստի ֆայլերի կառուցում docs/app/ պանակում
-./build_wasm.sh        # Linux / macOS համակարգերում
-./build_wasm.ps1       # Windows PowerShell-ում
-```
-
----
-
-## Ֆայլի ձևաչափ և ուղեկցող ճարտարապետություն
-
-OniAnvil-ը խուսափում է փակ բինարային ձևաչափերից։ Յուրաքանչյուր նախագիծ բաղկացած է երկու մաքուր, վերահսկվող (Git) ֆայլերից.
-
-```
-my_character/
-├── my_character.png            # Ստանդարտ PNG սփրայթ-թերթ (բացվում է ցանկացած շարժիչում կամ դիտիչում)
-└── my_character.onianvil.json   # Ուղեկցող մետատվյալների ֆայլ
-```
-
-`.onianvil.json` մետատվյալների ֆայլը պահպանում է.
-- Կտավի ցանցի կարգավորումները. կադրի չափսերը, սյուների քանակը, կադրերի ընդհանուր քանակը։
-- Շերտերի հիերարխիան. ուղիների անվանումները, անթափանցիկության մակարդակները, տեսանելիության և կողպման դրոշակները։
-- Անիմացիայի թեգերը. անվանումը, սկզբնական/վերջնական կադրերի ինդեքսները, նվագարկման ուղղությունը, տևողությունները։
-- Գունապնակի սահմանումները. ակտիվ գույները, անվանական սկիները, ակտիվ սկինի ինդեքսը։
-- Էսքիզի շերտի վիճակը. պատկերի ուղին, մասշտաբը, տեղաշարժը, պտույտի անկյունը, թափանցիկությունը։
-- Առանցքային կետերը. սփրայթի կենտրոնը (Origin), զենքի կետերը և բախման կենտրոնները։
-
----
-
-## Ներդրում և երախտագիտություն
-
-Մենք ողջունում ենք ցանկացած առաջարկ, սխալների մասին հաղորդում և pull request!
-1. Ստեղծեք ռեպոզիտորիայի Fork-ը GitHub-ում։
-2. Ստեղծեք ֆունկցիոնալ ճյուղ՝ `git checkout -b feature/nor-gorciq`։
-3. Կատարեք փոփոխությունները և գրանցեք՝ `git commit -am 'Add new pixel tool'`։
-4. Ուղարկեք ճյուղը՝ `git push origin feature/nor-gorciq`։
-5. Բացեք Pull Request։
-
-### Երախտագիտություն
-- Կատվի անիմացիայի ցուցադրական սփրայթը՝ **"Cat 2D Pixel Art"**, ստեղծվել է **xzany**-ի կողմից ([նախագծի էջը itch.io-ում](https://xzany.itch.io/cat-2d-pixel-art))։
-- Ծրագիրը կառուցված է հիանալի **[egui](https://github.com/emilk/egui)** գրաֆիկական գրադարանի և **[wgpu](https://wgpu.rs/)** գրաֆիկական էկոհամակարգի հիման վրա։
-- Միջերեսի իկոնկաներն ապահովվում են @fontawesome-ի **[Font Awesome Free](https://fontawesome.com)** փաթեթով (Իկոնկաներ՝ CC BY 4.0, Տառատեսակներ՝ SIL OFL 1.1, Կոդ՝ MIT արտոնագիր)։
-
----
-
-## Արտոնագիր և պատասխանատվության սահմանափակում
-
-Այս նախագիծը տարածվում է **[MIT արտոնագրով](LICENSE)**։ Դուք ազատ եք օգտագործել, փոփոխել, տարածել և ինտեգրել OniAnvil-ը առևտրային և անձնական խաղերի մշակման գործընթացներում։
-
-### Երաշխիքի մերժում և պատասխանատվության սահմանափակում
+### Disclaimer of Warranty & Limitation of Liability
 > [!IMPORTANT]
-> **OniAnvil** ծրագիրը տարածվում է **անվճար**, **«ԻՆՉՊԵՍ ՈՐ Է» («AS IS»)** և **«ԻՆՉՔԱՆՈՎ ՀԱՍԱՆԵԼԻ Է» («AS AVAILABLE»)** սկզբունքով, առանց որևէ բացահայտ կամ ենթադրյալ երաշխիքի։
+> **OniAnvil** is distributed **free of charge** on an **"AS IS"** and **"AS AVAILABLE"** basis, without warranties or conditions of any kind, either express or implied.
 > 
-> Ոչ մի դեպքում հեղինակ(ներ)ը, հեղինակային իրավունքի տերերը կամ մշակողները **պատասխանատվություն չեն կրում** որևէ ուղղակի, անուղղակի, պատահական, տուգանային կամ հետևանքային վնասի համար (ներառյալ տվյալների կորուստը, ֆայլերի վնասումը, սարքավորումների խափանումը, բաց թողնված օգուտը կամ աշխատանքի ընդհատումը), որն առաջացել է այս ծրագրի օգտագործման կամ օգտագործման անհնարինության հետևանքով, նույնիսկ եթե տեղյակ են եղել նման վնասի հնարավորության մասին։ Ծրագրի օգտագործման հետ կապված բոլոր ռիսկերը կրում է օգտատերը։
+> Under no circumstances shall the author(s), copyright holders, or contributors be held liable for any direct, indirect, incidental, special, exemplary, or consequential damages (including, but not limited to, loss of data, file corruption, hardware failure, lost profits, or business interruption) arising in any way out of the use of or inability to use this software. You assume all responsibility and risk for using this program.

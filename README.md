@@ -308,6 +308,7 @@ Accelerate your workflow by tracing hand-drawn sketches or reference photographs
 - **Blending Modes**: Underlay (beneath your pixel layers) or Overlay (above your pixel layers).
 - **Transform Controls**: Independent zoom, position offset, rotation, and opacity slider.
 - **Smart Color Sampling**: Use the Eyedropper on the sketch layer with optional automatic snapping to the nearest color in your active project palette.
+- **Advanced Sketch Baking**: The dedicated **Bake Sketch** dialog allows baking concept art and AI-generated imagery into clean pixel art frames, featuring preset retro palette quantization, configurable dithering (Floyd-Steinberg, Atkinson, Bayer Ordered), and pixel precision controls to preserve crisp lines.
 - **1-Click Bake**: Flatten the scaled reference image directly into pixel art on the active frame.
 
 ### 6. Precision Selection Suite & Marching Ants
@@ -342,12 +343,15 @@ All image effects include a real-time **Live Preview** checkbox that previews mo
 - **Sheet Slicer**: Autocorrelation boundary detection automatically slices raw sprite sheets into uniform or tightly bounded animation frames.
 - **9-Grid (9-Slice) Scaling**: Set customizable slice margins (top, bottom, left, right) to preview scalable UI boxes and button panels.
 - **Extruded Border PNG Export**: Extrudes edge pixel colors into transparent margins, eliminating texture filtering seams and bleeding in OpenGL, DirectX, Vulkan, and 2D game engines (such as Godot).
+- **Direct Godot 4 SpriteFrames Export (`.tres`)**: Exports animations directly into Godot's native `SpriteFrames` resource format with frame delays and autoplay.
+- **Direct Aseprite Binary Export (`.aseprite` / `.ase`)**: Direct binary export fully compatible with Aseprite and game engine pipelines.
 - **Animated GIF Export**: Generate optimized animated GIFs with custom loop counts, frame delays, and transparent backgrounds.
 - **Standard Sprite Sheet JSON**: Exports frame slices, tags, durations, and pivot coordinates matching the standard sprite sheet JSON schema used across modern 2D game engines.
 
-### 10. 35 Ergonomic Themes & Multilingual Localization
+### 10. 35 Ergonomic Themes, Draggable Dialogs & Multilingual Localization
 
-- **Curated Themes**: Studio Dark, Studio Light, Pitch Black, Cyberpunk Neon, Synthwave, Nord Frost, Dracula, Tokyo Night, Catppuccin Mocha, Gruvbox Dark, Monokai Pro, Solarized Dark, Solarized Light, Amber CRT, Green CRT, Cyan CRT, Retro Consoles (Game Boy, Game Boy Light, Super Game Boy, NES/Famicom, SNES, Genesis/Mega Drive, PlayStation 1, PlayStation 2, Dreamcast), and Retro Computers (C64, ZX Spectrum, Amiga Workbench, Atari ST, MSX, Apple II, DOS CGA, Mac Classic, Windows 98).
+- **Curated Themes**: Studio Dark, Studio Light, Pitch Black, Cyberpunk Neon, Synthwave, Nord Frost, Dracula, Tokyo Night, Catppuccin Mocha, Gruvbox Dark, Monokai Pro, Solarized Dark, Solarized Light, Amber CRT, Green CRT, Cyan CRT, Retro Consoles (Game Boy, Game Boy Light, Super Game Boy, NES/Famicom, SNES, Genesis/Mega Drive, PlayStation 1, PlayStation 2, Dreamcast), and Retro Computers (C64, ZX Spectrum, Amiga Workbench, Atari ST, MSX, Apple II, DOS CGA, Mac Classic, Windows 98) with full high-contrast optimization.
+- **Draggable Modals**: All popup windows and tool settings dialogs can be freely dragged across the canvas by their title bars.
 - **37 Languages**: Comprehensive native UI localization across 37 languages with 100% dictionary key parity.
 
 ---
