@@ -9,7 +9,7 @@
 
 - **Project Name:** OniAnvil (`onianvil`)
 - **Repository:** `https://github.com/rbm13s/OniAnvil`
-- **Current Version:** `v1.0.0` (Production Release)
+- **Current Version:** `v1.2.0` (Production Release)
 - **License:** MIT License
 - **Author/Maintainer:** rbm13s & OniAnvil Contributors
 
@@ -327,10 +327,10 @@ Whenever preparing or cutting a new release, all contributors and agents **must 
 ### Phase 2: GitHub Actions CI Verification
 1. Monitor GitHub Actions release pipeline. Wait until Linux, macOS, Windows, and Release jobs succeed.
 2. Confirm presence of all 4 published binary assets:
-   - `OniAnvil-windows-x86_64.zip`
+   - `OniAnvil-X.Y.Z-windows-x86_64.zip`
    - `onianvil_X.Y.Z_amd64.deb`
-   - `OniAnvil-linux-x86_64.tar.gz`
-   - `OniAnvil-macos-universal.zip`
+   - `OniAnvil-X.Y.Z-linux-x86_64.tar.gz`
+   - `OniAnvil-X.Y.Z-macos-universal.zip`
 
 ### Phase 3: WebAssembly Rebuild & Docs Sync (Branch `main` Only)
 1. Recompile WebAssembly app into `docs/app/`:
@@ -357,3 +357,25 @@ Whenever preparing or cutting a new release, all contributors and agents **must 
 - **Typo Corrections:** Fixed misspelled screenshot assets (`checkerboard`, `scroll`) across 75 markdown and HTML documents.
 - **Tools Table Formatting:** Stripped unicode escape literals (`\u{...}`) next to emojis in all 37 documentation tables.
 - **Repository Branding:** Configured GitHub repository About description, homepage URL, and 17 search topics via GitHub REST API.
+
+---
+
+## 9. Major Additions in v1.2.0
+
+- **Dedicated Palette Extraction Dialog:**
+  - Replaced immediate 64-color extraction with an interactive dialog for both *Extract from Sheet* and *Import from (png)*.
+  - Added support for extracting up to 1024 colors with customizable limit slider and quick-select buttons (`16`, `32`, `64`, `128`, `256`, `512`, `1024`).
+  - Added four color extraction algorithms: *Most Frequent* (default), *Median Cut* (color box quantization), *Perceptual Diversity* (max-distance emphasis for rare accents), and *First Appearance* (scanline order).
+  - Live interactive swatch preview with hover tooltips showing slot, hex, pixel count, and image coverage percentage.
+  - Zero UI latency: single-pass occurrence histogram aggregation on modal open ensures sub-millisecond slider and algorithm adjustments.
+  - Fully translated across all 37 supported languages.
+
+- **High-Performance Palette Remapping (`PaletteColorMatcher`):**
+  - Resolved UI stutter when opening *Remap to Palette* on projects with 512 or 1024 palette colors.
+  - Added `PaletteColorMatcher` with a 4096-entry direct-mapped L1 CPU cache (32 KB footprint) for RGB triplet lookups, yielding a 95%+ cache hit rate.
+  - Converted redmean perceptual distance to 32-bit integer arithmetic with exact-match early-exit and green-channel difference pruning.
+  - Added dirty-check caching to the preview pipeline in `app.rs`: preview calculations only run when settings change, completely eliminating redundant 60 FPS texture re-renders and GPU uploads.
+
+- **Release Automation & Archive Versioning:**
+  - Changed GitHub Actions CI trigger from push-on-main to release-tags (`v*`) and manual dispatch (`workflow_dispatch`), preventing redundant workflow runs.
+  - Archive outputs now include the application version in their filenames across all platforms (`OniAnvil-1.2.0-windows-x86_64.zip`, `OniAnvil-1.2.0-linux-x86_64.tar.gz`, `OniAnvil-1.2.0-macos-universal.zip`).

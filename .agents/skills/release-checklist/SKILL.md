@@ -61,10 +61,10 @@ This skill provides step-by-step guidance for safely releasing a new version of 
      Select-Object name, size
    ```
    Ensure all 4 binary packages are attached:
-   - `OniAnvil-windows-x86_64.zip`
+   - `OniAnvil-X.Y.Z-windows-x86_64.zip`
    - `onianvil_X.Y.Z_amd64.deb`
-   - `OniAnvil-linux-x86_64.tar.gz`
-   - `OniAnvil-macos-universal.zip`
+   - `OniAnvil-X.Y.Z-linux-x86_64.tar.gz`
+   - `OniAnvil-X.Y.Z-macos-universal.zip`
 
 > [!CAUTION]
 > NEVER proceed to Phase 3 if any desktop build failed or if release assets are missing or unverified.

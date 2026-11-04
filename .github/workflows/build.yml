@@ -82,12 +82,12 @@ jobs:
           VERSION=$(grep '^version' Cargo.toml | head -n1 | cut -d '"' -f2)
           strip target/release/onianvil
 
-          # 1. Portable archive: OniAnvil-linux-x86_64.tar.gz
+          # 1. Portable archive: OniAnvil-*-linux-x86_64.tar.gz
           mkdir -p dist/OniAnvil-linux-x86_64
           cp target/release/onianvil dist/OniAnvil-linux-x86_64/
           cp README.md dist/OniAnvil-linux-x86_64/
           convert assets/icon_2048x2048.jpg -resize 256x256 dist/OniAnvil-linux-x86_64/onianvil.png
-          tar -czvf OniAnvil-linux-x86_64.tar.gz -C dist OniAnvil-linux-x86_64
+          tar -czvf "OniAnvil-${VERSION}-linux-x86_64.tar.gz" -C dist OniAnvil-linux-x86_64
 
           # 2. Debian package: onianvil_<version>_amd64.deb
           DEB_DIR="deb_pkg/onianvil_${VERSION}_amd64"
@@ -132,7 +132,7 @@ jobs:
         with:
           name: OniAnvil-Linux-x86_64
           path: |
-            OniAnvil-linux-x86_64.tar.gz
+            OniAnvil-*-linux-x86_64.tar.gz
             onianvil_*_amd64.deb
 
   # ============================================================================
@@ -222,13 +222,13 @@ jobs:
 
           cp README.md dist/
           cd dist
-          ditto -c -k --sequesterRsrc --keepParent OniAnvil.app ../OniAnvil-macos-universal.zip
+          ditto -c -k --sequesterRsrc --keepParent OniAnvil.app "../OniAnvil-${VERSION}-macos-universal.zip"
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: OniAnvil-macOS-Universal
-          path: OniAnvil-macos-universal.zip
+          path: OniAnvil-*-macos-universal.zip
 
   # ============================================================================
   # 3. Windows (x86_64 MSVC) — Portable .zip with embedded icon
@@ -258,13 +258,14 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist/OniAnvil-windows-x86_64 | Out-Null
           Copy-Item target/release/onianvil.exe dist/OniAnvil-windows-x86_64/OniAnvil.exe
           Copy-Item README.md dist/OniAnvil-windows-x86_64/README.md
-          Compress-Archive -Path dist/OniAnvil-windows-x86_64/* -DestinationPath OniAnvil-windows-x86_64.zip -Force
+          $VERSION = (Get-Content Cargo.toml | Select-String '^version\s*=\s*"([^"]+)"').Matches.Groups[1].Value
+          Compress-Archive -Path dist/OniAnvil-windows-x86_64/* -DestinationPath "OniAnvil-$VERSION-windows-x86_64.zip" -Force
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: OniAnvil-Windows-x86_64
-          path: OniAnvil-windows-x86_64.zip
+          path: OniAnvil-*-windows-x86_64.zip
 
   # ============================================================================
   # 4. Automatic GitHub Release when pushing a version tag (e.g. v0.1.0)
@@ -297,7 +298,7 @@ jobs:
         with:
           body_path: release_notes.md
           files: |
-            release-assets/OniAnvil-linux-x86_64.tar.gz
+            release-assets/OniAnvil-*-linux-x86_64.tar.gz
             release-assets/onianvil_*_amd64.deb
-            release-assets/OniAnvil-macos-universal.zip
-            release-assets/OniAnvil-windows-x86_64.zip
+            release-assets/OniAnvil-*-macos-universal.zip
+            release-assets/OniAnvil-*-windows-x86_64.zip
