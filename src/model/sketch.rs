@@ -170,6 +170,53 @@ impl Default for SketchReferenceState {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct SketchSampleContext {
+    pub cx: f32,
+    pub cy: f32,
+    pub inv_2hx: f32,
+    pub inv_2hy: f32,
+    pub sin_t: f32,
+    pub cos_t: f32,
+    pub flip_h: bool,
+    pub flip_v: bool,
+    pub sw: u32,
+    pub sh: u32,
+}
+
+impl SketchSampleContext {
+    #[inline(always)]
+    pub fn sample_rgba(&self, sketch_img: &RgbaImage, fx: f32, fy: f32) -> Option<[u8; 4]> {
+        let dx = fx - self.cx;
+        let dy = fy - self.cy;
+        let sx = dx * self.cos_t + dy * self.sin_t;
+        let sy = -dx * self.sin_t + dy * self.cos_t;
+
+        let mut u = sx * self.inv_2hx + 0.5;
+        let mut v = sy * self.inv_2hy + 0.5;
+
+        if !(0.0..=1.0).contains(&u) || !(0.0..=1.0).contains(&v) {
+            return None;
+        }
+
+        if self.flip_h {
+            u = 1.0 - u;
+        }
+        if self.flip_v {
+            v = 1.0 - v;
+        }
+
+        let px = ((u * self.sw as f32).floor() as u32).min(self.sw - 1);
+        let py = ((v * self.sh as f32).floor() as u32).min(self.sh - 1);
+        let p = *sketch_img.get_pixel(px, py);
+        if p[3] > 0 {
+            Some([p[0], p[1], p[2], p[3]])
+        } else {
+            None
+        }
+    }
+}
+
 impl SketchReferenceState {
     pub fn reset_transform(&mut self) {
         self.offset_x = 0.0;
@@ -178,6 +225,104 @@ impl SketchReferenceState {
         self.rotation_deg = 0.0;
         self.flip_h = false;
         self.flip_v = false;
+    }
+
+    /// Returns the cache key tuple capturing all transform state that affects pixel grid sampling.
+    pub fn cache_key(&self) -> (u32, u32, i32, i32, i32, bool, bool) {
+        (
+            self.scale.to_bits(),
+            self.rotation_deg.to_bits(),
+            (self.offset_x * 100.0).round() as i32,
+            (self.offset_y * 100.0).round() as i32,
+            self.bilinear_filter as i32,
+            self.flip_h,
+            self.flip_v,
+        )
+    }
+
+    /// Precomputes inverse-transform constants for rapid sampling of many pixels in a frame.
+    pub fn get_sample_context(
+        &self,
+        frame_w: u32,
+        frame_h: u32,
+        sketch_w: u32,
+        sketch_h: u32,
+    ) -> Option<SketchSampleContext> {
+        if sketch_w == 0 || sketch_h == 0 {
+            return None;
+        }
+        let (cx, cy, hx, hy) = self.half_extents(frame_w, frame_h, sketch_w, sketch_h);
+        if hx <= 1e-5 || hy <= 1e-5 {
+            return None;
+        }
+        let rad = self.rotation_deg.to_radians();
+        let (sin_t, cos_t) = rad.sin_cos();
+        Some(SketchSampleContext {
+            cx,
+            cy,
+            inv_2hx: 1.0 / (2.0 * hx),
+            inv_2hy: 1.0 / (2.0 * hy),
+            sin_t,
+            cos_t,
+            flip_h: self.flip_h,
+            flip_v: self.flip_v,
+            sw: sketch_w,
+            sh: sketch_h,
+        })
+    }
+
+    pub fn fit_width(&mut self, frame_w: u32, frame_h: u32, sketch_w: u32, sketch_h: u32) {
+        if sketch_w == 0 || sketch_h == 0 {
+            return;
+        }
+        let fw = frame_w.max(1) as f32;
+        let fh = frame_h.max(1) as f32;
+        let sw = sketch_w as f32;
+        let sh = sketch_h as f32;
+        let base_fit = (fw / sw).min(fh / sh);
+        if base_fit > 1e-6 {
+            self.scale = (fw / sw) / base_fit;
+            self.offset_x = 0.0;
+            self.offset_y = 0.0;
+            self.rotation_deg = 0.0;
+        }
+    }
+
+    pub fn fit_height(&mut self, frame_w: u32, frame_h: u32, sketch_w: u32, sketch_h: u32) {
+        if sketch_w == 0 || sketch_h == 0 {
+            return;
+        }
+        let fw = frame_w.max(1) as f32;
+        let fh = frame_h.max(1) as f32;
+        let sw = sketch_w as f32;
+        let sh = sketch_h as f32;
+        let base_fit = (fw / sw).min(fh / sh);
+        if base_fit > 1e-6 {
+            self.scale = (fh / sh) / base_fit;
+            self.offset_x = 0.0;
+            self.offset_y = 0.0;
+            self.rotation_deg = 0.0;
+        }
+    }
+
+    pub fn fit_to_pixels(&mut self, frame_w: u32, frame_h: u32, sketch_w: u32, sketch_h: u32) {
+        if sketch_w == 0 || sketch_h == 0 {
+            return;
+        }
+        let fw = frame_w.max(1) as f32;
+        let fh = frame_h.max(1) as f32;
+        let sw = sketch_w as f32;
+        let sh = sketch_h as f32;
+        let base_fit = (fw / sw).min(fh / sh);
+        if base_fit > 1e-6 {
+            self.scale = 1.0 / base_fit;
+            let target_x0 = ((frame_w as i32 - sketch_w as i32) / 2) as f32;
+            let target_y0 = ((frame_h as i32 - sketch_h as i32) / 2) as f32;
+            self.offset_x = target_x0 - (fw - sw) * 0.5;
+            self.offset_y = target_y0 - (fh - sh) * 0.5;
+            self.rotation_deg = 0.0;
+            self.bilinear_filter = false;
+        }
     }
 
     fn half_extents(
@@ -233,51 +378,12 @@ impl SketchReferenceState {
         fx: f32,
         fy: f32,
     ) -> Option<[u8; 4]> {
-        let sw = sketch_img.width();
-        let sh = sketch_img.height();
-        if sw == 0 || sh == 0 {
-            return None;
-        }
-
-        let (cx, cy, hx, hy) = self.half_extents(frame_w, frame_h, sw, sh);
-        if hx <= 1e-5 || hy <= 1e-5 {
-            return None;
-        }
-
-        let dx = fx - cx;
-        let dy = fy - cy;
-        let rad = self.rotation_deg.to_radians();
-        let (sin_t, cos_t) = rad.sin_cos();
-
-        let sx = dx * cos_t + dy * sin_t;
-        let sy = -dx * sin_t + dy * cos_t;
-
-        let mut u = sx / (2.0 * hx) + 0.5;
-        let mut v = sy / (2.0 * hy) + 0.5;
-
-        if !(0.0..=1.0).contains(&u) || !(0.0..=1.0).contains(&v) {
-            return None;
-        }
-
-        if self.flip_h {
-            u = 1.0 - u;
-        }
-        if self.flip_v {
-            v = 1.0 - v;
-        }
-
-        let px = ((u * sw as f32).floor() as u32).min(sw - 1);
-        let py = ((v * sh as f32).floor() as u32).min(sh - 1);
-        let p = *sketch_img.get_pixel(px, py);
-        if p[3] > 0 {
-            Some([p[0], p[1], p[2], p[3]])
-        } else {
-            None
-        }
+        let ctx = self.get_sample_context(frame_w, frame_h, sketch_img.width(), sketch_img.height())?;
+        ctx.sample_rgba(sketch_img, fx, fy)
     }
 
     /// Samples a frame pixel cell at `(lx, ly)` according to `precision`, `alpha_threshold`,
-    /// `crisp_lines` contrast enhancement, and optional target `palette` (used for mode/majority voting in Dominant mode).
+    /// `crisp_lines` contrast enhancement, and optional target `palette`.
     #[allow(clippy::too_many_arguments)]
     pub fn sample_pixel_area(
         &self,
@@ -291,12 +397,28 @@ impl SketchReferenceState {
         palette: Option<&[[u8; 4]]>,
         crisp_lines: bool,
     ) -> Option<[u8; 4]> {
+        let ctx = self.get_sample_context(frame_w, frame_h, sketch_img.width(), sketch_img.height())?;
+        Self::sample_pixel_area_with_ctx(sketch_img, &ctx, lx, ly, precision, alpha_threshold, palette, crisp_lines)
+    }
+
+    /// Zero-allocation, high-throughput area sampler taking precomputed `SketchSampleContext`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn sample_pixel_area_with_ctx(
+        sketch_img: &RgbaImage,
+        ctx: &SketchSampleContext,
+        lx: i32,
+        ly: i32,
+        precision: PixelPrecisionMode,
+        alpha_threshold: u8,
+        palette: Option<&[[u8; 4]]>,
+        crisp_lines: bool,
+    ) -> Option<[u8; 4]> {
         let fx = lx as f32 + 0.5;
         let fy = ly as f32 + 0.5;
 
         match precision {
             PixelPrecisionMode::Center => {
-                let sampled = self.sample_rgba_at_frame_pos(sketch_img, frame_w, frame_h, fx, fy)?;
+                let sampled = ctx.sample_rgba(sketch_img, fx, fy)?;
                 if sampled[3] >= alpha_threshold {
                     if let Some(pal) = palette {
                         Some(nearest_palette_color(sampled, pal))
@@ -313,19 +435,15 @@ impl SketchReferenceState {
                 let mut sum_b = 0u64;
                 let mut total_a = 0u64;
                 let mut total_samples = 0usize;
-                let mut valid_samples: Vec<[u8; 4]> = Vec::with_capacity(9);
+                let mut valid_samples = [[0u8; 4]; 9];
+                let mut num_valid = 0usize;
 
                 for &dy in &[-0.35, 0.0, 0.35] {
                     for &dx in &[-0.35, 0.0, 0.35] {
-                        if let Some(p) = self.sample_rgba_at_frame_pos(
-                            sketch_img,
-                            frame_w,
-                            frame_h,
-                            fx + dx,
-                            fy + dy,
-                        ) {
+                        if let Some(p) = ctx.sample_rgba(sketch_img, fx + dx, fy + dy) {
                             if p[3] >= alpha_threshold {
-                                valid_samples.push(p);
+                                valid_samples[num_valid] = p;
+                                num_valid += 1;
                             }
                             let a = p[3] as u64;
                             sum_r += p[0] as u64 * a;
@@ -337,7 +455,7 @@ impl SketchReferenceState {
                     }
                 }
 
-                if total_samples == 0 || total_a == 0 || valid_samples.is_empty() {
+                if total_samples == 0 || total_a == 0 || num_valid == 0 {
                     return None;
                 }
                 let avg_a = (total_a / total_samples as u64) as u8;
@@ -345,13 +463,11 @@ impl SketchReferenceState {
                     return None;
                 }
 
-                // If crisp_lines is enabled and there is high contrast in the cell (e.g. 1px outline against light fill),
-                // prioritize the sharp stroke color rather than blending into washed-out gray.
-                if crisp_lines && valid_samples.len() >= 2 {
+                if crisp_lines && num_valid >= 2 {
                     let mut min_luma = 255.0f32;
                     let mut max_luma = 0.0f32;
                     let mut dark_sample = valid_samples[0];
-                    for &s in &valid_samples {
+                    for &s in &valid_samples[..num_valid] {
                         let luma = 0.299 * s[0] as f32 + 0.587 * s[1] as f32 + 0.114 * s[2] as f32;
                         if luma < min_luma {
                             min_luma = luma;
@@ -382,20 +498,16 @@ impl SketchReferenceState {
                 }
             }
             PixelPrecisionMode::Dominant => {
-                let mut valid_samples: Vec<[u8; 4]> = Vec::with_capacity(9);
+                let mut valid_samples = [[0u8; 4]; 9];
+                let mut num_valid = 0usize;
                 let mut transparent_count = 0usize;
 
                 for &dy in &[-0.33, 0.0, 0.33] {
                     for &dx in &[-0.33, 0.0, 0.33] {
-                        if let Some(p) = self.sample_rgba_at_frame_pos(
-                            sketch_img,
-                            frame_w,
-                            frame_h,
-                            fx + dx,
-                            fy + dy,
-                        ) {
+                        if let Some(p) = ctx.sample_rgba(sketch_img, fx + dx, fy + dy) {
                             if p[3] >= alpha_threshold {
-                                valid_samples.push(p);
+                                valid_samples[num_valid] = p;
+                                num_valid += 1;
                             } else {
                                 transparent_count += 1;
                             }
@@ -405,17 +517,16 @@ impl SketchReferenceState {
                     }
                 }
 
-                if valid_samples.is_empty() || transparent_count >= 6 {
+                if num_valid == 0 || transparent_count >= 6 {
                     return None;
                 }
 
-                // If crisp lines enabled, find stroke/contour features
                 let mut dark_sample_opt = None;
-                if crisp_lines && valid_samples.len() >= 2 {
+                if crisp_lines && num_valid >= 2 {
                     let mut min_luma = 255.0f32;
                     let mut max_luma = 0.0f32;
                     let mut darkest = valid_samples[0];
-                    for &s in &valid_samples {
+                    for &s in &valid_samples[..num_valid] {
                         let luma = 0.299 * s[0] as f32 + 0.587 * s[1] as f32 + 0.114 * s[2] as f32;
                         if luma < min_luma {
                             min_luma = luma;
@@ -431,8 +542,10 @@ impl SketchReferenceState {
                 }
 
                 if let Some(pal) = palette {
-                    let mut votes: Vec<([u8; 4], usize)> = Vec::new();
-                    for &p in &valid_samples {
+                    let mut votes: [([u8; 4], usize); 9] = [([0, 0, 0, 0], 0); 9];
+                    let mut num_votes = 0usize;
+
+                    for &p in &valid_samples[..num_valid] {
                         let snapped = nearest_palette_color(p, pal);
                         let bonus = if let Some(ds) = dark_sample_opt {
                             if (p[0] as i32 - ds[0] as i32).abs() + (p[1] as i32 - ds[1] as i32).abs() + (p[2] as i32 - ds[2] as i32).abs() < 40 {
@@ -443,17 +556,25 @@ impl SketchReferenceState {
                         } else {
                             1
                         };
-                        if let Some(entry) = votes.iter_mut().find(|(c, _)| *c == snapped) {
-                            entry.1 += bonus;
-                        } else {
-                            votes.push((snapped, bonus));
+                        let mut found = false;
+                        for entry in &mut votes[..num_votes] {
+                            if entry.0 == snapped {
+                                entry.1 += bonus;
+                                found = true;
+                                break;
+                            }
+                        }
+                        if !found && num_votes < 9 {
+                            votes[num_votes] = (snapped, bonus);
+                            num_votes += 1;
                         }
                     }
-                    votes.sort_by(|a, b| b.1.cmp(&a.1));
-                    votes.first().map(|(c, _)| *c)
+                    votes[..num_votes].iter().max_by_key(|a| a.1).map(|(c, _)| *c)
                 } else {
-                    let mut clusters: Vec<([u8; 4], usize)> = Vec::new();
-                    for &p in &valid_samples {
+                    let mut clusters: [([u8; 4], usize); 9] = [([0, 0, 0, 0], 0); 9];
+                    let mut num_clusters = 0usize;
+
+                    for &p in &valid_samples[..num_valid] {
                         let bonus = if let Some(ds) = dark_sample_opt {
                             if (p[0] as i32 - ds[0] as i32).abs() + (p[1] as i32 - ds[1] as i32).abs() + (p[2] as i32 - ds[2] as i32).abs() < 40 {
                                 2
@@ -463,36 +584,36 @@ impl SketchReferenceState {
                         } else {
                             1
                         };
-                        if let Some(entry) = clusters.iter_mut().find(|(c, _)| {
-                            let dr = (c[0] as i32 - p[0] as i32).abs();
-                            let dg = (c[1] as i32 - p[1] as i32).abs();
-                            let db = (c[2] as i32 - p[2] as i32).abs();
-                            dr + dg + db <= 24
-                        }) {
-                            entry.1 += bonus;
-                        } else {
-                            clusters.push(([p[0], p[1], p[2], 255], bonus));
+                        let mut found = false;
+                        for entry in &mut clusters[..num_clusters] {
+                            let dr = (entry.0[0] as i32 - p[0] as i32).abs();
+                            let dg = (entry.0[1] as i32 - p[1] as i32).abs();
+                            let db = (entry.0[2] as i32 - p[2] as i32).abs();
+                            if dr + dg + db <= 24 {
+                                entry.1 += bonus;
+                                found = true;
+                                break;
+                            }
+                        }
+                        if !found && num_clusters < 9 {
+                            clusters[num_clusters] = ([p[0], p[1], p[2], 255], bonus);
+                            num_clusters += 1;
                         }
                     }
-                    clusters.sort_by(|a, b| b.1.cmp(&a.1));
-                    clusters.first().map(|(c, _)| *c)
+                    clusters[..num_clusters].iter().max_by_key(|a| a.1).map(|(c, _)| *c)
                 }
             }
             PixelPrecisionMode::Median => {
-                let mut valid_samples: Vec<[u8; 4]> = Vec::with_capacity(9);
+                let mut valid_samples = [[0u8; 4]; 9];
+                let mut num_valid = 0usize;
                 let mut transparent_count = 0usize;
 
                 for &dy in &[-0.33, 0.0, 0.33] {
                     for &dx in &[-0.33, 0.0, 0.33] {
-                        if let Some(p) = self.sample_rgba_at_frame_pos(
-                            sketch_img,
-                            frame_w,
-                            frame_h,
-                            fx + dx,
-                            fy + dy,
-                        ) {
+                        if let Some(p) = ctx.sample_rgba(sketch_img, fx + dx, fy + dy) {
                             if p[3] >= alpha_threshold {
-                                valid_samples.push(p);
+                                valid_samples[num_valid] = p;
+                                num_valid += 1;
                             } else {
                                 transparent_count += 1;
                             }
@@ -502,17 +623,18 @@ impl SketchReferenceState {
                     }
                 }
 
-                if valid_samples.is_empty() || transparent_count >= 6 {
+                if num_valid == 0 || transparent_count >= 6 {
                     return None;
                 }
 
-                valid_samples.sort_by(|a, b| {
+                let slice = &mut valid_samples[..num_valid];
+                slice.sort_by(|a, b| {
                     let la = 0.299 * a[0] as f32 + 0.587 * a[1] as f32 + 0.114 * a[2] as f32;
                     let lb = 0.299 * b[0] as f32 + 0.587 * b[1] as f32 + 0.114 * b[2] as f32;
                     la.partial_cmp(&lb).unwrap_or(std::cmp::Ordering::Equal)
                 });
 
-                let med = valid_samples[valid_samples.len() / 2];
+                let med = slice[num_valid / 2];
                 let col = [med[0], med[1], med[2], 255];
                 if let Some(pal) = palette {
                     Some(nearest_palette_color(col, pal))
@@ -521,20 +643,16 @@ impl SketchReferenceState {
                 }
             }
             PixelPrecisionMode::Contrast => {
-                let mut valid_samples: Vec<[u8; 4]> = Vec::with_capacity(9);
+                let mut valid_samples = [[0u8; 4]; 9];
+                let mut num_valid = 0usize;
                 let mut transparent_count = 0usize;
 
                 for &dy in &[-0.33, 0.0, 0.33] {
                     for &dx in &[-0.33, 0.0, 0.33] {
-                        if let Some(p) = self.sample_rgba_at_frame_pos(
-                            sketch_img,
-                            frame_w,
-                            frame_h,
-                            fx + dx,
-                            fy + dy,
-                        ) {
+                        if let Some(p) = ctx.sample_rgba(sketch_img, fx + dx, fy + dy) {
                             if p[3] >= alpha_threshold {
-                                valid_samples.push(p);
+                                valid_samples[num_valid] = p;
+                                num_valid += 1;
                             } else {
                                 transparent_count += 1;
                             }
@@ -544,14 +662,14 @@ impl SketchReferenceState {
                     }
                 }
 
-                if valid_samples.is_empty() || transparent_count >= 6 {
+                if num_valid == 0 || transparent_count >= 6 {
                     return None;
                 }
 
                 let mut min_luma = 255.0f32;
                 let mut max_luma = 0.0f32;
                 let mut darkest = valid_samples[0];
-                for &s in &valid_samples {
+                for &s in &valid_samples[..num_valid] {
                     let luma = 0.299 * s[0] as f32 + 0.587 * s[1] as f32 + 0.114 * s[2] as f32;
                     if luma < min_luma {
                         min_luma = luma;
@@ -565,12 +683,13 @@ impl SketchReferenceState {
                 let chosen = if (max_luma - min_luma) >= 40.0 {
                     [darkest[0], darkest[1], darkest[2], 255]
                 } else {
-                    valid_samples.sort_by(|a, b| {
+                    let slice = &mut valid_samples[..num_valid];
+                    slice.sort_by(|a, b| {
                         let la = 0.299 * a[0] as f32 + 0.587 * a[1] as f32 + 0.114 * a[2] as f32;
                         let lb = 0.299 * b[0] as f32 + 0.587 * b[1] as f32 + 0.114 * b[2] as f32;
                         la.partial_cmp(&lb).unwrap_or(std::cmp::Ordering::Equal)
                     });
-                    let med = valid_samples[valid_samples.len() / 2];
+                    let med = slice[num_valid / 2];
                     [med[0], med[1], med[2], 255]
                 };
 
@@ -581,20 +700,16 @@ impl SketchReferenceState {
                 }
             }
             PixelPrecisionMode::MaxChroma => {
-                let mut valid_samples: Vec<[u8; 4]> = Vec::with_capacity(9);
+                let mut valid_samples = [[0u8; 4]; 9];
+                let mut num_valid = 0usize;
                 let mut transparent_count = 0usize;
 
                 for &dy in &[-0.33, 0.0, 0.33] {
                     for &dx in &[-0.33, 0.0, 0.33] {
-                        if let Some(p) = self.sample_rgba_at_frame_pos(
-                            sketch_img,
-                            frame_w,
-                            frame_h,
-                            fx + dx,
-                            fy + dy,
-                        ) {
+                        if let Some(p) = ctx.sample_rgba(sketch_img, fx + dx, fy + dy) {
                             if p[3] >= alpha_threshold {
-                                valid_samples.push(p);
+                                valid_samples[num_valid] = p;
+                                num_valid += 1;
                             } else {
                                 transparent_count += 1;
                             }
@@ -604,13 +719,13 @@ impl SketchReferenceState {
                     }
                 }
 
-                if valid_samples.is_empty() || transparent_count >= 6 {
+                if num_valid == 0 || transparent_count >= 6 {
                     return None;
                 }
 
                 let mut max_chroma = -1i32;
                 let mut best_sample = valid_samples[0];
-                for &s in &valid_samples {
+                for &s in &valid_samples[..num_valid] {
                     let r = s[0] as i32;
                     let g = s[1] as i32;
                     let b = s[2] as i32;
@@ -638,20 +753,16 @@ impl SketchReferenceState {
                 let mut sum_g = 0.0f32;
                 let mut sum_b = 0.0f32;
                 let mut total_w = 0.0f32;
-                let mut valid_samples: Vec<[u8; 4]> = Vec::with_capacity(9);
+                let mut valid_samples = [[0u8; 4]; 9];
+                let mut num_valid = 0usize;
 
                 for &(dy, wy) in &[(-0.35, 1.0), (0.0, 2.0), (0.35, 1.0)] {
                     for &(dx, wx) in &[(-0.35, 1.0), (0.0, 2.0), (0.35, 1.0)] {
                         let w = wx * wy;
-                        if let Some(p) = self.sample_rgba_at_frame_pos(
-                            sketch_img,
-                            frame_w,
-                            frame_h,
-                            fx + dx,
-                            fy + dy,
-                        ) {
+                        if let Some(p) = ctx.sample_rgba(sketch_img, fx + dx, fy + dy) {
                             if p[3] >= alpha_threshold {
-                                valid_samples.push(p);
+                                valid_samples[num_valid] = p;
+                                num_valid += 1;
                                 let alpha_weight = (p[3] as f32 / 255.0) * w;
                                 sum_r += p[0] as f32 * alpha_weight;
                                 sum_g += p[1] as f32 * alpha_weight;
@@ -662,15 +773,15 @@ impl SketchReferenceState {
                     }
                 }
 
-                if total_w < 1.0 || valid_samples.is_empty() {
+                if total_w < 1.0 || num_valid == 0 {
                     return None;
                 }
 
-                if crisp_lines && valid_samples.len() >= 2 {
+                if crisp_lines && num_valid >= 2 {
                     let mut min_luma = 255.0f32;
                     let mut max_luma = 0.0f32;
                     let mut dark_sample = valid_samples[0];
-                    for &s in &valid_samples {
+                    for &s in &valid_samples[..num_valid] {
                         let luma = 0.299 * s[0] as f32 + 0.587 * s[1] as f32 + 0.114 * s[2] as f32;
                         if luma < min_luma {
                             min_luma = luma;
@@ -704,10 +815,63 @@ impl SketchReferenceState {
             }
         }
     }
+}
 
+/// Adjusts brightness, contrast, and saturation in-place across a whole frame grid using a 256-entry precomputed LUT.
+pub fn adjust_color_grid(
+    grid: &mut [Option<[u8; 4]>],
+    brightness: i32,
+    contrast: i32,
+    saturation: i32,
+) {
+    if brightness == 0 && contrast == 0 && saturation == 0 {
+        return;
+    }
+
+    let mut bc_lut = [0u8; 256];
+    let b_delta = (brightness as f32 / 100.0) * 255.0;
+    let c = (contrast.clamp(-99, 99) as f32) * 2.55;
+    let c_factor = if contrast != 0 {
+        (259.0 * (c + 255.0)) / (255.0 * (259.0 - c))
+    } else {
+        1.0
+    };
+
+    for (i, slot) in bc_lut.iter_mut().enumerate() {
+        let mut v = i as f32;
+        if brightness != 0 {
+            v += b_delta;
+        }
+        if contrast != 0 {
+            v = c_factor * (v - 128.0) + 128.0;
+        }
+        *slot = v.clamp(0.0, 255.0) as u8;
+    }
+
+    let sat_factor = 1.0 + saturation as f32 / 100.0;
+    let do_sat = saturation != 0;
+
+    for col in grid.iter_mut().flatten() {
+        let r = bc_lut[col[0] as usize];
+        let g = bc_lut[col[1] as usize];
+        let b = bc_lut[col[2] as usize];
+        if do_sat {
+            let (h, s, l) = crate::model::palette::rgb_to_hsl(r, g, b);
+            let s_new = (s * sat_factor).clamp(0.0, 1.0);
+            let (nr, ng, nb) = crate::model::palette::hsl_to_rgb(h, s_new, l);
+            col[0] = nr;
+            col[1] = ng;
+            col[2] = nb;
+        } else {
+            col[0] = r;
+            col[1] = g;
+            col[2] = b;
+        }
+    }
 }
 
 /// Adjusts brightness (-100..=100), contrast (-100..=100), and saturation (-100..=100) of an RGBA pixel.
+#[allow(dead_code)]
 pub fn adjust_rgba_color(
     rgba: [u8; 4],
     brightness: i32,
@@ -770,12 +934,12 @@ pub fn nearest_palette_color(target_rgba: [u8; 4], palette: &[[u8; 4]]) -> [u8; 
     let b0 = target_rgba[2] as i32;
 
     let mut best = palette[0];
-    let mut best_dist = i64::MAX;
+    let mut best_dist = i32::MAX;
 
     for &col in palette {
-        let dr = (col[0] as i32 - r0) as i64;
-        let dg = (col[1] as i32 - g0) as i64;
-        let db = (col[2] as i32 - b0) as i64;
+        let dr = col[0] as i32 - r0;
+        let dg = col[1] as i32 - g0;
+        let db = col[2] as i32 - b0;
         // Perceptual luma weights (2, 4, 3)
         let dist = 2 * dr * dr + 4 * dg * dg + 3 * db * db;
         if dist < best_dist {
@@ -910,5 +1074,58 @@ mod tests {
         // MaxChroma should pick the vivid red pixel over the light gray background
         let chroma_res = state.sample_pixel_area(&sketch, 16, 16, 8, 8, PixelPrecisionMode::MaxChroma, 128, None, false);
         assert_eq!(chroma_res, Some([255, 0, 0, 255]));
+    }
+
+    #[test]
+    fn test_sketch_fit_transformations() {
+        let mut state = SketchReferenceState::default();
+        // Frame: 32x32, Sketch: 64x128
+        state.fit_width(32, 32, 64, 128);
+        let (_, _, hx_w, _) = state.half_extents(32, 32, 64, 128);
+        assert!((2.0 * hx_w - 32.0).abs() < 1e-4, "Width should fit 32px exactly");
+        assert_eq!(state.offset_x, 0.0);
+        assert_eq!(state.offset_y, 0.0);
+
+        state.fit_height(32, 32, 64, 128);
+        let (_, _, _, hy_h) = state.half_extents(32, 32, 64, 128);
+        assert!((2.0 * hy_h - 32.0).abs() < 1e-4, "Height should fit 32px exactly");
+        assert_eq!(state.offset_x, 0.0);
+        assert_eq!(state.offset_y, 0.0);
+
+        // 1:1 pixel fit: Sketch 16x20 on 32x32 frame
+        state.fit_to_pixels(32, 32, 16, 20);
+        let (cx, cy, hx_p, hy_p) = state.half_extents(32, 32, 16, 20);
+        assert!((2.0 * hx_p - 16.0).abs() < 1e-4, "Width should match original 16px");
+        assert!((2.0 * hy_p - 20.0).abs() < 1e-4, "Height should match original 20px");
+        assert!(!state.bilinear_filter, "Bilinear filter should be disabled for 1:1 pixel fit");
+
+        // Top-left boundary must land exactly on an integer pixel
+        let left = cx - hx_p;
+        let top = cy - hy_p;
+        assert!((left - left.round()).abs() < 1e-4, "Left boundary must land on integer pixel coordinate");
+        assert!((top - top.round()).abs() < 1e-4, "Top boundary must land on integer pixel coordinate");
+    }
+
+    #[test]
+    fn test_adjust_color_grid_matches_adjust_rgba_color() {
+        let test_colors = [
+            [0, 0, 0, 255],
+            [255, 255, 255, 255],
+            [128, 64, 32, 255],
+            [200, 100, 50, 255],
+            [15, 80, 220, 255],
+        ];
+        for brightness in [-50, 0, 30] {
+            for contrast in [-40, 0, 50] {
+                for saturation in [-60, 0, 40] {
+                    let mut grid: Vec<Option<[u8; 4]>> = test_colors.iter().map(|&c| Some(c)).collect();
+                    adjust_color_grid(&mut grid, brightness, contrast, saturation);
+                    for (i, &col) in test_colors.iter().enumerate() {
+                        let expected = adjust_rgba_color(col, brightness, contrast, saturation);
+                        assert_eq!(grid[i], Some(expected), "Mismatch at b={brightness}, c={contrast}, s={saturation}");
+                    }
+                }
+            }
+        }
     }
 }

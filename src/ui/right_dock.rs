@@ -1169,6 +1169,55 @@ pub fn show_right_dock(
                             );
                         });
 
+                        let has_sketch = project.sketch_rgba.is_some();
+                        let (sw, sh) = project
+                            .sketch_rgba
+                            .as_ref()
+                            .map(|img| (img.width(), img.height()))
+                            .unwrap_or((1, 1));
+                        let (fw, fh) = (
+                            project.metadata.frame_width,
+                            project.metadata.frame_height,
+                        );
+
+                        ui.horizontal(|ui| {
+                            if ui
+                                .add_enabled(
+                                    has_sketch,
+                                    egui::Button::new(i18n.tr("panel.sketch.fit_width")),
+                                )
+                                .on_hover_text(i18n.tr("tooltip.sketch_fit_width"))
+                                .clicked()
+                            {
+                                project.metadata.sketch.fit_width(fw, fh, sw, sh);
+                                project.has_unsaved_changes = true;
+                            }
+
+                            if ui
+                                .add_enabled(
+                                    has_sketch,
+                                    egui::Button::new(i18n.tr("panel.sketch.fit_height")),
+                                )
+                                .on_hover_text(i18n.tr("tooltip.sketch_fit_height"))
+                                .clicked()
+                            {
+                                project.metadata.sketch.fit_height(fw, fh, sw, sh);
+                                project.has_unsaved_changes = true;
+                            }
+
+                            if ui
+                                .add_enabled(
+                                    has_sketch,
+                                    egui::Button::new(i18n.tr("panel.sketch.fit_pixels")),
+                                )
+                                .on_hover_text(i18n.tr("tooltip.sketch_fit_pixels"))
+                                .clicked()
+                            {
+                                project.metadata.sketch.fit_to_pixels(fw, fh, sw, sh);
+                                project.has_unsaved_changes = true;
+                            }
+                        });
+
                         ui.horizontal(|ui| {
                             ui.toggle_value(
                                 &mut project.metadata.sketch.flip_h,
