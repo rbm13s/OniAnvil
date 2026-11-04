@@ -119,7 +119,336 @@ pub fn format_palette_gpl(palette_name: &str, colors: &[[u8; 4]]) -> String {
     out
 }
 
+/// Algorithms for extracting a representative palette from an image or sprite sheet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum PaletteExtractAlgorithm {
+    /// Top most frequent colors across the image (default)
+    #[default]
+    MostFrequent,
+    /// Median Cut color quantization (balanced representation of the color space)
+    MedianCut,
+    /// Perceptual diversity (maximizes minimum color distance to preserve accents)
+    PerceptualDiversity,
+    /// First appearance in raster order (natural scanline order)
+    FirstAppearance,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ColorOccurrence {
+    pub color: [u8; 4],
+    pub count: u32,
+    pub first_index: usize,
+}
+
+/// Computes occurrences of every non-transparent unique color in `img`.
+pub fn extract_color_occurrences(
+    img: &RgbaImage,
+    ignore_transparent: bool,
+) -> Vec<ColorOccurrence> {
+    use std::collections::HashMap;
+    let mut map: HashMap<[u8; 4], (u32, usize)> = HashMap::new();
+    let mut index = 0;
+
+    for p in img.pixels() {
+        if ignore_transparent && p[3] == 0 {
+            index += 1;
+            continue;
+        }
+        let rgba = if ignore_transparent {
+            [p[0], p[1], p[2], 255]
+        } else {
+            p.0
+        };
+        let entry = map.entry(rgba).or_insert((0, index));
+        entry.0 += 1;
+        index += 1;
+    }
+
+    let mut result: Vec<ColorOccurrence> = map
+        .into_iter()
+        .map(|(color, (count, first_index))| ColorOccurrence {
+            color,
+            count,
+            first_index,
+        })
+        .collect();
+
+    // Default sort by frequency descending
+    result.sort_by(|a, b| b.count.cmp(&a.count).then_with(|| a.first_index.cmp(&b.first_index)));
+    result
+}
+
+pub fn extract_by_frequency(
+    occurrences: &[ColorOccurrence],
+    limit: usize,
+) -> Vec<[u8; 4]> {
+    let mut sorted = occurrences.to_vec();
+    sorted.sort_by(|a, b| b.count.cmp(&a.count).then_with(|| a.first_index.cmp(&b.first_index)));
+    sorted.into_iter().take(limit).map(|o| o.color).collect()
+}
+
+pub fn extract_by_appearance(
+    occurrences: &[ColorOccurrence],
+    limit: usize,
+) -> Vec<[u8; 4]> {
+    let mut sorted = occurrences.to_vec();
+    sorted.sort_by_key(|o| o.first_index);
+    sorted.into_iter().take(limit).map(|o| o.color).collect()
+}
+
+#[derive(Clone)]
+struct MedianCutBox {
+    colors: Vec<ColorOccurrence>,
+    total_count: u64,
+}
+
+impl MedianCutBox {
+    fn new(colors: Vec<ColorOccurrence>) -> Self {
+        let total_count = colors.iter().map(|c| c.count as u64).sum();
+        Self { colors, total_count }
+    }
+
+    fn channel_range(&self) -> (usize, u8) {
+        let mut r_min = 255; let mut r_max = 0;
+        let mut g_min = 255; let mut g_max = 0;
+        let mut b_min = 255; let mut b_max = 0;
+        for c in &self.colors {
+            r_min = r_min.min(c.color[0]);
+            r_max = r_max.max(c.color[0]);
+            g_min = g_min.min(c.color[1]);
+            g_max = g_max.max(c.color[1]);
+            b_min = b_min.min(c.color[2]);
+            b_max = b_max.max(c.color[2]);
+        }
+        let r_range = r_max.saturating_sub(r_min);
+        let g_range = g_max.saturating_sub(g_min);
+        let b_range = b_max.saturating_sub(b_min);
+        let max_range = r_range.max(g_range).max(b_range);
+        let channel = if max_range == r_range {
+            0
+        } else if max_range == g_range {
+            1
+        } else {
+            2
+        };
+        (channel, max_range)
+    }
+
+    fn representative_color(&self) -> [u8; 4] {
+        if self.colors.is_empty() {
+            return [0, 0, 0, 255];
+        }
+        if self.colors.len() == 1 {
+            return self.colors[0].color;
+        }
+        let mut sum_r = 0u64;
+        let mut sum_g = 0u64;
+        let mut sum_b = 0u64;
+        for c in &self.colors {
+            let cnt = c.count as u64;
+            sum_r += c.color[0] as u64 * cnt;
+            sum_g += c.color[1] as u64 * cnt;
+            sum_b += c.color[2] as u64 * cnt;
+        }
+        let div = self.total_count.max(1);
+        let target_r = (sum_r / div) as i32;
+        let target_g = (sum_g / div) as i32;
+        let target_b = (sum_b / div) as i32;
+
+        let mut closest = self.colors[0].color;
+        let mut min_d = i32::MAX;
+        for c in &self.colors {
+            let dr = c.color[0] as i32 - target_r;
+            let dg = c.color[1] as i32 - target_g;
+            let db = c.color[2] as i32 - target_b;
+            let d = dr * dr + dg * dg + db * db;
+            if d < min_d {
+                min_d = d;
+                closest = c.color;
+            }
+        }
+        closest
+    }
+
+    fn split(mut self) -> (MedianCutBox, Option<MedianCutBox>) {
+        if self.colors.len() <= 1 {
+            return (self, None);
+        }
+        let (channel, max_range) = self.channel_range();
+        if max_range == 0 {
+            return (self, None);
+        }
+
+        self.colors.sort_by_key(|c| c.color[channel]);
+
+        let half_count = self.total_count / 2;
+        let mut running = 0u64;
+        let mut split_idx = 1;
+        for (i, c) in self.colors.iter().enumerate() {
+            running += c.count as u64;
+            if running >= half_count && i > 0 && i < self.colors.len() {
+                split_idx = i;
+                break;
+            }
+        }
+        if split_idx >= self.colors.len() {
+            split_idx = self.colors.len() / 2;
+        }
+
+        let right_colors = self.colors.split_off(split_idx);
+        let left_box = MedianCutBox::new(self.colors);
+        let right_box = MedianCutBox::new(right_colors);
+        (left_box, Some(right_box))
+    }
+}
+
+pub fn extract_by_median_cut(
+    occurrences: &[ColorOccurrence],
+    limit: usize,
+) -> Vec<[u8; 4]> {
+    if occurrences.is_empty() || limit == 0 {
+        return Vec::new();
+    }
+    if occurrences.len() <= limit {
+        return occurrences.iter().map(|o| o.color).collect();
+    }
+
+    let mut boxes = vec![MedianCutBox::new(occurrences.to_vec())];
+
+    while boxes.len() < limit {
+        // Pick the box with largest channel range that can be split
+        let mut best_box_idx = None;
+        let mut best_range = 0u8;
+
+        for (i, b) in boxes.iter().enumerate() {
+            if b.colors.len() > 1 {
+                let (_, range) = b.channel_range();
+                if range > best_range {
+                    best_range = range;
+                    best_box_idx = Some(i);
+                }
+            }
+        }
+
+        let idx = match best_box_idx {
+            Some(i) => i,
+            None => break, // No more boxes can be split
+        };
+
+        let target_box = boxes.swap_remove(idx);
+        let (left, right) = target_box.split();
+        boxes.push(left);
+        if let Some(r) = right {
+            boxes.push(r);
+        }
+    }
+
+    // Sort boxes by total count descending so main clusters come first
+    boxes.sort_by_key(|a| std::cmp::Reverse(a.total_count));
+    let mut result = Vec::with_capacity(boxes.len());
+    for b in boxes {
+        let col = b.representative_color();
+        if !result.contains(&col) {
+            result.push(col);
+        }
+    }
+    result
+}
+
+pub fn extract_by_diversity(
+    occurrences: &[ColorOccurrence],
+    limit: usize,
+) -> Vec<[u8; 4]> {
+    if occurrences.is_empty() || limit == 0 {
+        return Vec::new();
+    }
+    if occurrences.len() <= limit {
+        return occurrences.iter().map(|o| o.color).collect();
+    }
+
+    #[inline]
+    fn color_dist_sq(c1: [u8; 4], c2: [u8; 4]) -> u32 {
+        let dr = c1[0] as i32 - c2[0] as i32;
+        let dg = c1[1] as i32 - c2[1] as i32;
+        let db = c1[2] as i32 - c2[2] as i32;
+        (2 * dr * dr + 4 * dg * dg + 3 * db * db) as u32
+    }
+
+    let mut selected = Vec::with_capacity(limit);
+    selected.push(occurrences[0].color);
+
+    let mut min_dists: Vec<u32> = occurrences
+        .iter()
+        .map(|o| color_dist_sq(o.color, selected[0]))
+        .collect();
+
+    while selected.len() < limit {
+        let mut best_idx = 0;
+        let mut best_score = 0.0_f64;
+
+        for (i, occ) in occurrences.iter().enumerate() {
+            let dist = min_dists[i];
+            if dist == 0 {
+                continue;
+            }
+            let count_weight = (occ.count as f64).ln_1p().max(1.0);
+            let score = (dist as f64) * count_weight;
+            if score > best_score {
+                best_score = score;
+                best_idx = i;
+            }
+        }
+
+        if best_score <= 0.0 {
+            break;
+        }
+
+        let new_col = occurrences[best_idx].color;
+        selected.push(new_col);
+
+        for (i, occ) in occurrences.iter().enumerate() {
+            let d = color_dist_sq(occ.color, new_col);
+            if d < min_dists[i] {
+                min_dists[i] = d;
+            }
+        }
+    }
+
+    selected
+}
+
+/// Extracts a representative palette from precomputed color occurrences according to `algo`.
+pub fn extract_palette_from_occurrences(
+    occurrences: &[ColorOccurrence],
+    limit: usize,
+    algo: PaletteExtractAlgorithm,
+) -> Vec<[u8; 4]> {
+    let limit = limit.clamp(1, 1024);
+    if occurrences.is_empty() {
+        return Vec::new();
+    }
+    match algo {
+        PaletteExtractAlgorithm::MostFrequent => extract_by_frequency(occurrences, limit),
+        PaletteExtractAlgorithm::MedianCut => extract_by_median_cut(occurrences, limit),
+        PaletteExtractAlgorithm::PerceptualDiversity => extract_by_diversity(occurrences, limit),
+        PaletteExtractAlgorithm::FirstAppearance => extract_by_appearance(occurrences, limit),
+    }
+}
+
+/// Extracts a representative palette from an image according to `algo`.
+#[allow(dead_code)]
+pub fn extract_palette_from_image(
+    img: &RgbaImage,
+    limit: usize,
+    algo: PaletteExtractAlgorithm,
+    ignore_transparent: bool,
+) -> Vec<[u8; 4]> {
+    let occurrences = extract_color_occurrences(img, ignore_transparent);
+    extract_palette_from_occurrences(&occurrences, limit, algo)
+}
+
 /// Extracts unique non-transparent colors from a `.png` palette image in order of appearance.
+#[allow(dead_code)]
 pub fn parse_palette_png(png_bytes: &[u8]) -> Result<Vec<[u8; 4]>, String> {
     let img = image::load_from_memory(png_bytes)
         .map_err(|e| format!("Failed to decode palette PNG: {}", e))?
@@ -1270,5 +1599,55 @@ mod tests {
             .find(|p| p.name == "Windows 95 (256)")
             .expect("Windows 95 (256) palette not found");
         assert_eq!(win95.hex_colors.len(), 256);
+    }
+
+    #[test]
+    fn test_palette_extraction_algorithms() {
+        // Create an image:
+        // 100 pixels of black [0, 0, 0, 255]
+        // 50 pixels of dark gray [50, 50, 50, 255]
+        // 10 pixels of white [255, 255, 255, 255]
+        // 1 pixel of vivid red [255, 0, 0, 255]
+        let mut img = RgbaImage::new(161, 1);
+        let mut x = 0;
+        for _ in 0..100 {
+            img.put_pixel(x, 0, Rgba([0, 0, 0, 255]));
+            x += 1;
+        }
+        for _ in 0..50 {
+            img.put_pixel(x, 0, Rgba([50, 50, 50, 255]));
+            x += 1;
+        }
+        for _ in 0..10 {
+            img.put_pixel(x, 0, Rgba([255, 255, 255, 255]));
+            x += 1;
+        }
+        img.put_pixel(x, 0, Rgba([255, 0, 0, 255]));
+
+        let occ = extract_color_occurrences(&img, true);
+        assert_eq!(occ.len(), 4);
+
+        // 1. MostFrequent with limit 2: should pick Black (100) and Dark Gray (50)
+        let top2 = extract_palette_from_occurrences(&occ, 2, PaletteExtractAlgorithm::MostFrequent);
+        assert_eq!(top2.len(), 2);
+        assert_eq!(top2[0], [0, 0, 0, 255]);
+        assert_eq!(top2[1], [50, 50, 50, 255]);
+
+        // 2. FirstAppearance: Black, Gray, White, Red
+        let first3 = extract_palette_from_occurrences(&occ, 3, PaletteExtractAlgorithm::FirstAppearance);
+        assert_eq!(first3.len(), 3);
+        assert_eq!(first3[0], [0, 0, 0, 255]);
+        assert_eq!(first3[1], [50, 50, 50, 255]);
+        assert_eq!(first3[2], [255, 255, 255, 255]);
+
+        // 3. PerceptualDiversity with limit 3: should pick Black, then White/Red (high perceptual distance)
+        let div3 = extract_palette_from_occurrences(&occ, 3, PaletteExtractAlgorithm::PerceptualDiversity);
+        assert_eq!(div3.len(), 3);
+        assert_eq!(div3[0], [0, 0, 0, 255]);
+        assert!(div3.contains(&[255, 255, 255, 255]));
+
+        // 4. MedianCut with limit 2: should produce 2 quantized clusters
+        let med2 = extract_palette_from_occurrences(&occ, 2, PaletteExtractAlgorithm::MedianCut);
+        assert_eq!(med2.len(), 2);
     }
 }
