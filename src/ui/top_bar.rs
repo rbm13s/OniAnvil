@@ -47,6 +47,7 @@ pub struct TopBarActions {
     pub trigger_color_adjust: bool,
     pub open_convolution_modal: bool,
     pub open_remap_palette_modal: bool,
+    pub open_extract_palette_modal: bool,
     pub trigger_sort_palette: Option<PaletteSortCriterion>,
     pub trigger_custom_brush: bool,
     pub trigger_auto_crop: bool,
@@ -407,6 +408,16 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.open_remap_palette_modal = true;
+                    ui.close();
+                }
+                if ui
+                    .add_enabled(
+                        has_doc,
+                        egui::Button::new(format!("{FA_MAGIC_WAND} {}", i18n.tr("menu.edit.extract_palette"))),
+                    )
+                    .clicked()
+                {
+                    actions.open_extract_palette_modal = true;
                     ui.close();
                 }
                 ui.menu_button(format!("{FA_SORT} {}", i18n.tr("menu.edit.sort_palette")), |ui| {

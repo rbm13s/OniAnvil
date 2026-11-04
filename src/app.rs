@@ -29,7 +29,7 @@ use crate::ui::modals::{
     ExportScaledPngModalState, ModifySelectionMode, ModifySelectionModalState, NewProjectWizardState,
     OutlineFxAction, OutlineFxModalState,
     ReGridModalState, RecoveryAction, RemapPaletteAction, RemapPaletteModalState, ReplaceColorModalState, Resize9GridModalState, RotateAction, RotateModalState, SheetSlicerModalState,
-    BakeSketchAction, BakeSketchModalState,
+    BakeSketchAction, BakeSketchModalState, ExtractPaletteAction, ExtractPaletteModalState,
 };
 use crate::model::sketch::BakePaletteSource;
 use crate::tools::selection::SelectionModifyShape;
@@ -76,6 +76,7 @@ pub struct OniAnvilApp {
     pub outline_fx_modal: OutlineFxModalState,
     pub convolution_modal: ConvolutionModalState,
     pub remap_palette_modal: RemapPaletteModalState,
+    pub extract_palette_modal: ExtractPaletteModalState,
     pub bake_sketch_modal: BakeSketchModalState,
     pub last_bake_sketch_preview_settings: Option<crate::model::sketch::BakeSketchSettings>,
     pub last_bake_sketch_preview_frame: Option<usize>,
@@ -138,6 +139,7 @@ impl OniAnvilApp {
             outline_fx_modal: OutlineFxModalState::default(),
             convolution_modal: ConvolutionModalState::default(),
             remap_palette_modal: RemapPaletteModalState::default(),
+            extract_palette_modal: ExtractPaletteModalState::default(),
             bake_sketch_modal: BakeSketchModalState::default(),
             last_bake_sketch_preview_settings: None,
             last_bake_sketch_preview_frame: None,
@@ -1301,6 +1303,14 @@ impl OniAnvilApp {
                 IoEvent::SlicerSheetLoaded { name, rgba } => {
                     self.slicer_modal.open_with_sheet(name, rgba);
                 }
+                IoEvent::ImportPaletteImageLoaded { name, rgba } => {
+                    let limit = self
+                        .documents
+                        .get(self.active_doc_idx)
+                        .and_then(|d| d.project.metadata.target_color_limit)
+                        .unwrap_or(64) as usize;
+                    self.extract_palette_modal.open_with(name, &rgba, limit);
+                }
                 IoEvent::PaletteLoaded(colors) => {
                     if let Some(doc) = self.documents.get_mut(self.active_doc_idx) {
                         doc.record_history();
@@ -1830,6 +1840,17 @@ impl eframe::App for OniAnvilApp {
                     .open_with(!doc.renderer.selection.is_empty(), doc.project.metadata.palette.colors.len());
             }
         }
+        if top_actions.open_extract_palette_modal {
+            if let Some(doc) = self.documents.get(self.active_doc_idx) {
+                let comp = doc.project.composited_atlas_rgba();
+                let limit = doc.project.metadata.target_color_limit.unwrap_or(64) as usize;
+                self.extract_palette_modal.open_with(
+                    self.i18n.tr("panel.palette.extract_sheet_title").to_string(),
+                    &comp,
+                    limit,
+                );
+            }
+        }
         if let Some(criterion) = top_actions.trigger_sort_palette {
             self.apply_palette_sort(criterion);
         }
@@ -2068,6 +2089,15 @@ impl eframe::App for OniAnvilApp {
                     if right_actions.trigger_remap_palette_modal {
                         self.remap_palette_modal
                             .open_with(!doc.renderer.selection.is_empty(), doc.project.metadata.palette.colors.len());
+                    }
+                    if right_actions.trigger_extract_palette_modal {
+                        let comp = doc.project.composited_atlas_rgba();
+                        let limit = doc.project.metadata.target_color_limit.unwrap_or(64) as usize;
+                        self.extract_palette_modal.open_with(
+                            self.i18n.tr("panel.palette.extract_sheet_title").to_string(),
+                            &comp,
+                            limit,
+                        );
                     }
                     if let Some(del_skin) = right_actions.request_delete_skin {
                         self.pending_delete_skin = Some(del_skin);
@@ -2539,6 +2569,37 @@ impl eframe::App for OniAnvilApp {
                 }
             }
             self.apply_palette_remap(action);
+        }
+
+        if let Some(action) = self.extract_palette_modal.show(ctx, &self.i18n) {
+            match action {
+                ExtractPaletteAction::Apply { colors, append } => {
+                    if let Some(doc) = self.documents.get_mut(self.active_doc_idx) {
+                        doc.record_history();
+                        if append {
+                            for col in colors {
+                                if !doc.project.metadata.palette.colors.contains(&col) {
+                                    doc.project.metadata.palette.colors.push(col);
+                                    for swap in &mut doc.project.metadata.palette.swaps {
+                                        swap.colors.push(col);
+                                    }
+                                }
+                            }
+                        } else {
+                            doc.project.metadata.palette.colors = colors.clone();
+                            for swap in &mut doc.project.metadata.palette.swaps {
+                                swap.colors = colors.clone();
+                            }
+                        }
+                        if !doc.project.metadata.palette.colors.is_empty() {
+                            self.tools.fg_color = doc.project.metadata.palette.colors[0];
+                        }
+                        doc.project.has_unsaved_changes = true;
+                        self.status_key = "app.status.palette_extracted";
+                    }
+                }
+                ExtractPaletteAction::Cancel => {}
+            }
         }
 
         if let Some(action) = self.rotate_modal.show(ctx, &self.i18n) {
@@ -3081,6 +3142,7 @@ mod tests {
             outline_fx_modal: OutlineFxModalState::default(),
             convolution_modal: ConvolutionModalState::default(),
             remap_palette_modal: RemapPaletteModalState::default(),
+            extract_palette_modal: ExtractPaletteModalState::default(),
             bake_sketch_modal: BakeSketchModalState::default(),
             last_bake_sketch_preview_settings: None,
             last_bake_sketch_preview_frame: None,
@@ -3159,6 +3221,7 @@ mod tests {
             outline_fx_modal: OutlineFxModalState::default(),
             convolution_modal: ConvolutionModalState::default(),
             remap_palette_modal: RemapPaletteModalState::default(),
+            extract_palette_modal: ExtractPaletteModalState::default(),
             bake_sketch_modal: BakeSketchModalState::default(),
             last_bake_sketch_preview_settings: None,
             last_bake_sketch_preview_frame: None,
@@ -3244,6 +3307,7 @@ mod tests {
             outline_fx_modal: OutlineFxModalState::default(),
             convolution_modal: ConvolutionModalState::default(),
             remap_palette_modal: RemapPaletteModalState::default(),
+            extract_palette_modal: ExtractPaletteModalState::default(),
             bake_sketch_modal: BakeSketchModalState::default(),
             last_bake_sketch_preview_settings: None,
             last_bake_sketch_preview_frame: None,

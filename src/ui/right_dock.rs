@@ -24,6 +24,7 @@ pub struct RightDockActions {
     pub trigger_export_palette_gpl: bool,
     pub trigger_sort_palette: Option<PaletteSortCriterion>,
     pub trigger_remap_palette_modal: bool,
+    pub trigger_extract_palette_modal: bool,
     pub request_delete_skin: Option<(usize, String)>,
     pub request_delete_palette_slot: Option<(usize, [u8; 4])>,
     pub request_delete_pivot_point: Option<(usize, String)>,
@@ -675,18 +676,7 @@ pub fn show_right_dock(
                                 .on_hover_text(i18n.tr("tooltip.palette_extract"))
                                 .clicked()
                             {
-                                let limit = project
-                                    .metadata
-                                    .target_color_limit
-                                    .map(|l| l as usize)
-                                    .unwrap_or(1024);
-                                let extracted = project.extract_unique_colors(limit);
-                                if !extracted.is_empty() {
-                                    project.metadata.palette.colors = extracted.clone();
-                                    for swap in &mut project.metadata.palette.swaps {
-                                        swap.colors = extracted.clone();
-                                    }
-                                }
+                                actions.trigger_extract_palette_modal = true;
                             }
                         });
 
