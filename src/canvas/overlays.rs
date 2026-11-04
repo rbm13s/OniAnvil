@@ -1,8 +1,9 @@
-﻿use crate::canvas::viewport::{BackgroundMode, CanvasViewMode, ViewportState};
+use crate::canvas::viewport::{BackgroundMode, CanvasViewMode, ViewportState};
 use crate::model::metadata::ProjectMetadata;
 use crate::tools::selection::SelectionMask;
+use crate::tools::stroke::expand_stamp_points;
 use crate::tools::SymmetryMode;
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use egui::{Color32, FontId, Painter, Pos2, Rect, Stroke, Vec2};
 
 pub fn draw_canvas_background(
@@ -328,6 +329,7 @@ pub fn draw_selection_overlay(
         }
     }
 }
+#[allow(dead_code)]
 pub fn brush_cursor_geometry(
     origin: Pos2,
     hover_px: (i32, i32),
@@ -344,6 +346,78 @@ pub fn brush_cursor_geometry(
     let center = rect.center();
     let radius = (size as f32 * 0.5) * zoom;
     (rect, center, radius)
+}
+
+/// Computes merged boundary line segments along pixel borders for a set of pixel coordinates.
+///
+/// Each segment aligns strictly with pixel boundaries:
+/// horizontal edges lie on integer `y` lines between `[x_start, x_end]`,
+/// and vertical edges lie on integer `x` lines between `[y_start, y_end]`.
+pub fn compute_pixel_contour_segments(
+    pixels: &[(i32, i32)],
+    origin: Pos2,
+    zoom: f32,
+) -> Vec<[Pos2; 2]> {
+    if pixels.is_empty() {
+        return Vec::new();
+    }
+    let pixel_set: HashSet<(i32, i32)> = pixels.iter().copied().collect();
+
+    let mut h_edges: BTreeMap<i32, Vec<i32>> = BTreeMap::new();
+    let mut v_edges: BTreeMap<i32, Vec<i32>> = BTreeMap::new();
+
+    for &(x, y) in pixels {
+        if !pixel_set.contains(&(x, y - 1)) {
+            h_edges.entry(y).or_default().push(x);
+        }
+        if !pixel_set.contains(&(x, y + 1)) {
+            h_edges.entry(y + 1).or_default().push(x);
+        }
+        if !pixel_set.contains(&(x - 1, y)) {
+            v_edges.entry(x).or_default().push(y);
+        }
+        if !pixel_set.contains(&(x + 1, y)) {
+            v_edges.entry(x + 1).or_default().push(y);
+        }
+    }
+
+    let mut segments = Vec::new();
+
+    for (y, mut xs) in h_edges {
+        xs.sort_unstable();
+        let mut i = 0;
+        while i < xs.len() {
+            let start_x = xs[i];
+            let mut end_x = start_x + 1;
+            while i + 1 < xs.len() && xs[i + 1] == end_x {
+                end_x += 1;
+                i += 1;
+            }
+            let p0 = Pos2::new(origin.x + start_x as f32 * zoom, origin.y + y as f32 * zoom);
+            let p1 = Pos2::new(origin.x + end_x as f32 * zoom, origin.y + y as f32 * zoom);
+            segments.push([p0, p1]);
+            i += 1;
+        }
+    }
+
+    for (x, mut ys) in v_edges {
+        ys.sort_unstable();
+        let mut i = 0;
+        while i < ys.len() {
+            let start_y = ys[i];
+            let mut end_y = start_y + 1;
+            while i + 1 < ys.len() && ys[i + 1] == end_y {
+                end_y += 1;
+                i += 1;
+            }
+            let p0 = Pos2::new(origin.x + x as f32 * zoom, origin.y + start_y as f32 * zoom);
+            let p1 = Pos2::new(origin.x + x as f32 * zoom, origin.y + end_y as f32 * zoom);
+            segments.push([p0, p1]);
+            i += 1;
+        }
+    }
+
+    segments
 }
 
 pub fn draw_preview_pixels_and_cursor(
@@ -373,23 +447,29 @@ pub fn draw_preview_pixels_and_cursor(
     }
 
     if let Some(hover_px) = hover_local_px {
-        let (cursor_rect, center, radius) =
-            brush_cursor_geometry(active_frame_rect.min, hover_px, brush_size, zoom);
         if brush_size > 1 {
-            // High-contrast dual stroke for round brush cursor:
-            // Dark outer shadow ring ensures visibility against bright canvases,
-            // while bright inner ring ensures visibility against dark canvases.
-            painter.circle_stroke(
-                center,
-                radius + 0.5,
-                Stroke::new(1.0, Color32::from_rgba_unmultiplied(20, 20, 20, 160)),
-            );
-            painter.circle_stroke(
-                center,
-                radius,
-                Stroke::new(1.0, Color32::from_rgba_unmultiplied(240, 240, 240, 220)),
-            );
+            let stamp =
+                expand_stamp_points(hover_px, brush_size, SymmetryMode::None, 0.5, 0.5, 1, 1);
+            let segments = compute_pixel_contour_segments(&stamp, active_frame_rect.min, zoom);
+            // High-contrast dual stroke for pixel-boundary brush frame:
+            // Dark shadow line ensures visibility against bright canvases,
+            // while bright inner line ensures visibility against dark canvases.
+            let stroke_dark = Stroke::new(2.0, Color32::from_rgba_unmultiplied(15, 15, 15, 180));
+            let stroke_light = Stroke::new(1.0, Color32::from_rgba_unmultiplied(245, 245, 245, 230));
+            for &[p0, p1] in &segments {
+                painter.line_segment([p0, p1], stroke_dark);
+            }
+            for &[p0, p1] in &segments {
+                painter.line_segment([p0, p1], stroke_light);
+            }
         } else {
+            let size = brush_size.clamp(1, 64) as i32;
+            let half_low = (size - 1) / 2;
+            let min = Pos2::new(
+                active_frame_rect.min.x + (hover_px.0 - half_low) as f32 * zoom,
+                active_frame_rect.min.y + (hover_px.1 - half_low) as f32 * zoom,
+            );
+            let cursor_rect = Rect::from_min_size(min, Vec2::splat(size as f32 * zoom));
             painter.rect_stroke(
                 cursor_rect,
                 0.0,
@@ -605,5 +685,33 @@ mod tests {
         assert_eq!(rect.height(), 50.0);
         assert_eq!(center, Pos2::new(35.0, 55.0));
         assert_eq!(radius, 25.0);
+    }
+
+    #[test]
+    fn test_compute_pixel_contour_segments_single_pixel() {
+        let segs = compute_pixel_contour_segments(&[(2, 3)], Pos2::ZERO, 10.0);
+        // 1 pixel has 4 boundary edges of length 10.0
+        assert_eq!(segs.len(), 4);
+        assert!(segs.contains(&[Pos2::new(20.0, 30.0), Pos2::new(30.0, 30.0)])); // top
+        assert!(segs.contains(&[Pos2::new(20.0, 40.0), Pos2::new(30.0, 40.0)])); // bottom
+        assert!(segs.contains(&[Pos2::new(20.0, 30.0), Pos2::new(20.0, 40.0)])); // left
+        assert!(segs.contains(&[Pos2::new(30.0, 30.0), Pos2::new(30.0, 40.0)])); // right
+    }
+
+    #[test]
+    fn test_compute_pixel_contour_segments_round_stamp_merges_collinear() {
+        let stamp = expand_stamp_points((5, 5), 4, SymmetryMode::None, 0.5, 0.5, 32, 32);
+        let segs = compute_pixel_contour_segments(&stamp, Pos2::ZERO, 1.0);
+        // Octagonal 12-pixel stamp boundary:
+        // 4 merged flat segments of length 2 + 8 corner step segments of length 1 = 12 segments
+        assert_eq!(segs.len(), 12);
+        // Verify top merged flat segment [5..7, 4]
+        assert!(segs.contains(&[Pos2::new(5.0, 4.0), Pos2::new(7.0, 4.0)]));
+        // Verify bottom merged flat segment [5..7, 8]
+        assert!(segs.contains(&[Pos2::new(5.0, 8.0), Pos2::new(7.0, 8.0)]));
+        // Verify left merged flat segment [4, 5..7]
+        assert!(segs.contains(&[Pos2::new(4.0, 5.0), Pos2::new(4.0, 7.0)]));
+        // Verify right merged flat segment [8, 5..7]
+        assert!(segs.contains(&[Pos2::new(8.0, 5.0), Pos2::new(8.0, 7.0)]));
     }
 }
