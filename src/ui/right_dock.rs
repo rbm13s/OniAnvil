@@ -326,10 +326,12 @@ pub fn show_right_dock(
 
     Panel::right("onianvil_right_utility_dock")
         .resizable(true)
-        .default_size(275.0)
-        .size_range(235.0..=380.0)
+        .default_size(290.0)
+        .size_range(260.0..=460.0)
         .show(ui, |ui: &mut Ui| {
-            ScrollArea::vertical().show(ui, |ui| {
+            ScrollArea::vertical()
+                .horizontal_scroll_offset(0.0)
+                .show(ui, |ui| {
                 // 1. Live Animation Preview Panel
                 egui::CollapsingHeader::new(format!("{FA_PLAY} {}", i18n.tr("panel.preview.title")))
                     .default_open(true)
@@ -625,7 +627,7 @@ pub fn show_right_dock(
                             if cols[0]
                                 .add_sized(
                                     [cols[0].available_width(), 20.0],
-                                    egui::Button::new(format!("{FA_PLUS} {}", i18n.tr("panel.palette.add_color"))),
+                                    egui::Button::new(format!("{FA_PLUS} {}", i18n.tr("panel.palette.add_color"))).truncate(),
                                 )
                                 .on_hover_text(i18n.tr("tooltip.palette_add_fg"))
                                 .clicked()
@@ -640,7 +642,7 @@ pub fn show_right_dock(
                             if cols[1]
                                 .add_sized(
                                     [cols[1].available_width(), 20.0],
-                                    egui::Button::new(format!("{FA_MAGIC_WAND} {}", i18n.tr("panel.palette.extract"))),
+                                    egui::Button::new(format!("{FA_MAGIC_WAND} {}", i18n.tr("panel.palette.extract"))).truncate(),
                                 )
                                 .on_hover_text(i18n.tr("tooltip.palette_extract"))
                                 .clicked()
@@ -659,7 +661,7 @@ pub fn show_right_dock(
                             if cols[0]
                                 .add_sized(
                                     [cols[0].available_width(), 20.0],
-                                    egui::Button::new(format!("{FA_IMPORT} {}", i18n.tr("panel.palette.import_btn"))),
+                                    egui::Button::new(format!("{FA_IMPORT} {}", i18n.tr("panel.palette.import_btn"))).truncate(),
                                 )
                                 .on_hover_text(i18n.tr("tooltip.palette_import"))
                                 .clicked()
@@ -673,7 +675,7 @@ pub fn show_right_dock(
                                     egui::Button::new(format!(
                                         "{FA_EXPORT} {}",
                                         i18n.tr("panel.palette.export_btn")
-                                    )),
+                                    )).truncate(),
                                 )
                                 .on_hover_text(i18n.tr("tooltip.palette_export_hex"));
                             let popup_id = cols[1].make_persistent_id("palette_export_menu_popup");
@@ -724,7 +726,7 @@ pub fn show_right_dock(
                             let sort_btn = cols[0]
                                 .add_sized(
                                     [cols[0].available_width(), 20.0],
-                                    egui::Button::new(format!("{FA_SORT} {}", i18n.tr("panel.palette.sort_btn"))),
+                                    egui::Button::new(format!("{FA_SORT} {}", i18n.tr("panel.palette.sort_btn"))).truncate(),
                                 )
                                 .on_hover_text(i18n.tr("tooltip.palette_sort"));
                             let sort_popup_id = cols[0].make_persistent_id("palette_sort_menu_popup");
@@ -758,7 +760,7 @@ pub fn show_right_dock(
                             if cols[1]
                                 .add_sized(
                                     [cols[1].available_width(), 20.0],
-                                    egui::Button::new(format!("{FA_PALETTE} {}", i18n.tr("panel.palette.remap_btn"))),
+                                    egui::Button::new(format!("{FA_PALETTE} {}", i18n.tr("panel.palette.remap_btn"))).truncate(),
                                 )
                                 .on_hover_text(i18n.tr("tooltip.palette_remap"))
                                 .clicked()
@@ -1180,38 +1182,41 @@ pub fn show_right_dock(
                             project.metadata.frame_height,
                         );
 
-                        ui.horizontal(|ui| {
-                            if ui
-                                .add_enabled(
-                                    has_sketch,
-                                    egui::Button::new(i18n.tr("panel.sketch.fit_width")),
+                        ui.columns(3, |cols| {
+                            if cols[0]
+                                .add_sized(
+                                    [cols[0].available_width(), 20.0],
+                                    egui::Button::new(i18n.tr("panel.sketch.fit_width")).truncate(),
                                 )
                                 .on_hover_text(i18n.tr("tooltip.sketch_fit_width"))
                                 .clicked()
+                                && has_sketch
                             {
                                 project.metadata.sketch.fit_width(fw, fh, sw, sh);
                                 project.has_unsaved_changes = true;
                             }
 
-                            if ui
-                                .add_enabled(
-                                    has_sketch,
-                                    egui::Button::new(i18n.tr("panel.sketch.fit_height")),
+                            if cols[1]
+                                .add_sized(
+                                    [cols[1].available_width(), 20.0],
+                                    egui::Button::new(i18n.tr("panel.sketch.fit_height")).truncate(),
                                 )
                                 .on_hover_text(i18n.tr("tooltip.sketch_fit_height"))
                                 .clicked()
+                                && has_sketch
                             {
                                 project.metadata.sketch.fit_height(fw, fh, sw, sh);
                                 project.has_unsaved_changes = true;
                             }
 
-                            if ui
-                                .add_enabled(
-                                    has_sketch,
-                                    egui::Button::new(i18n.tr("panel.sketch.fit_pixels")),
+                            if cols[2]
+                                .add_sized(
+                                    [cols[2].available_width(), 20.0],
+                                    egui::Button::new(i18n.tr("panel.sketch.fit_pixels")).truncate(),
                                 )
                                 .on_hover_text(i18n.tr("tooltip.sketch_fit_pixels"))
                                 .clicked()
+                                && has_sketch
                             {
                                 project.metadata.sketch.fit_to_pixels(fw, fh, sw, sh);
                                 project.has_unsaved_changes = true;
