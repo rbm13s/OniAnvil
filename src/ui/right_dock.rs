@@ -326,17 +326,21 @@ pub fn show_right_dock(
 
     Panel::right("onianvil_right_utility_dock")
         .resizable(true)
-        .default_size(290.0)
-        .size_range(260.0..=460.0)
+        .default_size(320.0)
+        .size_range(320.0..=540.0)
         .show(ui, |ui: &mut Ui| {
+            let avail_w = ui.available_width();
             ScrollArea::vertical()
                 .horizontal_scroll_offset(0.0)
+                .max_width(avail_w)
                 .show(ui, |ui| {
                 // 1. Live Animation Preview Panel
+
                 egui::CollapsingHeader::new(format!("{FA_PLAY} {}", i18n.tr("panel.preview.title")))
                     .default_open(true)
                     .show(ui, |ui| {
                         let preview_box_h = 128.0;
+
                         let (rect, _) = ui.allocate_exact_size(
                             Vec2::new(ui.available_width(), preview_box_h),
                             egui::Sense::hover(),
@@ -444,49 +448,59 @@ pub fn show_right_dock(
                         });
 
                         // Playback Mode & Speed Multiplier
-                        ui.horizontal(|ui| {
-                            ui.label(i18n.tr("panel.preview.mode"));
-                            egui::ComboBox::from_id_salt("preview_playback_mode_combo")
-                                .width(85.0)
-                                .selected_text(match preview.mode {
-                                    PlaybackMode::Loop => i18n.tr("panel.preview.loop"),
-                                    PlaybackMode::PingPong => i18n.tr("panel.preview.ping_pong"),
-                                    PlaybackMode::Once => i18n.tr("panel.preview.once"),
-                                })
-                                .show_ui(ui, |ui| {
-                                    ui.selectable_value(
-                                        &mut preview.mode,
-                                        PlaybackMode::Loop,
-                                        i18n.tr("panel.preview.loop"),
-                                    );
-                                    ui.selectable_value(
-                                        &mut preview.mode,
-                                        PlaybackMode::PingPong,
-                                        i18n.tr("panel.preview.ping_pong"),
-                                    );
-                                    ui.selectable_value(
-                                        &mut preview.mode,
-                                        PlaybackMode::Once,
-                                        i18n.tr("panel.preview.once"),
-                                    );
-                                })
-                                .response
-                                .on_hover_text(i18n.tr("tooltip.preview_mode"));
-
-                            ui.label(i18n.tr("panel.preview.speed"));
-                            egui::ComboBox::from_id_salt("preview_speed_combo")
-                                .width(58.0)
-                                .selected_text(format!("{}x", preview.speed_multiplier))
-                                .show_ui(ui, |ui| {
-                                    for spd in [0.1_f32, 0.25, 0.5, 1.0, 2.0] {
+                        let w_half = (ui.available_width() - ui.spacing().item_spacing.x) / 2.0;
+                        ui.columns(2, |cols| {
+                            cols[0].set_max_width(w_half);
+                            cols[0].horizontal(|ui| {
+                                ui.small(i18n.tr("panel.preview.mode"));
+                                egui::ComboBox::from_id_salt("preview_playback_mode_combo")
+                                    .width((ui.available_width() - 4.0).clamp(40.0, 85.0))
+                                    .truncate()
+                                    .selected_text(match preview.mode {
+                                        PlaybackMode::Loop => i18n.tr("panel.preview.loop"),
+                                        PlaybackMode::PingPong => i18n.tr("panel.preview.ping_pong"),
+                                        PlaybackMode::Once => i18n.tr("panel.preview.once"),
+                                    })
+                                    .show_ui(ui, |ui| {
                                         ui.selectable_value(
-                                            &mut preview.speed_multiplier,
-                                            spd,
-                                            format!("{}x", spd),
+                                            &mut preview.mode,
+                                            PlaybackMode::Loop,
+                                            i18n.tr("panel.preview.loop"),
                                         );
-                                    }
-                                });
+                                        ui.selectable_value(
+                                            &mut preview.mode,
+                                            PlaybackMode::PingPong,
+                                            i18n.tr("panel.preview.ping_pong"),
+                                        );
+                                        ui.selectable_value(
+                                            &mut preview.mode,
+                                            PlaybackMode::Once,
+                                            i18n.tr("panel.preview.once"),
+                                        );
+                                    })
+                                    .response
+                                    .on_hover_text(i18n.tr("tooltip.preview_mode"));
+                            });
+
+                            cols[1].set_max_width(w_half);
+                            cols[1].horizontal(|ui| {
+                                ui.small(i18n.tr("panel.preview.speed"));
+                                egui::ComboBox::from_id_salt("preview_speed_combo")
+                                    .width((ui.available_width() - 4.0).clamp(35.0, 60.0))
+                                    .truncate()
+                                    .selected_text(format!("{}x", preview.speed_multiplier))
+                                    .show_ui(ui, |ui| {
+                                        for spd in [0.1_f32, 0.25, 0.5, 1.0, 2.0] {
+                                            ui.selectable_value(
+                                                &mut preview.speed_multiplier,
+                                                spd,
+                                                format!("{}x", spd),
+                                            );
+                                        }
+                                    });
+                            });
                         });
+
 
                         // Active Tag Filter for Preview
                         if !project.metadata.tags.is_empty() {
@@ -510,8 +524,9 @@ pub fn show_right_dock(
                                         }),
                                     None => i18n.tr("panel.preview.all_frames").to_string(),
                                 };
+                                let combo_w = (ui.available_width() - 4.0).max(60.0);
                                 egui::ComboBox::from_id_salt("preview_active_tag_combo")
-                                    .width(145.0)
+                                    .width(combo_w)
                                     .selected_text(selected_tag_label)
                                     .show_ui(ui, |ui| {
                                         ui.selectable_value(
@@ -539,17 +554,21 @@ pub fn show_right_dock(
                         ui.checkbox(&mut preview.motion_test, i18n.tr("panel.preview.motion_test"))
                             .on_hover_text(i18n.tr("tooltip.preview_motion"));
                         if preview.motion_test {
-                            ui.horizontal(|ui| {
-                                ui.small(i18n.tr("panel.preview.scroll_x"));
-                                ui.add(
-                                    egui::DragValue::new(&mut preview.scroll_speed_x)
-                                        .range(-256.0..=256.0),
-                                );
-                                ui.small(i18n.tr("panel.preview.scroll_y"));
-                                ui.add(
-                                    egui::DragValue::new(&mut preview.scroll_speed_y)
-                                        .range(-256.0..=256.0),
-                                );
+                            ui.columns(2, |cols| {
+                                cols[0].horizontal(|ui| {
+                                    ui.small(i18n.tr("panel.preview.scroll_x"));
+                                    ui.add(
+                                        egui::DragValue::new(&mut preview.scroll_speed_x)
+                                            .range(-256.0..=256.0),
+                                    );
+                                });
+                                cols[1].horizontal(|ui| {
+                                    ui.small(i18n.tr("panel.preview.scroll_y"));
+                                    ui.add(
+                                        egui::DragValue::new(&mut preview.scroll_speed_y)
+                                            .range(-256.0..=256.0),
+                                    );
+                                });
                             });
                         }
                     });
@@ -566,8 +585,13 @@ pub fn show_right_dock(
                             .min(PREDEFINED_PALETTES.len().saturating_sub(1));
                         ui.horizontal(|ui| {
                             ui.small(i18n.tr("panel.palette.preset"));
-                            let combo_w = (ui.available_width() - 85.0).max(90.0);
-                            egui::ComboBox::from_id_salt("palette_preset_combo")
+                            let btn_label = format!("{FA_PALETTE} {}", i18n.tr("panel.palette.apply_preset"));
+                            let font_id = egui::TextStyle::Button.resolve(ui.style());
+                            let text_w = ui.painter().layout_no_wrap(btn_label.clone(), font_id, Color32::WHITE).size().x;
+                            let btn_w = (text_w + 14.0).clamp(24.0, 100.0);
+                            let avail = ui.available_width();
+                            let combo_w = (avail - btn_w - ui.spacing().item_spacing.x).max(40.0);
+                            let _cb_resp = egui::ComboBox::from_id_salt("palette_preset_combo")
                                 .width(combo_w)
                                 .height(260.0)
                                 .selected_text(PREDEFINED_PALETTES[preset_idx].name)
@@ -579,14 +603,16 @@ pub fn show_right_dock(
                                             p.name,
                                         );
                                     }
-                                })
-                                .response
+                                });
+                            let final_btn_w = (ui.available_width() - 2.0).clamp(16.0, btn_w);
+                            let btn_resp = ui
+                                .add_sized(
+                                    [final_btn_w, 20.0],
+                                    egui::Button::new(btn_label).small().truncate(),
+                                )
                                 .on_hover_text(i18n.tr("tooltip.palette_preset"));
 
-                            if ui
-                                .small_button(format!("{FA_PALETTE} {}", i18n.tr("panel.palette.apply_preset")))
-                                .on_hover_text(i18n.tr("tooltip.palette_preset"))
-                                .clicked()
+                            if btn_resp.clicked()
                             {
                                 let chosen = &PREDEFINED_PALETTES[preview
                                     .selected_preset_index
@@ -596,7 +622,7 @@ pub fn show_right_dock(
                                     project.metadata.palette.colors = cols.clone();
                                     let active_s = project.metadata.palette.active_swap_index;
                                     if let Some(swap) =
-                                        project.metadata.palette.swaps.get_mut(active_s)
+                                         project.metadata.palette.swaps.get_mut(active_s)
                                     {
                                         swap.colors = cols;
                                     }
@@ -605,25 +631,27 @@ pub fn show_right_dock(
                             }
                         });
 
-                        ui.horizontal(|ui| {
-                            let count = project.metadata.palette.colors.len();
-                            let limit_str = match project.metadata.target_color_limit {
-                                Some(lim) => lim.to_string(),
-                                None => i18n.tr("panel.palette.unlimited").to_string(),
-                            };
-                            ui.small(format!(
-                                "{} {}  •  {} {}",
-                                i18n.tr("panel.palette.colors_count"),
-                                count,
-                                i18n.tr("panel.palette.limit"),
-                                limit_str
-                            ));
-                        });
+
+                        let count = project.metadata.palette.colors.len();
+                        let limit_str = match project.metadata.target_color_limit {
+                            Some(lim) => lim.to_string(),
+                            None => i18n.tr("panel.palette.unlimited").to_string(),
+                        };
+                        ui.small(format!(
+                            "{} {}  •  {} {}",
+                            i18n.tr("panel.palette.colors_count"),
+                            count,
+                            i18n.tr("panel.palette.limit"),
+                            limit_str
+                        ));
+
 
                         ui.add_space(2.0);
 
                         // Actions: Symmetrical 2x2 grid without horizontal blowout
                         ui.columns(2, |cols| {
+
+
                             if cols[0]
                                 .add_sized(
                                     [cols[0].available_width(), 20.0],
@@ -839,8 +867,10 @@ pub fn show_right_dock(
                                     });
                             });
 
+
                         // Active Slot Editor + Global Color Replace
                         if !project.metadata.palette.colors.is_empty() {
+
                             let slot_idx = preview
                                 .selected_palette_slot
                                 .min(project.metadata.palette.colors.len() - 1);
@@ -885,12 +915,16 @@ pub fn show_right_dock(
                                 }
                                 if project.metadata.palette.colors.len() > 1
                                     && ui
-                                        .small_button(format!("{FA_TRASH} {}", i18n.tr("panel.palette.del_slot")))
+                                        .add_sized(
+                                            [ui.available_width().min(110.0), 20.0],
+                                            egui::Button::new(format!("{FA_TRASH} {}", i18n.tr("panel.palette.del_slot"))).small().truncate(),
+                                        )
                                         .on_hover_text(i18n.tr("tooltip.palette_del_slot"))
                                         .clicked()
                                 {
                                     actions.request_delete_palette_slot = Some((slot_idx, old_col));
                                 }
+
                             });
                         }
 
@@ -966,8 +1000,10 @@ pub fn show_right_dock(
 
                         ui.separator();
 
+
                         // Palette Swaps (Skins) (Collapsible)
                         egui::CollapsingHeader::new(format!("{FA_SWAP} {}", i18n.tr("panel.palette.swaps_title")))
+
                             .default_open(true)
                             .show(ui, |ui| {
                                 let prev_idx = project
@@ -993,7 +1029,7 @@ pub fn show_right_dock(
                                     } else {
                                         28.0
                                     };
-                                    let combo_w = (ui.available_width() - btn_w).max(70.0);
+                                    let combo_w = (ui.available_width() - btn_w - ui.spacing().item_spacing.x * 2.0).max(60.0);
                                     egui::ComboBox::from_id_salt("palette_swaps_combo")
                                         .width(combo_w)
                                         .height(260.0)
@@ -1081,6 +1117,7 @@ pub fn show_right_dock(
                 egui::CollapsingHeader::new(format!("{FA_EYE} {}", i18n.tr("panel.sketch.title")))
                     .default_open(true)
                     .show(ui, |ui| {
+
                         ui.horizontal(|ui| {
                             if ui
                                 .button(format!("{FA_FOLDER} {}", i18n.tr("panel.sketch.load")))
@@ -1113,40 +1150,52 @@ pub fn show_right_dock(
                         )
                         .on_hover_text(i18n.tr("tooltip.sketch_bilinear"));
 
-                        ui.horizontal(|ui| {
-                            ui.label(i18n.tr("panel.sketch.layer_mode"));
-                            ui.selectable_value(
+                        let w_half = (ui.available_width() - ui.spacing().item_spacing.x) / 2.0;
+                        ui.columns(2, |cols| {
+                            cols[0].set_max_width(w_half);
+                            cols[0].selectable_value(
                                 &mut project.metadata.sketch.layer_mode,
                                 SketchLayerMode::Underlay,
                                 i18n.tr("panel.sketch.underlay"),
                             )
                             .on_hover_text(i18n.tr("tooltip.sketch_underlay"));
-                            ui.selectable_value(
+
+                            cols[1].set_max_width(w_half);
+                            cols[1].selectable_value(
                                 &mut project.metadata.sketch.layer_mode,
                                 SketchLayerMode::Overlay,
                                 i18n.tr("panel.sketch.overlay"),
                             )
                             .on_hover_text(i18n.tr("tooltip.sketch_overlay"));
                         });
+
                         ui.horizontal(|ui| {
-                            ui.label(i18n.tr("panel.sketch.opacity"));
-                            ui.add(egui::Slider::new(
-                                &mut project.metadata.sketch.opacity,
-                                0.0..=1.0,
-                            ));
+                            ui.small(i18n.tr("panel.sketch.opacity"));
+                            let slider_w = (ui.available_width() - 4.0).clamp(40.0, 110.0);
+                            ui.add_sized(
+                                [slider_w, 20.0],
+                                egui::Slider::new(
+                                    &mut project.metadata.sketch.opacity,
+                                    0.0..=1.0,
+                                ),
+                            );
                         });
+
                         ui.horizontal(|ui| {
-                            ui.label(i18n.tr("panel.sketch.scale"));
-                            ui.add(
+                            ui.small(i18n.tr("panel.sketch.scale"));
+                            let slider_w = (ui.available_width() - 4.0).clamp(40.0, 110.0);
+                            ui.add_sized(
+                                [slider_w, 20.0],
                                 egui::Slider::new(&mut project.metadata.sketch.scale, 0.1..=10.0)
                                     .logarithmic(true),
                             );
                         });
 
-
                         ui.horizontal(|ui| {
-                            ui.label(i18n.tr("panel.sketch.rotation"));
-                            ui.add(
+                            ui.small(i18n.tr("panel.sketch.rotation"));
+                            let slider_w = (ui.available_width() - 4.0).clamp(40.0, 110.0);
+                            ui.add_sized(
+                                [slider_w, 20.0],
                                 egui::Slider::new(
                                     &mut project.metadata.sketch.rotation_deg,
                                     -180.0..=180.0,
@@ -1155,20 +1204,26 @@ pub fn show_right_dock(
                             );
                         });
 
-
-                        ui.horizontal(|ui| {
-                            ui.small(i18n.tr("panel.sketch.offset_x"));
-                            ui.add(
-                                egui::DragValue::new(&mut project.metadata.sketch.offset_x)
-                                    .speed(0.5)
-                                    .range(-1024.0..=1024.0),
-                            );
-                            ui.small(i18n.tr("panel.sketch.offset_y"));
-                            ui.add(
-                                egui::DragValue::new(&mut project.metadata.sketch.offset_y)
-                                    .speed(0.5)
-                                    .range(-1024.0..=1024.0),
-                            );
+                        let w_half = (ui.available_width() - ui.spacing().item_spacing.x) / 2.0;
+                        ui.columns(2, |cols| {
+                            cols[0].set_max_width(w_half);
+                            cols[0].horizontal(|ui| {
+                                ui.small(i18n.tr("panel.sketch.offset_x"));
+                                ui.add(
+                                    egui::DragValue::new(&mut project.metadata.sketch.offset_x)
+                                        .speed(0.5)
+                                        .range(-1024.0..=1024.0),
+                                );
+                            });
+                            cols[1].set_max_width(w_half);
+                            cols[1].horizontal(|ui| {
+                                ui.small(i18n.tr("panel.sketch.offset_y"));
+                                ui.add(
+                                    egui::DragValue::new(&mut project.metadata.sketch.offset_y)
+                                        .speed(0.5)
+                                        .range(-1024.0..=1024.0),
+                                );
+                            });
                         });
 
                         let has_sketch = project.sketch_rgba.is_some();
@@ -1182,7 +1237,9 @@ pub fn show_right_dock(
                             project.metadata.frame_height,
                         );
 
-                        ui.columns(3, |cols| {
+                        let w_half = (ui.available_width() - ui.spacing().item_spacing.x) / 2.0;
+                        ui.columns(2, |cols| {
+                            cols[0].set_max_width(w_half);
                             if cols[0]
                                 .add_sized(
                                     [cols[0].available_width(), 20.0],
@@ -1196,6 +1253,7 @@ pub fn show_right_dock(
                                 project.has_unsaved_changes = true;
                             }
 
+                            cols[1].set_max_width(w_half);
                             if cols[1]
                                 .add_sized(
                                     [cols[1].available_width(), 20.0],
@@ -1208,10 +1266,13 @@ pub fn show_right_dock(
                                 project.metadata.sketch.fit_height(fw, fh, sw, sh);
                                 project.has_unsaved_changes = true;
                             }
+                        });
 
-                            if cols[2]
+                        ui.columns(2, |cols| {
+                            cols[0].set_max_width(w_half);
+                            if cols[0]
                                 .add_sized(
-                                    [cols[2].available_width(), 20.0],
+                                    [cols[0].available_width(), 20.0],
                                     egui::Button::new(i18n.tr("panel.sketch.fit_pixels")).truncate(),
                                 )
                                 .on_hover_text(i18n.tr("tooltip.sketch_fit_pixels"))
@@ -1221,25 +1282,52 @@ pub fn show_right_dock(
                                 project.metadata.sketch.fit_to_pixels(fw, fh, sw, sh);
                                 project.has_unsaved_changes = true;
                             }
-                        });
 
-                        ui.horizontal(|ui| {
-                            ui.toggle_value(
-                                &mut project.metadata.sketch.flip_h,
-                                format!("{FA_FLIP_H} {}", i18n.tr("panel.sketch.flip_h")),
-                            )
-                            .on_hover_text(i18n.tr("tooltip.sketch_flip_h"));
-                            ui.toggle_value(
-                                &mut project.metadata.sketch.flip_v,
-                                format!("{FA_FLIP_V} {}", i18n.tr("panel.sketch.flip_v")),
-                            )
-                            .on_hover_text(i18n.tr("tooltip.sketch_flip_v"));
-                            if ui
-                                .small_button(format!("{FA_RESET} {}", i18n.tr("panel.sketch.reset")))
+                            cols[1].set_max_width(w_half);
+                            if cols[1]
+                                .add_sized(
+                                    [cols[1].available_width(), 20.0],
+                                    egui::Button::new(format!("{FA_RESET} {}", i18n.tr("panel.sketch.reset"))).truncate(),
+                                )
                                 .on_hover_text(i18n.tr("tooltip.sketch_reset"))
                                 .clicked()
                             {
                                 project.metadata.sketch.reset_transform();
+                                project.has_unsaved_changes = true;
+                            }
+                        });
+
+                        ui.columns(2, |cols| {
+                            cols[0].set_max_width(w_half);
+                            let flip_h_active = project.metadata.sketch.flip_h;
+                            if cols[0]
+                                .add_sized(
+                                    [cols[0].available_width(), 20.0],
+                                    egui::Button::new(format!("{FA_FLIP_H} {}", i18n.tr("panel.sketch.flip_h")))
+                                        .selected(flip_h_active)
+                                        .truncate(),
+                                )
+                                .on_hover_text(i18n.tr("tooltip.sketch_flip_h"))
+                                .clicked()
+                            {
+                                project.metadata.sketch.flip_h = !flip_h_active;
+                                project.has_unsaved_changes = true;
+                            }
+
+                            cols[1].set_max_width(w_half);
+                            let flip_v_active = project.metadata.sketch.flip_v;
+                            if cols[1]
+                                .add_sized(
+                                    [cols[1].available_width(), 20.0],
+                                    egui::Button::new(format!("{FA_FLIP_V} {}", i18n.tr("panel.sketch.flip_v")))
+                                        .selected(flip_v_active)
+                                        .truncate(),
+                                )
+                                .on_hover_text(i18n.tr("tooltip.sketch_flip_v"))
+                                .clicked()
+                            {
+                                project.metadata.sketch.flip_v = !flip_v_active;
+                                project.has_unsaved_changes = true;
                             }
                         });
 
@@ -1271,27 +1359,37 @@ pub fn show_right_dock(
                             i18n.tr("panel.onion.enabled"),
                         )
                         .on_hover_text(i18n.tr("tooltip.onion_enable"));
+                        ui.columns(2, |cols| {
+                            cols[0].set_max_width(w_half);
+                            cols[0].vertical(|ui| {
+                                ui.small(i18n.tr("panel.onion.prev_frames"));
+                                ui.add(
+                                    egui::DragValue::new(&mut project.metadata.onion_skin.prev_frames)
+                                        .range(0..=5),
+                                );
+                            });
+                            cols[1].set_max_width(w_half);
+                            cols[1].vertical(|ui| {
+                                ui.small(i18n.tr("panel.onion.next_frames"));
+                                ui.add(
+                                    egui::DragValue::new(&mut project.metadata.onion_skin.next_frames)
+                                        .range(0..=5),
+                                );
+                            });
+                        });
+
                         ui.horizontal(|ui| {
-                            ui.label(i18n.tr("panel.onion.prev_frames"));
-                            ui.add(
-                                egui::DragValue::new(&mut project.metadata.onion_skin.prev_frames)
-                                    .range(0..=5),
-                            );
-                            ui.label(i18n.tr("panel.onion.next_frames"));
-                            ui.add(
-                                egui::DragValue::new(&mut project.metadata.onion_skin.next_frames)
-                                    .range(0..=5),
+                            ui.small(i18n.tr("panel.onion.opacity"));
+                            let slider_w = (ui.available_width() - 4.0).clamp(40.0, 110.0);
+                            ui.add_sized(
+                                [slider_w, 20.0],
+                                egui::Slider::new(
+                                    &mut project.metadata.onion_skin.opacity,
+                                    0.05..=0.9,
+                                ),
                             );
                         });
 
-
-                        ui.horizontal(|ui| {
-                            ui.label(i18n.tr("panel.onion.opacity"));
-                            ui.add(egui::Slider::new(
-                                &mut project.metadata.onion_skin.opacity,
-                                0.05..=0.9,
-                            ));
-                        });
                         ui.checkbox(
                             &mut project.metadata.onion_skin.color_tint,
                             i18n.tr("panel.onion.tint"),
@@ -1299,8 +1397,10 @@ pub fn show_right_dock(
                         .on_hover_text(i18n.tr("tooltip.onion_tint"));
                         ui.horizontal(|ui| {
                             ui.small(i18n.tr("context.quick_peek"));
+                            let combo_w = (ui.available_width() - 4.0).clamp(40.0, 140.0);
                             egui::ComboBox::from_id_salt("panel_quick_peek_combo")
-                                .width(120.0)
+                                .width(combo_w)
+                                .truncate()
                                 .selected_text(match project.metadata.onion_skin.quick_peek_mode {
                                     QuickPeekMode::PreviousFrame => {
                                         i18n.tr("context.peek_prev_frame")
@@ -1332,10 +1432,12 @@ pub fn show_right_dock(
 
                 ui.separator();
 
+
                 // 4. Pivot & Action Points Panel
                 egui::CollapsingHeader::new(format!("{FA_PIVOT} {}", i18n.tr("panel.pivots.title")))
                     .default_open(false)
                     .show(ui, |ui| {
+
                         ui.checkbox(
                             &mut project.metadata.pivot.show_gizmos,
                             i18n.tr("panel.pivots.show"),
@@ -1373,17 +1475,21 @@ pub fn show_right_dock(
                                     (project.metadata.frame_height / 2) as i32;
                             }
                         });
-                        ui.horizontal(|ui| {
-                            ui.label(i18n.tr("panel.pivots.origin_x"));
-                            ui.add(
-                                egui::DragValue::new(&mut project.metadata.pivot.origin_x)
-                                    .range(-512..=2048),
-                            );
-                            ui.label(i18n.tr("panel.pivots.origin_y"));
-                            ui.add(
-                                egui::DragValue::new(&mut project.metadata.pivot.origin_y)
-                                    .range(-512..=2048),
-                            );
+                        ui.columns(2, |cols| {
+                            cols[0].horizontal(|ui| {
+                                ui.small(i18n.tr("panel.pivots.origin_x"));
+                                ui.add(
+                                    egui::DragValue::new(&mut project.metadata.pivot.origin_x)
+                                        .range(-512..=2048),
+                                );
+                            });
+                            cols[1].horizontal(|ui| {
+                                ui.small(i18n.tr("panel.pivots.origin_y"));
+                                ui.add(
+                                    egui::DragValue::new(&mut project.metadata.pivot.origin_y)
+                                        .range(-512..=2048),
+                                );
+                            });
                         });
 
                         ui.add_space(4.0);
@@ -1664,6 +1770,65 @@ mod tests {
         preview.accumulator_sec = 0.15;
         preview.tick(&ctx, &mut proj);
         assert_eq!(proj.active_frame, 2);
+    }
+
+    #[test]
+    fn test_right_dock_locales_layout_and_clipping() {
+        use crate::canvas::renderer::CanvasRenderer;
+        use crate::model::metadata::ProjectMetadata;
+        use crate::model::project::Project;
+
+        for lang in crate::i18n::Language::ALL {
+            let ctx = egui::Context::default();
+            let i18n = I18n::new(lang);
+            let meta = ProjectMetadata::new_config("dock_test".to_string(), 16, 16, 2, 1, None);
+            let mut proj = Project::new(meta);
+            let mut tools = ToolSettings::default();
+            let mut preview = PreviewState::default();
+            let renderer = CanvasRenderer::default();
+
+            let mut p_id = egui::Id::NULL;
+            let raw_input = egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(1280.0, 720.0))),
+                ..Default::default()
+            };
+
+            let mut output = ctx.run_ui(raw_input, |ui| {
+                p_id = ui.make_persistent_id("onianvil_right_utility_dock");
+                let _actions = show_right_dock(
+                    ui,
+                    &i18n,
+                    &mut proj,
+                    &mut tools,
+                    &mut preview,
+                    &renderer,
+                    None,
+                );
+            });
+            for shape in &output.shapes {
+                let r = shape.shape.visual_bounding_rect();
+                if r.max.x > 1280.0 {
+                    println!("Lang {:?} shape rect: {:?}, shape: {:#?}", lang, r, shape.shape);
+                }
+            }
+            output.textures_delta.clear();
+
+            if let Some(state) = ctx.data_mut(|d| d.get_persisted::<egui::containers::panel::PanelState>(p_id)) {
+                // Dock must be stable and exactly within screen bounds across all locales
+                assert!(
+                    (state.outer_rect.max.x - 1280.0).abs() < 1.0,
+                    "Lang {:?} outer_rect.max.x {} drifted from 1280.0",
+                    lang,
+                    state.outer_rect.max.x
+                );
+                assert!(
+                    (state.outer_rect.min.x - 960.0).abs() < 1.0,
+                    "Lang {:?} outer_rect.min.x {} drifted from 960.0",
+                    lang,
+                    state.outer_rect.min.x
+                );
+            }
+        }
     }
 }
 
