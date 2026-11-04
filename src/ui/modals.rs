@@ -4410,6 +4410,17 @@ pub fn show_hotkeys_modal(ctx: &Context, open: &mut bool, i18n: &I18n) {
         ("[ / ]", i18n.tr("modal.hotkeys.brush_size")),
     ];
 
+    let file_items = [
+        ("Ctrl/Cmd + Z", i18n.tr("menu.edit.undo")),
+        ("Ctrl/Cmd + Y / Shift+Z", i18n.tr("menu.edit.redo")),
+        ("Ctrl/Cmd + S", i18n.tr("menu.file.save")),
+        ("Ctrl/Cmd + Shift + S", i18n.tr("menu.file.save_as")),
+        ("Ctrl/Cmd + N", i18n.tr("menu.file.new")),
+        ("Ctrl/Cmd + O", i18n.tr("menu.file.open")),
+        ("Ctrl/Cmd + W", i18n.tr("menu.file.close")),
+        ("F1", i18n.tr("modal.hotkeys.title")),
+    ];
+
     let canvas_items = [
         ("Space + Drag", i18n.tr("modal.hotkeys.pan_canvas")),
         ("Wheel", i18n.tr("modal.hotkeys.zoom_canvas")),
@@ -4419,10 +4430,14 @@ pub fn show_hotkeys_modal(ctx: &Context, open: &mut bool, i18n: &I18n) {
         ("Esc / Ctrl/Cmd+D", i18n.tr("modal.hotkeys.deselect")),
         ("Ctrl/Cmd+A / Shift+I", i18n.tr("modal.hotkeys.select_all")),
         ("Ctrl/Cmd+C / X / V", i18n.tr("modal.hotkeys.copy_paste")),
-        ("Delete", i18n.tr("modal.hotkeys.delete_selection")),
-        ("Shift + Drag", i18n.tr("modal.hotkeys.sel_add")),
+        ("Delete / Backspace", i18n.tr("modal.hotkeys.delete_selection")),
+        ("Arrows (← ↑ → ↓)", i18n.tr("modal.hotkeys.nudge")),
+        ("Alt (Hold)", i18n.tr("modal.hotkeys.quick_eyedropper")),
+        ("Shift + Drag", i18n.tr("modal.hotkeys.axis_lock")),
+        ("Shift + Drag (Sel)", i18n.tr("modal.hotkeys.sel_add")),
         ("Alt+Shift / RMB Drag", i18n.tr("modal.hotkeys.sel_subtract")),
         ("Ctrl/Cmd+Shift + Drag", i18n.tr("modal.hotkeys.sel_intersect")),
+        ("RMB Drag (Eraser)", i18n.tr("modal.hotkeys.eraser_replace")),
         ("Shift + R", i18n.tr("modal.hotkeys.replace_color")),
         ("Shift + O", i18n.tr("modal.hotkeys.outline_fx")),
         ("Ctrl/Cmd + Shift + R", i18n.tr("modal.hotkeys.rotate_arbitrary")),
@@ -4434,14 +4449,6 @@ pub fn show_hotkeys_modal(ctx: &Context, open: &mut bool, i18n: &I18n) {
         ("Enter / Ctrl/Cmd+Space", i18n.tr("modal.hotkeys.play_pause")),
         ("Ctrl/Cmd + Shift + D", i18n.tr("timeline.dup_frame")),
         ("Wheel / Shift+Wheel", i18n.tr("modal.hotkeys.timeline_scroll")),
-    ];
-
-    let file_items = [
-        ("Ctrl/Cmd + Z", i18n.tr("menu.edit.undo")),
-        ("Ctrl/Cmd + Y", i18n.tr("menu.edit.redo")),
-        ("Ctrl/Cmd + S", i18n.tr("menu.file.save")),
-        ("Ctrl/Cmd + N", i18n.tr("menu.file.new")),
-        ("Ctrl/Cmd + W", i18n.tr("menu.file.close")),
     ];
 
     egui::Window::new(i18n.tr("modal.hotkeys.title"))
@@ -4458,7 +4465,7 @@ pub fn show_hotkeys_modal(ctx: &Context, open: &mut bool, i18n: &I18n) {
             ui.horizontal_top(|ui| {
                 let card_w = (ui.available_width() - 12.0) / 2.0;
 
-                // Left Column: Drawing Tools (13 items)
+                // Left Column: Drawing Tools (17 items) & File & History (8 items)
                 ui.allocate_ui_with_layout(
                     egui::vec2(card_w, 0.0),
                     egui::Layout::top_down(egui::Align::LEFT),
@@ -4471,12 +4478,23 @@ pub fn show_hotkeys_modal(ctx: &Context, open: &mut bool, i18n: &I18n) {
                             "hotkeys_tools_grid",
                             &tools_items,
                         );
+
+                        ui.add_space(8.0);
+
+                        render_hotkey_section(
+                            ui,
+                            FA_FOLDER,
+                            i18n.tr("modal.hotkeys.sec_file"),
+                            Color32::from_rgb(205, 165, 250),
+                            "hotkeys_file_grid",
+                            &file_items,
+                        );
                     },
                 );
 
                 ui.add_space(12.0);
 
-                // Right Column: Canvas, Timeline, File (5 + 3 + 5 = 13 items)
+                // Right Column: Canvas & Viewport (21 items) & Animation & Timeline (3 items)
                 ui.allocate_ui_with_layout(
                     egui::vec2(card_w, 0.0),
                     egui::Layout::top_down(egui::Align::LEFT),
@@ -4499,17 +4517,6 @@ pub fn show_hotkeys_modal(ctx: &Context, open: &mut bool, i18n: &I18n) {
                             Color32::from_rgb(130, 215, 125),
                             "hotkeys_timeline_grid",
                             &timeline_items,
-                        );
-
-                        ui.add_space(8.0);
-
-                        render_hotkey_section(
-                            ui,
-                            FA_FOLDER,
-                            i18n.tr("modal.hotkeys.sec_file"),
-                            Color32::from_rgb(205, 165, 250),
-                            "hotkeys_file_grid",
-                            &file_items,
                         );
                     },
                 );
