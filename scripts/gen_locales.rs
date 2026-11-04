@@ -181,6 +181,9 @@ fn build_markdown_language_bar(current_code: &str, in_docs_dir: bool) -> String 
 }
 
 fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    let sync_locales = args.iter().any(|a| a == "--sync-locales" || a == "--locales");
+
     let en_path = Path::new("assets/locales/en.json");
     let ru_path = Path::new("assets/locales/ru.json");
 
@@ -192,60 +195,47 @@ fn main() {
 
     println!("Base keys loaded: {} (en), {} (ru)", en_map.len(), ru_map.len());
 
-    // Generate 35 JSON locale files
-    for lang in ALL_LANGS {
-        if lang.code == "en" || lang.code == "ru" {
-            continue;
-        }
+    // Only update locale JSON files when explicitly asked with --sync-locales,
+    // and always preserve all existing translated keys!
+    if sync_locales {
+        for lang in ALL_LANGS {
+            if lang.code == "en" || lang.code == "ru" {
+                continue;
+            }
 
-        let out_json_path = format!("assets/locales/{}.json", lang.code);
-        let mut target_map = BTreeMap::new();
-
-        // Use appropriate translation base: Slavic languages use Russian base where closer, others use English base
-        let use_ru_base = matches!(lang.code, "uk" | "be" | "kk" | "bg" | "sr");
-
-        for (k, en_val) in &en_map {
-            let base_val = if use_ru_base {
-                ru_map.get(k).unwrap_or(en_val)
+            let out_json_path = format!("assets/locales/{}.json", lang.code);
+            let existing_map: BTreeMap<String, String> = if Path::new(&out_json_path).exists() {
+                let existing_text = fs::read_to_string(&out_json_path).unwrap_or_default();
+                serde_json::from_str(&existing_text).unwrap_or_default()
             } else {
-                en_val
+                BTreeMap::new()
             };
 
-            // Custom specific overrides for common keys
-            let val = match k.as_str() {
-                "menu.file" => match lang.code {
-                    "uk" => "Файл", "be" => "Файл", "de" => "Datei", "fr" => "Fichier", "es" => "Archivo", "it" => "File", "pt" => "Ficheiro", "pl" => "Plik", "cs" => "Soubor", "zh-cn" => "文件", "zh-tw" => "檔案", "ja" => "ファイル", "ko" => "파일", _ => base_val,
-                },
-                "menu.edit" => match lang.code {
-                    "uk" => "Правка", "be" => "Праўка", "de" => "Bearbeiten", "fr" => "Édition", "es" => "Editar", "it" => "Modifica", "pt" => "Editar", "pl" => "Edycja", "cs" => "Úpravy", "zh-cn" => "编辑", "zh-tw" => "編輯", "ja" => "編集", "ko" => "편집", _ => base_val,
-                },
-                "menu.view" => match lang.code {
-                    "uk" => "Вигляд", "be" => "Выгляд", "de" => "Ansicht", "fr" => "Affichage", "es" => "Ver", "it" => "Visualizza", "pt" => "Ver", "pl" => "Widok", "cs" => "Zobrazení", "zh-cn" => "视图", "zh-tw" => "檢視", "ja" => "表示", "ko" => "보기", _ => base_val,
-                },
-                "menu.help" => match lang.code {
-                    "uk" => "Довідка", "be" => "Даведка", "de" => "Hilfe", "fr" => "Aide", "es" => "Ayuda", "it" => "Aiuto", "pt" => "Ajuda", "pl" => "Pomoc", "cs" => "Nápověda", "zh-cn" => "帮助", "zh-tw" => "說明", "ja" => "ヘルプ", "ko" => "도움말", _ => base_val,
-                },
-                "tools.pencil" => match lang.code {
-                    "uk" => "Олівець", "be" => "Аловак", "de" => "Bleistift", "fr" => "Crayon", "es" => "Lápiz", "it" => "Matita", "pt" => "Lápis", "pl" => "Ołówek", "cs" => "Tužka", "zh-cn" => "铅笔", "zh-tw" => "鉛筆", "ja" => "鉛筆", "ko" => "연필", _ => base_val,
-                },
-                "tools.eraser" => match lang.code {
-                    "uk" => "Гумка", "be" => "Гумка", "de" => "Radierer", "fr" => "Gomme", "es" => "Borrador", "it" => "Gomma", "pt" => "Borracha", "pl" => "Gumka", "cs" => "Guma", "zh-cn" => "橡皮擦", "zh-tw" => "橡皮擦", "ja" => "消しゴム", "ko" => "지우개", _ => base_val,
-                },
-                "tools.eyedropper" => match lang.code {
-                    "uk" => "Піпетка", "be" => "Піпетка", "de" => "Pipette", "fr" => "Pipette", "es" => "Cuentagotas", "it" => "Contagocce", "pt" => "Conta-gotas", "pl" => "Pipeta", "cs" => "Kapátko", "zh-cn" => "吸管", "zh-tw" => "滴管", "ja" => "スポイト", "ko" => "스포이트", _ => base_val,
-                },
-                "tools.fill" => match lang.code {
-                    "uk" => "Заливка", "be" => "Заліванне", "de" => "Füllung", "fr" => "Remplissage", "es" => "Bote de pintura", "it" => "Secchiello", "pt" => "Balde de tinta", "pl" => "Wypełnienie", "cs" => "Plechovka", "zh-cn" => "油漆桶", "zh-tw" => "油漆桶", "ja" => "塗りつぶし", "ko" => "페인트통", _ => base_val,
-                },
-                _ => base_val,
-            };
+            let mut target_map = BTreeMap::new();
+            let use_ru_base = matches!(lang.code, "uk" | "be" | "kk" | "bg" | "sr");
 
-            target_map.insert(k.clone(), val.to_string());
+            for (k, en_val) in &en_map {
+                // If translation already exists in the locale file, PRESERVE IT!
+                if let Some(existing_val) = existing_map.get(k) {
+                    target_map.insert(k.clone(), existing_val.clone());
+                    continue;
+                }
+
+                let base_val = if use_ru_base {
+                    ru_map.get(k).unwrap_or(en_val)
+                } else {
+                    en_val
+                };
+
+                target_map.insert(k.clone(), base_val.to_string());
+            }
+
+            let json_output = serde_json::to_string_pretty(&target_map).expect("Serialize locale JSON");
+            fs::write(&out_json_path, json_output).expect("Write locale json");
+            println!("Synchronized {}", out_json_path);
         }
-
-        let json_output = serde_json::to_string_pretty(&target_map).expect("Serialize locale JSON");
-        fs::write(&out_json_path, json_output).expect("Write locale json");
-        println!("Generated {}", out_json_path);
+    } else {
+        println!("Preserving assets/locales/*.json (use --sync-locales to add missing keys).");
     }
 
     // Now update README.md and docs/README-ru.md with the 37-language bar
