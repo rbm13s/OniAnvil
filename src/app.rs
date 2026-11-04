@@ -5,7 +5,7 @@ use crate::io::settings::AppSettings;
 use crate::io::storage::{IoEvent, IoManager};
 use crate::io::updater::UpdateChecker;
 use crate::model::document::ProjectDocument;
-use crate::model::palette::{remap_pixels_to_palette, sort_palette_colors, PaletteSortCriterion};
+use crate::model::palette::{remap_pixels_to_palette_with_matcher, sort_palette_colors, PaletteColorMatcher, PaletteSortCriterion};
 use crate::model::project::Project;
 use crate::theme::{setup_custom_fonts, AppTheme, FA_CLOSE, FA_PLUS};
 use crate::tools::fill::auto_outline_region;
@@ -80,6 +80,9 @@ pub struct OniAnvilApp {
     pub bake_sketch_modal: BakeSketchModalState,
     pub last_bake_sketch_preview_settings: Option<crate::model::sketch::BakeSketchSettings>,
     pub last_bake_sketch_preview_frame: Option<usize>,
+    pub last_remap_palette_preview_action: Option<RemapPaletteAction>,
+    pub last_remap_palette_preview_frame: Option<usize>,
+    pub last_remap_palette_preview_enabled: bool,
     pub rotate_modal: RotateModalState,
     pub pack_atlas_modal: ExportPackedAtlasModalState,
     pub pending_after_save: Option<PendingAfterSave>,
@@ -143,6 +146,9 @@ impl OniAnvilApp {
             bake_sketch_modal: BakeSketchModalState::default(),
             last_bake_sketch_preview_settings: None,
             last_bake_sketch_preview_frame: None,
+            last_remap_palette_preview_action: None,
+            last_remap_palette_preview_frame: None,
+            last_remap_palette_preview_enabled: false,
             rotate_modal: RotateModalState::default(),
             pack_atlas_modal: ExportPackedAtlasModalState::default(),
             modal_preview_backup: None,
@@ -490,6 +496,9 @@ impl OniAnvilApp {
     }
 
     pub fn apply_palette_remap(&mut self, action: RemapPaletteAction) {
+        self.last_remap_palette_preview_action = None;
+        self.last_remap_palette_preview_frame = None;
+        self.last_remap_palette_preview_enabled = false;
         let batch = action.all_frames;
         if let Some(doc) = self.documents.get_mut(self.active_doc_idx) {
             let snap = doc.current_snapshot();
@@ -509,16 +518,17 @@ impl OniAnvilApp {
             if palette.is_empty() {
                 return;
             }
+            let mut matcher = PaletteColorMatcher::new(&palette);
             let mut changed = false;
             for f_idx in frames {
                 let (ox, oy) = doc.project.metadata.frame_origin(f_idx);
-                if remap_pixels_to_palette(
+                if remap_pixels_to_palette_with_matcher(
                     &mut doc.project.atlas_rgba,
                     ox,
                     oy,
                     fw,
                     fh,
-                    &palette,
+                    &mut matcher,
                     action.dither,
                     action.dither_strength,
                     sel_pixels,
@@ -1835,6 +1845,9 @@ impl eframe::App for OniAnvilApp {
             }
         }
         if top_actions.open_remap_palette_modal {
+            self.last_remap_palette_preview_action = None;
+            self.last_remap_palette_preview_frame = None;
+            self.last_remap_palette_preview_enabled = false;
             if let Some(doc) = self.documents.get(self.active_doc_idx) {
                 self.remap_palette_modal
                     .open_with(!doc.renderer.selection.is_empty(), doc.project.metadata.palette.colors.len());
@@ -2087,6 +2100,9 @@ impl eframe::App for OniAnvilApp {
                         self.status_key = "app.status.palette_sorted";
                     }
                     if right_actions.trigger_remap_palette_modal {
+                        self.last_remap_palette_preview_action = None;
+                        self.last_remap_palette_preview_frame = None;
+                        self.last_remap_palette_preview_enabled = false;
                         self.remap_palette_modal
                             .open_with(!doc.renderer.selection.is_empty(), doc.project.metadata.palette.colors.len());
                     }
@@ -2562,6 +2578,9 @@ impl eframe::App for OniAnvilApp {
         }
 
         if let Some(action) = self.remap_palette_modal.show(ctx, &self.i18n) {
+            self.last_remap_palette_preview_action = None;
+            self.last_remap_palette_preview_frame = None;
+            self.last_remap_palette_preview_enabled = false;
             if let Some((b_idx, orig_rgba)) = self.modal_preview_backup.take() {
                 if let Some(doc) = self.documents.get_mut(b_idx) {
                     doc.project.atlas_rgba = orig_rgba;
@@ -2644,7 +2663,7 @@ impl eframe::App for OniAnvilApp {
                     let fw = doc.project.metadata.frame_width;
                     let fh = doc.project.metadata.frame_height;
 
-                    if !self.bake_sketch_modal.open {
+                    if !self.bake_sketch_modal.open && !self.remap_palette_modal.open {
                         doc.project.atlas_rgba = orig_rgba.clone();
                     }
 
@@ -2762,34 +2781,63 @@ impl eframe::App for OniAnvilApp {
                                 sel_pixels,
                             );
                         }
-                    } else if self.remap_palette_modal.open && self.remap_palette_modal.preview {
-                        let sel_pixels = if self.remap_palette_modal.in_selection_only
-                            && !doc.renderer.selection.is_empty()
-                        {
-                            Some(&doc.renderer.selection.pixels)
-                        } else {
-                            None
+                    } else if self.remap_palette_modal.open {
+                        let current_action = RemapPaletteAction {
+                            dither: self.remap_palette_modal.dither,
+                            dither_strength: self.remap_palette_modal.dither_strength,
+                            all_frames: self.remap_palette_modal.all_frames,
+                            in_selection_only: self.remap_palette_modal.in_selection_only
+                                && !doc.renderer.selection.is_empty(),
                         };
-                        let frames: Vec<usize> = if self.remap_palette_modal.all_frames {
-                            (0..doc.project.metadata.frame_count as usize).collect()
+                        if !self.remap_palette_modal.preview {
+                            if self.last_remap_palette_preview_enabled {
+                                doc.project.atlas_rgba = orig_rgba.clone();
+                                self.last_remap_palette_preview_action = None;
+                                self.last_remap_palette_preview_frame = None;
+                                self.last_remap_palette_preview_enabled = false;
+                                doc.project.canvas_dirty = true;
+                                let _ = doc.renderer.ensure_texture(ctx, &mut doc.project);
+                            }
                         } else {
-                            vec![doc.project.active_frame]
-                        };
-                        let palette = doc.project.metadata.palette.colors.clone();
-                        if !palette.is_empty() {
-                            for f_idx in frames {
-                                let (ox, oy) = doc.project.metadata.frame_origin(f_idx);
-                                let _ = remap_pixels_to_palette(
-                                    &mut doc.project.atlas_rgba,
-                                    ox,
-                                    oy,
-                                    fw,
-                                    fh,
-                                    &palette,
-                                    self.remap_palette_modal.dither,
-                                    self.remap_palette_modal.dither_strength,
-                                    sel_pixels,
-                                );
+                            let action_changed = self.last_remap_palette_preview_action != Some(current_action);
+                            let frame_changed = self.last_remap_palette_preview_frame != Some(doc.project.active_frame);
+                            let preview_toggled = !self.last_remap_palette_preview_enabled;
+
+                            if action_changed || frame_changed || preview_toggled {
+                                doc.project.atlas_rgba = orig_rgba.clone();
+                                let sel_pixels = if current_action.in_selection_only {
+                                    Some(&doc.renderer.selection.pixels)
+                                } else {
+                                    None
+                                };
+                                let frames: Vec<usize> = if current_action.all_frames {
+                                    (0..doc.project.metadata.frame_count as usize).collect()
+                                } else {
+                                    vec![doc.project.active_frame]
+                                };
+                                let palette = doc.project.metadata.palette.colors.clone();
+                                if !palette.is_empty() {
+                                    let mut matcher = PaletteColorMatcher::new(&palette);
+                                    for f_idx in frames {
+                                        let (ox, oy) = doc.project.metadata.frame_origin(f_idx);
+                                        let _ = remap_pixels_to_palette_with_matcher(
+                                            &mut doc.project.atlas_rgba,
+                                            ox,
+                                            oy,
+                                            fw,
+                                            fh,
+                                            &mut matcher,
+                                            current_action.dither,
+                                            current_action.dither_strength,
+                                            sel_pixels,
+                                        );
+                                    }
+                                }
+                                self.last_remap_palette_preview_action = Some(current_action);
+                                self.last_remap_palette_preview_frame = Some(doc.project.active_frame);
+                                self.last_remap_palette_preview_enabled = true;
+                                doc.project.canvas_dirty = true;
+                                let _ = doc.renderer.ensure_texture(ctx, &mut doc.project);
                             }
                         }
                     } else if self.rotate_modal.open {
@@ -2866,7 +2914,7 @@ impl eframe::App for OniAnvilApp {
                         }
                     }
 
-                    if !self.bake_sketch_modal.open {
+                    if !self.bake_sketch_modal.open && !self.remap_palette_modal.open {
                         doc.project.canvas_dirty = true;
                         let _ = doc.renderer.ensure_texture(ctx, &mut doc.project);
                     }
@@ -2875,6 +2923,9 @@ impl eframe::App for OniAnvilApp {
         } else if let Some((b_idx, orig_rgba)) = self.modal_preview_backup.take() {
             self.last_bake_sketch_preview_settings = None;
             self.last_bake_sketch_preview_frame = None;
+            self.last_remap_palette_preview_action = None;
+            self.last_remap_palette_preview_frame = None;
+            self.last_remap_palette_preview_enabled = false;
             if let Some(doc) = self.documents.get_mut(b_idx) {
                 doc.project.atlas_rgba = orig_rgba;
                 doc.project.sync_active_layer();
@@ -3146,6 +3197,9 @@ mod tests {
             bake_sketch_modal: BakeSketchModalState::default(),
             last_bake_sketch_preview_settings: None,
             last_bake_sketch_preview_frame: None,
+            last_remap_palette_preview_action: None,
+            last_remap_palette_preview_frame: None,
+            last_remap_palette_preview_enabled: false,
             rotate_modal: RotateModalState::default(),
             pack_atlas_modal: ExportPackedAtlasModalState::default(),
             modal_preview_backup: None,
@@ -3225,6 +3279,9 @@ mod tests {
             bake_sketch_modal: BakeSketchModalState::default(),
             last_bake_sketch_preview_settings: None,
             last_bake_sketch_preview_frame: None,
+            last_remap_palette_preview_action: None,
+            last_remap_palette_preview_frame: None,
+            last_remap_palette_preview_enabled: false,
             rotate_modal: RotateModalState::default(),
             pack_atlas_modal: ExportPackedAtlasModalState::default(),
             modal_preview_backup: None,
@@ -3311,6 +3368,9 @@ mod tests {
             bake_sketch_modal: BakeSketchModalState::default(),
             last_bake_sketch_preview_settings: None,
             last_bake_sketch_preview_frame: None,
+            last_remap_palette_preview_action: None,
+            last_remap_palette_preview_frame: None,
+            last_remap_palette_preview_enabled: false,
             rotate_modal: RotateModalState::default(),
             pack_atlas_modal: ExportPackedAtlasModalState::default(),
             modal_preview_backup: None,
