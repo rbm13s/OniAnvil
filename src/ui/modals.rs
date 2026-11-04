@@ -3,7 +3,10 @@ use crate::io::packer::{pack_project_atlas, PackerSettings};
 use crate::io::settings::AppSettings;
 use crate::io::updater::GITHUB_REPO_URL;
 use crate::model::metadata::ProjectMetadata;
-use crate::model::palette::{PaletteDitherMode, PREDEFINED_PALETTES};
+use crate::model::palette::{
+    extract_color_occurrences, extract_palette_from_occurrences, ColorOccurrence,
+    PaletteDitherMode, PaletteExtractAlgorithm, PREDEFINED_PALETTES,
+};
 use crate::model::sketch::{BackgroundRemovalTarget, BakePaletteSource, BakeSketchSettings, PixelPrecisionMode};
 use crate::model::project::Project;
 use crate::theme::*;
@@ -2765,6 +2768,321 @@ pub struct BakeSketchAction {
     pub settings: BakeSketchSettings,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExtractPaletteAction {
+    Apply {
+        colors: Vec<[u8; 4]>,
+        append: bool,
+    },
+    Cancel,
+}
+
+pub struct ExtractPaletteModalState {
+    pub open: bool,
+    pub source_name: String,
+    pub image_dims: (u32, u32),
+    pub color_limit: usize,
+    pub algorithm: PaletteExtractAlgorithm,
+    pub append_mode: bool,
+    pub ignore_transparent: bool,
+
+    occurrences: Vec<ColorOccurrence>,
+    total_pixels: usize,
+    source_image: Option<RgbaImage>,
+
+    pub cached_palette: Vec<[u8; 4]>,
+    is_dirty: bool,
+}
+
+impl Default for ExtractPaletteModalState {
+    fn default() -> Self {
+        Self {
+            open: false,
+            source_name: String::new(),
+            image_dims: (0, 0),
+            color_limit: 64,
+            algorithm: PaletteExtractAlgorithm::MostFrequent,
+            append_mode: false,
+            ignore_transparent: true,
+            occurrences: Vec::new(),
+            total_pixels: 0,
+            source_image: None,
+            cached_palette: Vec::new(),
+            is_dirty: false,
+        }
+    }
+}
+
+impl ExtractPaletteModalState {
+    pub fn open_with(&mut self, source_name: String, image: &RgbaImage, preferred_limit: usize) {
+        self.open = true;
+        self.source_name = source_name;
+        self.image_dims = (image.width(), image.height());
+        self.total_pixels = (image.width() as usize) * (image.height() as usize);
+        self.color_limit = preferred_limit.clamp(2, 1024);
+        self.algorithm = PaletteExtractAlgorithm::MostFrequent;
+        self.append_mode = false;
+        self.ignore_transparent = true;
+        self.source_image = Some(image.clone());
+
+        self.rebuild_occurrences();
+    }
+
+    pub fn rebuild_occurrences(&mut self) {
+        if let Some(img) = &self.source_image {
+            self.occurrences = extract_color_occurrences(img, self.ignore_transparent);
+        } else {
+            self.occurrences.clear();
+        }
+        self.recompute();
+    }
+
+    pub fn recompute(&mut self) {
+        self.cached_palette = extract_palette_from_occurrences(
+            &self.occurrences,
+            self.color_limit,
+            self.algorithm,
+        );
+        self.is_dirty = false;
+    }
+
+    pub fn show(&mut self, ctx: &Context, i18n: &I18n) -> Option<ExtractPaletteAction> {
+        if !self.open {
+            return None;
+        }
+
+        let mut triggered = None;
+        let mut window_open = self.open;
+        let mut close_requested = false;
+
+        Window::new(format!("{FA_MAGIC_WAND} {}", i18n.tr("modal.extract_palette.title")))
+            .open(&mut window_open)
+            .collapsible(false)
+            .resizable(false)
+            .default_width(430.0)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(ctx.viewport_rect().center())
+            .constrain(true)
+            .show(ctx, |ui| {
+                ui.set_width(430.0);
+
+                // Source summary line
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new(i18n.tr("modal.extract_palette.source")).strong());
+                    ui.label(&self.source_name);
+                    ui.small(format!("({}×{} px)", self.image_dims.0, self.image_dims.1));
+                });
+
+                let total_px = self.total_pixels.max(1);
+                let pixels_label = i18n.tr("modal.extract_palette.total_pixels")
+                    .replace("{count}", &self.total_pixels.to_string());
+                ui.small(format!(
+                    "{} {} ({})",
+                    i18n.tr("modal.extract_palette.unique_found"),
+                    self.occurrences.len(),
+                    pixels_label,
+                ));
+
+                ui.add_space(6.0);
+
+                // Algorithm ComboBox
+                ui.horizontal(|ui| {
+                    ui.label(i18n.tr("modal.extract_palette.algorithm"));
+                    let current_text = match self.algorithm {
+                        PaletteExtractAlgorithm::MostFrequent => i18n.tr("modal.extract_palette.algo_frequent"),
+                        PaletteExtractAlgorithm::MedianCut => i18n.tr("modal.extract_palette.algo_median_cut"),
+                        PaletteExtractAlgorithm::PerceptualDiversity => i18n.tr("modal.extract_palette.algo_diversity"),
+                        PaletteExtractAlgorithm::FirstAppearance => i18n.tr("modal.extract_palette.algo_appearance"),
+                    };
+                    egui::ComboBox::from_id_salt("extract_palette_algo_combo")
+                        .selected_text(current_text)
+                        .width(230.0)
+                        .show_ui(ui, |ui| {
+                            if ui.selectable_value(
+                                &mut self.algorithm,
+                                PaletteExtractAlgorithm::MostFrequent,
+                                i18n.tr("modal.extract_palette.algo_frequent"),
+                            ).clicked() {
+                                self.is_dirty = true;
+                            }
+                            if ui.selectable_value(
+                                &mut self.algorithm,
+                                PaletteExtractAlgorithm::MedianCut,
+                                i18n.tr("modal.extract_palette.algo_median_cut"),
+                            ).clicked() {
+                                self.is_dirty = true;
+                            }
+                            if ui.selectable_value(
+                                &mut self.algorithm,
+                                PaletteExtractAlgorithm::PerceptualDiversity,
+                                i18n.tr("modal.extract_palette.algo_diversity"),
+                            ).clicked() {
+                                self.is_dirty = true;
+                            }
+                            if ui.selectable_value(
+                                &mut self.algorithm,
+                                PaletteExtractAlgorithm::FirstAppearance,
+                                i18n.tr("modal.extract_palette.algo_appearance"),
+                            ).clicked() {
+                                self.is_dirty = true;
+                            }
+                        });
+                });
+
+                ui.add_space(4.0);
+
+                // Color Limit Slider & Presets
+                ui.horizontal(|ui| {
+                    ui.label(i18n.tr("modal.extract_palette.limit"));
+                    let slider = egui::Slider::new(&mut self.color_limit, 2..=1024)
+                        .logarithmic(true);
+                    if ui.add(slider).changed() {
+                        self.is_dirty = true;
+                    }
+                });
+
+                ui.horizontal(|ui| {
+                    ui.small(i18n.tr("modal.extract_palette.quick_limits"));
+                    for &preset in &[16, 32, 64, 128, 256, 512, 1024] {
+                        let is_active = self.color_limit == preset;
+                        let btn_text = if preset == 1024 {
+                            "1024 (Max)".to_string()
+                        } else {
+                            preset.to_string()
+                        };
+                        let btn = egui::Button::new(btn_text).small();
+                        let btn = if is_active {
+                            btn.fill(ui.visuals().widgets.active.bg_fill)
+                        } else {
+                            btn
+                        };
+                        if ui.add(btn).clicked() {
+                            self.color_limit = preset;
+                            self.is_dirty = true;
+                        }
+                    }
+                });
+
+                ui.add_space(4.0);
+
+                // Checkboxes & Modes
+                ui.horizontal(|ui| {
+                    if ui.checkbox(&mut self.ignore_transparent, i18n.tr("modal.extract_palette.ignore_transparent")).changed() {
+                        self.rebuild_occurrences();
+                    }
+                });
+
+                ui.horizontal(|ui| {
+                    ui.radio_value(&mut self.append_mode, false, i18n.tr("modal.extract_palette.mode_replace"));
+                    ui.radio_value(&mut self.append_mode, true, i18n.tr("modal.extract_palette.mode_append"));
+                });
+
+                // Recompute if dirty
+                if self.is_dirty {
+                    self.recompute();
+                }
+
+                ui.add_space(6.0);
+
+                // Preview section
+                ui.label(
+                    RichText::new(format!(
+                        "{} ({} / {})",
+                        i18n.tr("modal.extract_palette.preview"),
+                        self.cached_palette.len(),
+                        self.color_limit
+                    ))
+                    .strong(),
+                );
+
+                egui::Frame::canvas(ui.style())
+                    .fill(ui.visuals().extreme_bg_color)
+                    .stroke(ui.visuals().widgets.noninteractive.bg_stroke)
+                    .corner_radius(4.0)
+                    .inner_margin(egui::Margin::same(6))
+                    .show(ui, |ui| {
+                        egui::ScrollArea::vertical()
+                            .max_height(140.0)
+                            .auto_shrink([false, true])
+                            .show(ui, |ui| {
+                                ui.horizontal_wrapped(|ui| {
+                                    ui.spacing_mut().item_spacing = Vec2::splat(3.0);
+                                    for (idx, color) in self.cached_palette.iter().enumerate() {
+                                        let [r, g, b, a] = *color;
+                                        let c32 = Color32::from_rgba_unmultiplied(r, g, b, a);
+                                        let (rect, resp) = ui.allocate_exact_size(Vec2::splat(18.0), Sense::hover());
+                                        ui.painter().rect_filled(rect, 2.0, c32);
+                                        ui.painter().rect_stroke(
+                                            rect,
+                                            2.0,
+                                            Stroke::new(1.0, ui.visuals().widgets.noninteractive.bg_stroke.color),
+                                            StrokeKind::Inside,
+                                        );
+
+                                        let occ_count = self.occurrences.iter().find(|o| o.color == *color).map(|o| o.count).unwrap_or(0);
+                                        let pct = (occ_count as f64 / total_px as f64) * 100.0;
+                                        resp.on_hover_text(format!(
+                                            "#{:02X}{:02X}{:02X}\nSlot #{}\n{} px ({:.1}%)",
+                                            r, g, b, idx + 1, occ_count, pct
+                                        ));
+                                    }
+                                });
+                            });
+                    });
+
+                ui.add_space(10.0);
+
+                // Action buttons
+                ui.horizontal(|ui| {
+                    let apply_btn = egui::Button::new(
+                        RichText::new(format!(
+                            "{FA_CHECK} {} ({} {})",
+                            i18n.tr("modal.extract_palette.apply"),
+                            self.cached_palette.len(),
+                            i18n.tr("panel.palette.colors_count").to_lowercase()
+                        ))
+                        .strong()
+                        .color(Color32::WHITE),
+                    )
+                    .fill(ui.visuals().selection.bg_fill);
+
+                    if ui.add_sized([200.0, 26.0], apply_btn).clicked() {
+                        triggered = Some(ExtractPaletteAction::Apply {
+                            colors: self.cached_palette.clone(),
+                            append: self.append_mode,
+                        });
+                        close_requested = true;
+                    }
+
+                    if ui.add_sized([100.0, 26.0], egui::Button::new(format!("{FA_CLOSE} {}", i18n.tr("modal.extract_palette.cancel")))).clicked() {
+                        triggered = Some(ExtractPaletteAction::Cancel);
+                        close_requested = true;
+                    }
+                });
+
+                if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                    triggered = Some(ExtractPaletteAction::Apply {
+                        colors: self.cached_palette.clone(),
+                        append: self.append_mode,
+                    });
+                    close_requested = true;
+                }
+                if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                    triggered = Some(ExtractPaletteAction::Cancel);
+                    close_requested = true;
+                }
+            });
+
+        if !window_open || close_requested {
+            self.open = false;
+            self.source_image = None;
+            self.occurrences.clear();
+        }
+
+        triggered
+    }
+}
+
 pub struct BakeSketchModalState {
     pub open: bool,
     pub settings: BakeSketchSettings,
@@ -4801,6 +5119,16 @@ mod tests {
                 assert_eq!(res, None);
             });
             assert!(bake_sketch.open);
+
+            // 18. Extract palette modal
+            let mut extract_palette = ExtractPaletteModalState::default();
+            let test_img = image::RgbaImage::from_pixel(4, 4, image::Rgba([255, 0, 0, 255]));
+            extract_palette.open_with("test_sheet".to_string(), &test_img, 64);
+            run_test_pass(&ctx, |ctx| {
+                let res = extract_palette.show(ctx, &i18n);
+                assert_eq!(res, None);
+            });
+            assert!(extract_palette.open);
         }
     }
 }
