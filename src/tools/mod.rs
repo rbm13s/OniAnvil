@@ -231,6 +231,8 @@ pub struct ToolSettings {
     pub bg_color: [u8; 4],
     pub brush_size: u32,
     pub pixel_perfect: bool,
+    #[serde(default)]
+    pub eraser_pixel_perfect: bool,
     pub lock_alpha: bool,
     pub symmetry: SymmetryMode,
     pub dither_pattern: DitherPattern,
@@ -255,6 +257,7 @@ impl Default for ToolSettings {
             bg_color: [20, 18, 29, 255],
             brush_size: 1,
             pixel_perfect: true,
+            eraser_pixel_perfect: false,
             lock_alpha: false,
             symmetry: SymmetryMode::None,
             dither_pattern: DitherPattern::Checker50,
@@ -282,6 +285,13 @@ impl ToolSettings {
             self.brush_size
         } else {
             1
+        }
+    }
+
+    pub fn is_pixel_perfect_for(&self, tool: ToolKind) -> bool {
+        match tool {
+            ToolKind::Eraser => self.eraser_pixel_perfect,
+            _ => self.pixel_perfect,
         }
     }
 }
@@ -338,5 +348,15 @@ mod tests {
         // Switching back to Pencil restores configured size 14
         settings.active_tool = ToolKind::Pencil;
         assert_eq!(settings.effective_brush_size(), 14);
+    }
+
+    #[test]
+    fn test_pixel_perfect_defaults_per_tool() {
+        let settings = ToolSettings::default();
+        // Pencil and Curve default to true
+        assert!(settings.is_pixel_perfect_for(ToolKind::Pencil));
+        assert!(settings.is_pixel_perfect_for(ToolKind::Curve));
+        // Eraser defaults to false so pixels are never inadvertently skipped
+        assert!(!settings.is_pixel_perfect_for(ToolKind::Eraser));
     }
 }

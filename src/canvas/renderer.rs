@@ -1125,7 +1125,7 @@ impl CanvasRenderer {
                                         let seg = bresenham_line(stroke.last_local, (lx, ly));
                                         let eff_brush_size =
                                             stroke.tool.effective_brush_size(tools.brush_size);
-                                        let use_pixel_perfect = tools.pixel_perfect
+                                        let use_pixel_perfect = tools.is_pixel_perfect_for(stroke.tool)
                                             && eff_brush_size == 1
                                             && matches!(
                                                 stroke.tool,

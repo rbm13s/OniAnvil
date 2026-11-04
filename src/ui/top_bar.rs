@@ -802,8 +802,11 @@ pub fn show_top_bars(
                         ui.separator();
                     }
 
-                    if matches!(tools.active_tool, ToolKind::Pencil | ToolKind::Eraser) {
+                    if tools.active_tool == ToolKind::Pencil {
                         ui.checkbox(&mut tools.pixel_perfect, i18n.tr("context.pixel_perfect"))
+                            .on_hover_text(i18n.tr("tooltip.pixel_perfect"));
+                    } else if tools.active_tool == ToolKind::Eraser {
+                        ui.checkbox(&mut tools.eraser_pixel_perfect, i18n.tr("context.pixel_perfect"))
                             .on_hover_text(i18n.tr("tooltip.pixel_perfect"));
                     }
 
