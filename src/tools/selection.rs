@@ -1,7 +1,7 @@
 use crate::tools::fill::color_matches;
 use crate::tools::stroke::bresenham_line;
 use image::RgbaImage;
-use std::collections::{HashSet, VecDeque};
+use std::collections::{BTreeMap, HashSet, VecDeque};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -44,12 +44,20 @@ pub struct SelectionMask {
     pub pixels: HashSet<(i32, i32)>,
     /// Optional rectangular marquee bounds `(min_x, min_y, max_x, max_y)` in local frame coordinates.
     pub rect_bounds: Option<(i32, i32, i32, i32)>,
+    /// Precomputed merged boundary segments `[x0, y0, x1, y1]` in pixel boundary coordinates.
+    pub contour_segments: Vec<[i32; 4]>,
 }
 
 impl SelectionMask {
     pub fn clear(&mut self) {
         self.pixels.clear();
         self.rect_bounds = None;
+        self.contour_segments.clear();
+    }
+
+    pub fn set_pixels(&mut self, pixels: HashSet<(i32, i32)>) {
+        self.pixels = pixels;
+        self.update_rect_bounds_from_pixels();
     }
 
     pub fn is_empty(&self) -> bool {
@@ -89,8 +97,15 @@ impl SelectionMask {
                 }
             }
             self.rect_bounds = Some((min_x, min_y, max_x, max_y));
+            self.contour_segments = vec![
+                [min_x, min_y, max_x + 1, min_y],
+                [max_x + 1, min_y, max_x + 1, max_y + 1],
+                [min_x, max_y + 1, max_x + 1, max_y + 1],
+                [min_x, min_y, min_x, max_y + 1],
+            ];
         } else {
             self.rect_bounds = None;
+            self.contour_segments.clear();
         }
     }
 
@@ -162,7 +177,7 @@ impl SelectionMask {
             }
         }
         self.pixels = new_pixels;
-        self.rect_bounds = None;
+        self.update_rect_bounds_from_pixels();
     }
 
     pub fn rasterize_polygon(polygon: &[(i32, i32)], max_w: u32, max_h: u32) -> HashSet<(i32, i32)> {
@@ -343,18 +358,7 @@ impl SelectionMask {
             }
         }
         self.pixels = new_pixels;
-        if let Some((min_x, min_y, max_x, max_y)) = self.rect_bounds {
-            if wrap_around {
-                self.rect_bounds = None;
-            } else {
-                self.rect_bounds = Some((
-                    (min_x + dx).clamp(0, iw - 1),
-                    (min_y + dy).clamp(0, ih - 1),
-                    (max_x + dx).clamp(0, iw - 1),
-                    (max_y + dy).clamp(0, ih - 1),
-                ));
-            }
-        }
+        self.update_rect_bounds_from_pixels();
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -401,7 +405,12 @@ impl SelectionMask {
                 }
             }
         } else {
+            let w = region_w as usize;
+            let h = region_h as usize;
+            let mut visited = vec![false; w * h];
             let mut queue = VecDeque::new();
+
+            visited[(start_y as usize) * w + (start_x as usize)] = true;
             queue.push_back((start_x, start_y));
             self.pixels.insert((start_x, start_y));
 
@@ -411,16 +420,19 @@ impl SelectionMask {
                         && ny >= 0
                         && (nx as u32) < region_w
                         && (ny as u32) < region_h
-                        && !self.pixels.contains(&(nx, ny))
                     {
-                        let px = origin_x + nx as u32;
-                        let py = origin_y + ny as u32;
-                        if px < atlas_rgba.width()
-                            && py < atlas_rgba.height()
-                            && color_matches(atlas_rgba.get_pixel(px, py).0, target.0, tolerance)
-                        {
-                            self.pixels.insert((nx, ny));
-                            queue.push_back((nx, ny));
+                        let idx = (ny as usize) * w + (nx as usize);
+                        if !visited[idx] {
+                            let px = origin_x + nx as u32;
+                            let py = origin_y + ny as u32;
+                            if px < atlas_rgba.width()
+                                && py < atlas_rgba.height()
+                                && color_matches(atlas_rgba.get_pixel(px, py).0, target.0, tolerance)
+                            {
+                                visited[idx] = true;
+                                self.pixels.insert((nx, ny));
+                                queue.push_back((nx, ny));
+                            }
                         }
                     }
                 }
@@ -432,12 +444,92 @@ impl SelectionMask {
     pub fn update_rect_bounds_from_pixels(&mut self) {
         if self.pixels.is_empty() {
             self.rect_bounds = None;
-        } else {
-            let min_x = self.pixels.iter().map(|p| p.0).min().unwrap_or(0);
-            let max_x = self.pixels.iter().map(|p| p.0).max().unwrap_or(0);
-            let min_y = self.pixels.iter().map(|p| p.1).min().unwrap_or(0);
-            let max_y = self.pixels.iter().map(|p| p.1).max().unwrap_or(0);
-            self.rect_bounds = Some((min_x, min_y, max_x, max_y));
+            self.contour_segments.clear();
+            return;
+        }
+
+        let mut min_x = i32::MAX;
+        let mut max_x = i32::MIN;
+        let mut min_y = i32::MAX;
+        let mut max_y = i32::MIN;
+        for &(x, y) in &self.pixels {
+            if x < min_x {
+                min_x = x;
+            }
+            if x > max_x {
+                max_x = x;
+            }
+            if y < min_y {
+                min_y = y;
+            }
+            if y > max_y {
+                max_y = y;
+            }
+        }
+        self.rect_bounds = Some((min_x, min_y, max_x, max_y));
+
+        // Fast-path: pure solid rectangle has exactly 4 outer boundary segments
+        let expected_count = ((max_x - min_x + 1).max(0) as usize)
+            .saturating_mul((max_y - min_y + 1).max(0) as usize);
+        if expected_count == self.pixels.len() {
+            self.contour_segments = vec![
+                [min_x, min_y, max_x + 1, min_y],
+                [max_x + 1, min_y, max_x + 1, max_y + 1],
+                [min_x, max_y + 1, max_x + 1, max_y + 1],
+                [min_x, min_y, min_x, max_y + 1],
+            ];
+            return;
+        }
+
+        // Generalized path: merge collinear pixel edges into continuous line segments
+        let mut h_edges: BTreeMap<i32, Vec<i32>> = BTreeMap::new();
+        let mut v_edges: BTreeMap<i32, Vec<i32>> = BTreeMap::new();
+
+        for &(x, y) in &self.pixels {
+            if !self.pixels.contains(&(x, y - 1)) {
+                h_edges.entry(y).or_default().push(x);
+            }
+            if !self.pixels.contains(&(x, y + 1)) {
+                h_edges.entry(y + 1).or_default().push(x);
+            }
+            if !self.pixels.contains(&(x - 1, y)) {
+                v_edges.entry(x).or_default().push(y);
+            }
+            if !self.pixels.contains(&(x + 1, y)) {
+                v_edges.entry(x + 1).or_default().push(y);
+            }
+        }
+
+        self.contour_segments.clear();
+
+        for (y, mut xs) in h_edges {
+            xs.sort_unstable();
+            let mut i = 0;
+            while i < xs.len() {
+                let start_x = xs[i];
+                let mut end_x = start_x + 1;
+                while i + 1 < xs.len() && xs[i + 1] == end_x {
+                    end_x += 1;
+                    i += 1;
+                }
+                self.contour_segments.push([start_x, y, end_x, y]);
+                i += 1;
+            }
+        }
+
+        for (x, mut ys) in v_edges {
+            ys.sort_unstable();
+            let mut i = 0;
+            while i < ys.len() {
+                let start_y = ys[i];
+                let mut end_y = start_y + 1;
+                while i + 1 < ys.len() && ys[i + 1] == end_y {
+                    end_y += 1;
+                    i += 1;
+                }
+                self.contour_segments.push([x, start_y, x, end_y]);
+                i += 1;
+            }
         }
     }
 

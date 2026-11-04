@@ -237,7 +237,7 @@ impl OniAnvilApp {
                     last_new = Some(np);
                 }
                 if let Some(np) = last_new {
-                    doc.renderer.selection.pixels = np;
+                    doc.renderer.selection.set_pixels(np);
                 }
             } else {
                 for f_idx in frames {
@@ -275,7 +275,7 @@ impl OniAnvilApp {
                     last_new = Some(np);
                 }
                 if let Some(np) = last_new {
-                    doc.renderer.selection.pixels = np;
+                    doc.renderer.selection.set_pixels(np);
                 }
             } else {
                 for f_idx in frames {
@@ -313,7 +313,7 @@ impl OniAnvilApp {
                     last_new = Some(np);
                 }
                 if let Some(np) = last_new {
-                    doc.renderer.selection.pixels = np;
+                    doc.renderer.selection.set_pixels(np);
                 }
             } else {
                 for f_idx in frames {
@@ -353,7 +353,7 @@ impl OniAnvilApp {
                     last_new = Some(np);
                 }
                 if let Some(np) = last_new {
-                    doc.renderer.selection.pixels = np;
+                    doc.renderer.selection.set_pixels(np);
                 }
             } else {
                 for f_idx in frames {
@@ -687,6 +687,7 @@ impl OniAnvilApp {
                         }
                     }
                 }
+                doc.renderer.selection.update_rect_bounds_from_pixels();
                 doc.project.sync_active_layer();
                 doc.project.canvas_dirty = true;
                 doc.project.has_unsaved_changes = true;
@@ -2757,7 +2758,7 @@ impl eframe::App for OniAnvilApp {
                                     last_new = Some(np);
                                 }
                                 if let Some(np) = last_new {
-                                    doc.renderer.selection.pixels = np;
+                                    doc.renderer.selection.set_pixels(np);
                                 }
                             } else {
                                 for f_idx in frames {

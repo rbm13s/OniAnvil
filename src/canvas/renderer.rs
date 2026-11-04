@@ -954,9 +954,9 @@ impl CanvasRenderer {
                                     start_local: (lx, ly),
                                     last_local: (lx, ly),
                                     raw_points: vec![(lx, ly)],
-                                    base_atlas: project.atlas_rgba.clone(),
+                                    base_atlas: RgbaImage::new(1, 1),
                                     moving_selection: false,
-                                    base_selection: self.selection.clone(),
+                                    base_selection: SelectionMask::default(),
                                     axis_constraint: None,
                                 });
                             }
@@ -1023,6 +1023,11 @@ impl CanvasRenderer {
                                         project.canvas_dirty = true;
                                         project.has_unsaved_changes = true;
                                     }
+                                    let needs_base_atlas = matches!(
+                                        effective_tool,
+                                        ToolKind::Pencil | ToolKind::Eraser
+                                    ) && !moving_sel;
+                                    let needs_base_selection = is_sel_tool && !moving_sel;
                                     self.active_stroke = Some(ActiveStroke {
                                         tool: effective_tool,
                                         button: btn,
@@ -1030,9 +1035,17 @@ impl CanvasRenderer {
                                         start_local: (lx, ly),
                                         last_local: (lx, ly),
                                         raw_points: vec![(lx, ly)],
-                                        base_atlas: project.atlas_rgba.clone(),
+                                        base_atlas: if needs_base_atlas {
+                                            project.atlas_rgba.clone()
+                                        } else {
+                                            RgbaImage::new(1, 1)
+                                        },
                                         moving_selection: moving_sel,
-                                        base_selection: self.selection.clone(),
+                                        base_selection: if needs_base_selection {
+                                            self.selection.clone()
+                                        } else {
+                                            SelectionMask::default()
+                                        },
                                         axis_constraint: if shift_down {
                                             Some(AxisConstraint {
                                                 anchor: (lx, ly),
@@ -1195,6 +1208,14 @@ impl CanvasRenderer {
                                                 project.metadata.frame_height,
                                             );
                                             self.intersect_candidate = Some(cand);
+                                        } else if current_mode == SelectionMode::Replace {
+                                            self.intersect_candidate = None;
+                                            self.selection.set_rect(
+                                                stroke.start_local,
+                                                (lx, ly),
+                                                project.metadata.frame_width,
+                                                project.metadata.frame_height,
+                                            );
                                         } else {
                                             self.intersect_candidate = None;
                                             let mut updated = stroke.base_selection.clone();
@@ -1233,6 +1254,13 @@ impl CanvasRenderer {
                                                         project.metadata.frame_height,
                                                     );
                                                     self.intersect_candidate = Some(cand);
+                                                } else if current_mode == SelectionMode::Replace {
+                                                    self.intersect_candidate = None;
+                                                    self.selection.set_polygon(
+                                                        &stroke.raw_points,
+                                                        project.metadata.frame_width,
+                                                        project.metadata.frame_height,
+                                                    );
                                                 } else {
                                                     self.intersect_candidate = None;
                                                     let mut updated = stroke.base_selection.clone();

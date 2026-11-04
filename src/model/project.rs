@@ -420,9 +420,19 @@ impl Project {
     }
 
     pub fn to_color_image(&self) -> ColorImage {
+        let w = self.atlas_rgba.width().max(1);
+        let h = self.atlas_rgba.height().max(1);
+        let size = [w as usize, h as usize];
+        if self.metadata.layers.is_empty()
+            || (self.metadata.layers.len() == 1
+                && self.metadata.layers[0].visible
+                && (self.metadata.layers[0].opacity - 1.0).abs() < 1e-4)
+        {
+            return ColorImage::from_rgba_unmultiplied(size, self.atlas_rgba.as_raw());
+        }
         let composited = self.composited_atlas_rgba();
-        let size = [composited.width() as usize, composited.height() as usize];
-        ColorImage::from_rgba_unmultiplied(size, composited.as_raw())
+        let comp_size = [composited.width() as usize, composited.height() as usize];
+        ColorImage::from_rgba_unmultiplied(comp_size, composited.as_raw())
     }
 
     pub fn sketch_to_color_image(&self) -> Option<ColorImage> {

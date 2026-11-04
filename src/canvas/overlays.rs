@@ -36,7 +36,7 @@ pub fn draw_canvas_background(
 
             painter.rect_filled(clipped, 0.0, c1);
 
-            let tile_size = (viewport.zoom * 4.0).clamp(8.0, 32.0);
+            let tile_size = (viewport.zoom * 4.0).clamp(16.0, 48.0);
             let start_col = ((clipped.min.x - target_rect.min.x) / tile_size).floor() as i32;
             let end_col = ((clipped.max.x - target_rect.min.x) / tile_size).ceil() as i32;
             let start_row = ((clipped.min.y - target_rect.min.y) / tile_size).floor() as i32;
@@ -265,82 +265,11 @@ fn draw_mask_marching_ants(
         return;
     }
 
-    // Fast-path: if selection is a pure rectangular marquee, draw exactly 4 boundary segments!
-    if let Some((min_x, min_y, max_x, max_y)) = selection.rect_bounds {
-        let expected_count = ((max_x - min_x + 1).max(0) as usize)
-            .saturating_mul((max_y - min_y + 1).max(0) as usize);
-        if expected_count == selection.pixels.len() {
-            let left = active_frame_rect.min.x + min_x as f32 * zoom;
-            let right = active_frame_rect.min.x + (max_x + 1) as f32 * zoom;
-            let top = active_frame_rect.min.y + min_y as f32 * zoom;
-            let bottom = active_frame_rect.min.y + (max_y + 1) as f32 * zoom;
-
-            let lt = Pos2::new(left, top);
-            let rt = Pos2::new(right, top);
-            let rb = Pos2::new(right, bottom);
-            let lb = Pos2::new(left, bottom);
-
-            draw_marching_ants_segment_colored(painter, lt, rt, phase, stroke_dark, stroke_light);
-            draw_marching_ants_segment_colored(painter, rt, rb, phase, stroke_dark, stroke_light);
-            draw_marching_ants_segment_colored(painter, lb, rb, phase, stroke_dark, stroke_light);
-            draw_marching_ants_segment_colored(painter, lt, lb, phase, stroke_dark, stroke_light);
-            return;
-        }
-    }
-
-    // Generalized path: merge collinear pixel edges into long continuous line segments
-    let mut h_edges: BTreeMap<i32, Vec<i32>> = BTreeMap::new();
-    let mut v_edges: BTreeMap<i32, Vec<i32>> = BTreeMap::new();
-
-    for &(x, y) in &selection.pixels {
-        if !selection.pixels.contains(&(x, y - 1)) {
-            h_edges.entry(y).or_default().push(x);
-        }
-        if !selection.pixels.contains(&(x, y + 1)) {
-            h_edges.entry(y + 1).or_default().push(x);
-        }
-        if !selection.pixels.contains(&(x - 1, y)) {
-            v_edges.entry(x).or_default().push(y);
-        }
-        if !selection.pixels.contains(&(x + 1, y)) {
-            v_edges.entry(x + 1).or_default().push(y);
-        }
-    }
-
     let origin = active_frame_rect.min;
-
-    for (y, mut xs) in h_edges {
-        xs.sort_unstable();
-        let mut i = 0;
-        while i < xs.len() {
-            let start_x = xs[i];
-            let mut end_x = start_x + 1;
-            while i + 1 < xs.len() && xs[i + 1] == end_x {
-                end_x += 1;
-                i += 1;
-            }
-            let p0 = Pos2::new(origin.x + start_x as f32 * zoom, origin.y + y as f32 * zoom);
-            let p1 = Pos2::new(origin.x + end_x as f32 * zoom, origin.y + y as f32 * zoom);
-            draw_marching_ants_segment_colored(painter, p0, p1, phase, stroke_dark, stroke_light);
-            i += 1;
-        }
-    }
-
-    for (x, mut ys) in v_edges {
-        ys.sort_unstable();
-        let mut i = 0;
-        while i < ys.len() {
-            let start_y = ys[i];
-            let mut end_y = start_y + 1;
-            while i + 1 < ys.len() && ys[i + 1] == end_y {
-                end_y += 1;
-                i += 1;
-            }
-            let p0 = Pos2::new(origin.x + x as f32 * zoom, origin.y + start_y as f32 * zoom);
-            let p1 = Pos2::new(origin.x + x as f32 * zoom, origin.y + end_y as f32 * zoom);
-            draw_marching_ants_segment_colored(painter, p0, p1, phase, stroke_dark, stroke_light);
-            i += 1;
-        }
+    for &[x0, y0, x1, y1] in &selection.contour_segments {
+        let p0 = Pos2::new(origin.x + x0 as f32 * zoom, origin.y + y0 as f32 * zoom);
+        let p1 = Pos2::new(origin.x + x1 as f32 * zoom, origin.y + y1 as f32 * zoom);
+        draw_marching_ants_segment_colored(painter, p0, p1, phase, stroke_dark, stroke_light);
     }
 }
 
