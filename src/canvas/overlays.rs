@@ -1,4 +1,4 @@
-use crate::canvas::viewport::{BackgroundMode, CanvasViewMode, ViewportState};
+﻿use crate::canvas::viewport::{BackgroundMode, CanvasViewMode, ViewportState};
 use crate::model::metadata::ProjectMetadata;
 use crate::tools::selection::SelectionMask;
 use crate::tools::SymmetryMode;
@@ -328,6 +328,24 @@ pub fn draw_selection_overlay(
         }
     }
 }
+pub fn brush_cursor_geometry(
+    origin: Pos2,
+    hover_px: (i32, i32),
+    brush_size: u32,
+    zoom: f32,
+) -> (Rect, Pos2, f32) {
+    let size = brush_size.clamp(1, 64) as i32;
+    let half_low = (size - 1) / 2;
+    let min = Pos2::new(
+        origin.x + (hover_px.0 - half_low) as f32 * zoom,
+        origin.y + (hover_px.1 - half_low) as f32 * zoom,
+    );
+    let rect = Rect::from_min_size(min, Vec2::splat(size as f32 * zoom));
+    let center = rect.center();
+    let radius = (size as f32 * 0.5) * zoom;
+    (rect, center, radius)
+}
+
 pub fn draw_preview_pixels_and_cursor(
     painter: &Painter,
     active_frame_rect: Rect,
@@ -354,20 +372,31 @@ pub fn draw_preview_pixels_and_cursor(
         }
     }
 
-    if let Some((hx, hy)) = hover_local_px {
-        let size = brush_size.clamp(1, 64) as i32;
-        let half_low = (size - 1) / 2;
-        let min = Pos2::new(
-            active_frame_rect.min.x + (hx - half_low) as f32 * zoom,
-            active_frame_rect.min.y + (hy - half_low) as f32 * zoom,
-        );
-        let cursor_rect = Rect::from_min_size(min, Vec2::splat(size as f32 * zoom));
-        painter.rect_stroke(
-            cursor_rect,
-            0.0,
-            Stroke::new(1.0, Color32::from_rgba_unmultiplied(235, 235, 235, 190)),
-            egui::StrokeKind::Outside,
-        );
+    if let Some(hover_px) = hover_local_px {
+        let (cursor_rect, center, radius) =
+            brush_cursor_geometry(active_frame_rect.min, hover_px, brush_size, zoom);
+        if brush_size > 1 {
+            // High-contrast dual stroke for round brush cursor:
+            // Dark outer shadow ring ensures visibility against bright canvases,
+            // while bright inner ring ensures visibility against dark canvases.
+            painter.circle_stroke(
+                center,
+                radius + 0.5,
+                Stroke::new(1.0, Color32::from_rgba_unmultiplied(20, 20, 20, 160)),
+            );
+            painter.circle_stroke(
+                center,
+                radius,
+                Stroke::new(1.0, Color32::from_rgba_unmultiplied(240, 240, 240, 220)),
+            );
+        } else {
+            painter.rect_stroke(
+                cursor_rect,
+                0.0,
+                Stroke::new(1.0, Color32::from_rgba_unmultiplied(235, 235, 235, 190)),
+                egui::StrokeKind::Outside,
+            );
+        }
     }
 }
 
@@ -538,5 +567,43 @@ pub fn draw_pivot_gizmos(
             FontId::proportional(11.0),
             color,
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_brush_cursor_geometry_size_1() {
+        let (rect, center, radius) = brush_cursor_geometry(Pos2::new(10.0, 20.0), (3, 5), 1, 16.0);
+        // Size 1: pixel rect is 16x16
+        assert_eq!(rect.min, Pos2::new(10.0 + 3.0 * 16.0, 20.0 + 5.0 * 16.0));
+        assert_eq!(rect.width(), 16.0);
+        assert_eq!(rect.height(), 16.0);
+        assert_eq!(center, Pos2::new(rect.min.x + 8.0, rect.min.y + 8.0));
+        assert_eq!(radius, 8.0);
+    }
+
+    #[test]
+    fn test_brush_cursor_geometry_size_even() {
+        // Size 4: half_low = 1, half_high = 2. Min pixel is (3 - 1, 5 - 1) = (2, 4)
+        let (rect, center, radius) = brush_cursor_geometry(Pos2::ZERO, (3, 5), 4, 10.0);
+        assert_eq!(rect.min, Pos2::new(20.0, 40.0));
+        assert_eq!(rect.width(), 40.0);
+        assert_eq!(rect.height(), 40.0);
+        assert_eq!(center, Pos2::new(40.0, 60.0));
+        assert_eq!(radius, 20.0);
+    }
+
+    #[test]
+    fn test_brush_cursor_geometry_size_odd() {
+        // Size 5: half_low = 2, half_high = 2. Min pixel is (3 - 2, 5 - 2) = (1, 3)
+        let (rect, center, radius) = brush_cursor_geometry(Pos2::ZERO, (3, 5), 5, 10.0);
+        assert_eq!(rect.min, Pos2::new(10.0, 30.0));
+        assert_eq!(rect.width(), 50.0);
+        assert_eq!(rect.height(), 50.0);
+        assert_eq!(center, Pos2::new(35.0, 55.0));
+        assert_eq!(radius, 25.0);
     }
 }

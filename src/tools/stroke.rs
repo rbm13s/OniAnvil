@@ -152,4 +152,29 @@ mod tests {
         assert_eq!(line.first().copied(), Some((2, 3)));
         assert_eq!(line.last().copied(), Some((7, 5)));
     }
+
+    #[test]
+    fn test_expand_stamp_points_brush_sizes() {
+        // Size 1 -> single point
+        let stamp1 = expand_stamp_points((5, 5), 1, SymmetryMode::None, 0.5, 0.5, 32, 32);
+        assert_eq!(stamp1, vec![(5, 5)]);
+
+        // Size 2 -> 2x2 square
+        let stamp2 = expand_stamp_points((5, 5), 2, SymmetryMode::None, 0.5, 0.5, 32, 32);
+        assert_eq!(stamp2.len(), 4);
+        assert!(stamp2.contains(&(5, 5)));
+        assert!(stamp2.contains(&(6, 6)));
+
+        // Size 4 -> round stamp (corners excluded from 4x4)
+        let stamp4 = expand_stamp_points((5, 5), 4, SymmetryMode::None, 0.5, 0.5, 32, 32);
+        assert_eq!(stamp4.len(), 12); // 16 - 4 corners
+        // Corners (4, 4), (7, 4), (4, 7), (7, 7) are excluded
+        assert!(!stamp4.contains(&(4, 4)));
+        assert!(!stamp4.contains(&(7, 4)));
+        assert!(!stamp4.contains(&(4, 7)));
+        assert!(!stamp4.contains(&(7, 7)));
+        // Centers are included
+        assert!(stamp4.contains(&(5, 5)));
+        assert!(stamp4.contains(&(6, 5)));
+    }
 }
