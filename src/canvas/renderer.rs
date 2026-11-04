@@ -23,6 +23,59 @@ use egui::{
 };
 use image::{Rgba, RgbaImage};
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AxisLock {
+    Horizontal,
+    Vertical,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AxisConstraint {
+    pub anchor: (i32, i32),
+    pub axis: Option<AxisLock>,
+}
+
+/// Constrains movement along the primary axis (horizontal or vertical) when Shift is held.
+///
+/// If `shift_down` is false, constraint is cleared.
+/// If `shift_down` is true, an anchor is established at the start of the constraint.
+/// As soon as movement away from the anchor occurs, the dominant axis is locked
+/// until Shift is released, preventing deviations perpendicular to that axis.
+pub fn apply_axis_constraint(
+    raw_point: (i32, i32),
+    current_last: (i32, i32),
+    shift_down: bool,
+    constraint_state: &mut Option<AxisConstraint>,
+) -> (i32, i32) {
+    if !shift_down {
+        *constraint_state = None;
+        return raw_point;
+    }
+
+    let constraint = constraint_state.get_or_insert_with(|| AxisConstraint {
+        anchor: current_last,
+        axis: None,
+    });
+
+    if constraint.axis.is_none() {
+        let dx = raw_point.0 - constraint.anchor.0;
+        let dy = raw_point.1 - constraint.anchor.1;
+        if dx != 0 || dy != 0 {
+            constraint.axis = Some(if dx.abs() >= dy.abs() {
+                AxisLock::Horizontal
+            } else {
+                AxisLock::Vertical
+            });
+        }
+    }
+
+    match constraint.axis {
+        Some(AxisLock::Horizontal) => (raw_point.0, constraint.anchor.1),
+        Some(AxisLock::Vertical) => (constraint.anchor.0, raw_point.1),
+        None => constraint.anchor,
+    }
+}
+
 struct ActiveStroke {
     tool: ToolKind,
     button: PointerButton,
@@ -33,6 +86,7 @@ struct ActiveStroke {
     base_atlas: RgbaImage,
     moving_selection: bool,
     base_selection: SelectionMask,
+    axis_constraint: Option<AxisConstraint>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -903,6 +957,7 @@ impl CanvasRenderer {
                                     base_atlas: project.atlas_rgba.clone(),
                                     moving_selection: false,
                                     base_selection: self.selection.clone(),
+                                    axis_constraint: None,
                                 });
                             }
                             ToolKind::Curve => {}
@@ -978,6 +1033,14 @@ impl CanvasRenderer {
                                         base_atlas: project.atlas_rgba.clone(),
                                         moving_selection: moving_sel,
                                         base_selection: self.selection.clone(),
+                                        axis_constraint: if shift_down {
+                                            Some(AxisConstraint {
+                                                anchor: (lx, ly),
+                                                axis: None,
+                                            })
+                                        } else {
+                                            None
+                                        },
                                     });
                                 }
                             }
@@ -993,7 +1056,7 @@ impl CanvasRenderer {
                     if let Some(stroke) = &mut self.active_stroke {
                         let fw = project.metadata.frame_width.max(1) as i32;
                         let fh = project.metadata.frame_height.max(1) as i32;
-                        let (lx, ly) = match viewport.view_mode {
+                        let (raw_lx, raw_ly) = match viewport.view_mode {
                             CanvasViewMode::Frame => {
                                 if viewport.tiled_preview_3x3 {
                                     (cx.rem_euclid(fw), cy.rem_euclid(fh))
@@ -1008,6 +1071,24 @@ impl CanvasRenderer {
                                     (cy - oy as i32).clamp(0, fh - 1),
                                 )
                             }
+                        };
+
+                        let (lx, ly) = if matches!(
+                            stroke.tool,
+                            ToolKind::Pencil
+                                | ToolKind::Eraser
+                                | ToolKind::DitherBrush
+                                | ToolKind::Shading
+                        ) && !stroke.moving_selection
+                        {
+                            apply_axis_constraint(
+                                (raw_lx, raw_ly),
+                                stroke.last_local,
+                                shift_down,
+                                &mut stroke.axis_constraint,
+                            )
+                        } else {
+                            (raw_lx, raw_ly)
                         };
 
                         if (lx, ly) != stroke.last_local {
@@ -1588,7 +1669,16 @@ impl CanvasRenderer {
             }
             (None, 1)
         } else {
-            (viewport.hover_pixel, tools.effective_brush_size())
+            let hover_pos = if let Some(stroke) = &self.active_stroke {
+                if stroke.axis_constraint.is_some() {
+                    Some(stroke.last_local)
+                } else {
+                    viewport.hover_pixel
+                }
+            } else {
+                viewport.hover_pixel
+            };
+            (hover_pos, tools.effective_brush_size())
         };
 
         draw_preview_pixels_and_cursor(
@@ -1802,5 +1892,61 @@ mod tests {
             (1, 0),
         );
         assert_eq!(atlas.get_pixel(1, 0).0, [0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn test_axis_constraint_unconstrained_when_shift_not_held() {
+        let mut constraint = None;
+        let pt = apply_axis_constraint((15, 25), (10, 10), false, &mut constraint);
+        assert_eq!(pt, (15, 25));
+        assert!(constraint.is_none());
+    }
+
+    #[test]
+    fn test_axis_constraint_locks_horizontal_and_blocks_vertical_deviation() {
+        let mut constraint = None;
+        // Shift held, mouse moves horizontally (dx=5, dy=1)
+        let pt1 = apply_axis_constraint((15, 11), (10, 10), true, &mut constraint);
+        assert_eq!(pt1, (15, 10)); // y locked to anchor 10
+        assert_eq!(constraint.unwrap().axis, Some(AxisLock::Horizontal));
+
+        // Further movement with large vertical offset remains strictly locked to y=10
+        let pt2 = apply_axis_constraint((25, 45), (15, 10), true, &mut constraint);
+        assert_eq!(pt2, (25, 10));
+
+        // Backwards movement along x still stays on y=10
+        let pt3 = apply_axis_constraint((5, 99), (25, 10), true, &mut constraint);
+        assert_eq!(pt3, (5, 10));
+    }
+
+    #[test]
+    fn test_axis_constraint_locks_vertical_and_blocks_horizontal_deviation() {
+        let mut constraint = None;
+        // Shift held, mouse moves vertically (dx=1, dy=12)
+        let pt1 = apply_axis_constraint((11, 22), (10, 10), true, &mut constraint);
+        assert_eq!(pt1, (10, 22)); // x locked to anchor 10
+        assert_eq!(constraint.unwrap().axis, Some(AxisLock::Vertical));
+
+        // Further movement with large horizontal deviation remains locked to x=10
+        let pt2 = apply_axis_constraint((80, 40), (10, 22), true, &mut constraint);
+        assert_eq!(pt2, (10, 40));
+    }
+
+    #[test]
+    fn test_axis_constraint_release_and_reanchor() {
+        let mut constraint = None;
+        // 1. Lock horizontal from (10, 10)
+        let _ = apply_axis_constraint((18, 12), (10, 10), true, &mut constraint);
+        assert_eq!(constraint.unwrap().axis, Some(AxisLock::Horizontal));
+
+        // 2. Release Shift -> state cleared
+        let pt_free = apply_axis_constraint((30, 40), (18, 10), false, &mut constraint);
+        assert_eq!(pt_free, (30, 40));
+        assert!(constraint.is_none());
+
+        // 3. Re-engage Shift at new location (30, 40)
+        let pt_reanchor = apply_axis_constraint((31, 55), (30, 40), true, &mut constraint);
+        assert_eq!(pt_reanchor, (30, 55)); // Locks vertically from new anchor
+        assert_eq!(constraint.unwrap().axis, Some(AxisLock::Vertical));
     }
 }
