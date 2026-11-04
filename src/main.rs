@@ -109,7 +109,7 @@ mod tests {
         let ctx = egui::Context::default();
         theme::setup_custom_fonts(&ctx);
 
-        let _ = ctx.run_ui(egui::RawInput::default(), |ui| {
+        let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
             let font_id = egui::FontId::proportional(14.0);
             for sample in [
                 "#1",
@@ -131,5 +131,6 @@ mod tests {
                 assert!(galley.size().x > 0.0);
             }
         });
+        output.textures_delta.clear();
     }
 }

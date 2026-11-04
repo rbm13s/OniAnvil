@@ -792,7 +792,7 @@ mod tests {
         let mut color = [255, 128, 64, 255];
         let state_id = Id::unique("test_picker_render");
 
-        let _ = ctx.run_ui(egui::RawInput::default(), |ui| {
+        let mut out1 = ctx.run_ui(egui::RawInput::default(), |ui| {
             let changed = show_color_picker_content(
                 ui,
                 state_id,
@@ -802,8 +802,9 @@ mod tests {
             );
             assert!(!changed);
         });
+        out1.textures_delta.clear();
 
-        let _ = ctx.run_ui(egui::RawInput::default(), |ui| {
+        let mut out2 = ctx.run_ui(egui::RawInput::default(), |ui| {
             let _resp = modern_color_picker_button(
                 ui,
                 "btn_test",
@@ -812,5 +813,6 @@ mod tests {
                 Some(&mut settings),
             );
         });
+        out2.textures_delta.clear();
     }
 }

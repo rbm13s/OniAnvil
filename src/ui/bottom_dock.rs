@@ -1214,7 +1214,7 @@ mod tests {
         let mut preview = PreviewState::default();
         let renderer = CanvasRenderer::default();
 
-        let _ = ctx.run_ui(egui::RawInput::default(), |ui| {
+        let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
             let actions = show_bottom_dock(
                 ui,
                 &i18n,
@@ -1226,6 +1226,7 @@ mod tests {
             );
             assert!(actions.request_delete_frame.is_none());
         });
+        output.textures_delta.clear();
     }
 
     #[test]
@@ -1239,7 +1240,7 @@ mod tests {
         let mut preview = PreviewState::default();
         let renderer = CanvasRenderer::default();
 
-        let _ = ctx.run_ui(egui::RawInput::default(), |ui| {
+        let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
             let actions = show_bottom_dock(
                 ui,
                 &i18n,
@@ -1251,6 +1252,7 @@ mod tests {
             );
             assert!(actions.request_delete_frame.is_none());
         });
+        output.textures_delta.clear();
     }
 
     #[test]
@@ -1265,7 +1267,7 @@ mod tests {
 
         for theme in AppTheme::ALL {
             theme.apply(&ctx);
-            let _ = ctx.run_ui(egui::RawInput::default(), |ui| {
+            let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
                 let actions = show_bottom_dock(
                     ui,
                     &i18n,
@@ -1277,6 +1279,7 @@ mod tests {
                 );
                 assert!(actions.request_delete_frame.is_none());
             });
+            output.textures_delta.clear();
         }
     }
 }

@@ -4576,13 +4576,25 @@ mod tests {
         assert!(slicer.selected_frames.iter().all(|&selected| selected));
     }
 
+    fn run_test_pass<R>(ctx: &egui::Context, run: impl FnOnce(&egui::Context) -> R) -> R {
+        let mut res = None;
+        let mut run_opt = Some(run);
+        let mut output = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            if let Some(f) = run_opt.take() {
+                res = Some(f(ctx));
+            }
+        });
+        output.textures_delta.clear();
+        res.expect("test pass executed")
+    }
+
     #[test]
     fn test_hotkeys_modal_render() {
         let ctx = egui::Context::default();
         for lang in [crate::i18n::Language::Russian, crate::i18n::Language::English] {
             let i18n = I18n::new(lang);
             let mut open = true;
-            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            run_test_pass(&ctx, |ctx| {
                 show_hotkeys_modal(ctx, &mut open, &i18n);
             });
             assert!(open);
@@ -4595,7 +4607,7 @@ mod tests {
         for lang in [crate::i18n::Language::Russian, crate::i18n::Language::English] {
             let i18n = I18n::new(lang);
             let mut open = true;
-            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            run_test_pass(&ctx, |ctx| {
                 let confirmed = show_confirm_exit_app_modal(ctx, &i18n, &mut open);
                 assert!(!confirmed);
             });
@@ -4611,7 +4623,7 @@ mod tests {
 
             // 1. Delete skin modal
             let mut pending_skin = Some((1, "Skin 2".to_string()));
-            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            run_test_pass(&ctx, |ctx| {
                 let res = show_confirm_delete_skin_modal(ctx, &i18n, &mut pending_skin);
                 assert_eq!(res, None);
             });
@@ -4619,7 +4631,7 @@ mod tests {
 
             // 2. Delete frame modal
             let mut pending_frame = Some(2);
-            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            run_test_pass(&ctx, |ctx| {
                 let res = show_confirm_delete_frame_modal(ctx, &i18n, &mut pending_frame);
                 assert_eq!(res, None);
             });
@@ -4627,7 +4639,7 @@ mod tests {
 
             // 2b. Delete layer modal
             let mut pending_layer = Some((1, "Layer 2".to_string()));
-            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            run_test_pass(&ctx, |ctx| {
                 let res = show_confirm_delete_layer_modal(ctx, &i18n, &mut pending_layer);
                 assert_eq!(res, None);
             });
@@ -4635,14 +4647,14 @@ mod tests {
 
             // 3. Close doc modal
             let mut pending_close = Some(0);
-            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            run_test_pass(&ctx, |ctx| {
                 let res = show_confirm_close_doc_modal(ctx, &i18n, "cat_walk", &mut pending_close);
                 assert_eq!(res, None);
             });
             assert!(pending_close.is_some());
 
             // 4. Recovery modal
-            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            run_test_pass(&ctx, |ctx| {
                 let res = show_recovery_modal(ctx, &i18n, true);
                 assert_eq!(res, None);
             });
@@ -4652,7 +4664,7 @@ mod tests {
                 open: true,
                 ..Default::default()
             };
-            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            run_test_pass(&ctx, |ctx| {
                 let action = unsaved.show(ctx, &i18n);
                 assert_eq!(action, UnsavedAction::None);
             });
@@ -4660,7 +4672,7 @@ mod tests {
 
             // 6. Delete recent project modal
             let mut pending_recent = Some(PathBuf::from("hero.png"));
-            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            run_test_pass(&ctx, |ctx| {
                 let res = show_confirm_delete_recent_modal(ctx, &i18n, &mut pending_recent);
                 assert_eq!(res, None);
             });
@@ -4668,7 +4680,7 @@ mod tests {
 
             // 7. Delete palette slot modal
             let mut pending_slot = Some((0, [255, 0, 0, 255]));
-            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            run_test_pass(&ctx, |ctx| {
                 let res = show_confirm_delete_palette_slot_modal(ctx, &i18n, &mut pending_slot);
                 assert_eq!(res, None);
             });
@@ -4676,7 +4688,7 @@ mod tests {
 
             // 8. Delete pivot point modal
             let mut pending_pt = Some((0, "Head".to_string()));
-            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            run_test_pass(&ctx, |ctx| {
                 let res = show_confirm_delete_pivot_point_modal(ctx, &i18n, &mut pending_pt);
                 assert_eq!(res, None);
             });
@@ -4684,7 +4696,7 @@ mod tests {
 
             // 9. Delete tag modal
             let mut pending_tag = Some((0, "Run".to_string()));
-            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            run_test_pass(&ctx, |ctx| {
                 let res = show_confirm_delete_tag_modal(ctx, &i18n, &mut pending_tag);
                 assert_eq!(res, None);
             });
@@ -4693,7 +4705,7 @@ mod tests {
             // 10. Replace color modal
             let mut replace_color = ReplaceColorModalState::default();
             replace_color.open_with([255, 0, 0, 255], [0, 255, 0, 255], true);
-            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            run_test_pass(&ctx, |ctx| {
                 let res = replace_color.show(
                     ctx,
                     &i18n,
@@ -4711,7 +4723,7 @@ mod tests {
                 open: true,
                 ..Default::default()
             };
-            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            run_test_pass(&ctx, |ctx| {
                 let res = modify_sel.show(ctx, &i18n);
                 assert_eq!(res, None);
             });
@@ -4722,7 +4734,7 @@ mod tests {
                 open: true,
                 ..Default::default()
             };
-            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            run_test_pass(&ctx, |ctx| {
                 let res = outline_fx.show(
                     ctx,
                     &i18n,
@@ -4739,7 +4751,7 @@ mod tests {
                 open: true,
                 ..Default::default()
             };
-            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            run_test_pass(&ctx, |ctx| {
                 let res = convolution.show(ctx, &i18n);
                 assert_eq!(res, None);
             });
@@ -4750,7 +4762,7 @@ mod tests {
                 open: true,
                 ..Default::default()
             };
-            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            run_test_pass(&ctx, |ctx| {
                 let res = remap_palette.show(ctx, &i18n);
                 assert_eq!(res, None);
             });
@@ -4761,7 +4773,7 @@ mod tests {
                 open: true,
                 ..Default::default()
             };
-            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            run_test_pass(&ctx, |ctx| {
                 let res = rotate_modal.show(ctx, &i18n);
                 assert_eq!(res, None);
             });
@@ -4772,7 +4784,7 @@ mod tests {
                 open: true,
                 ..Default::default()
             };
-            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            run_test_pass(&ctx, |ctx| {
                 let res = pack_modal.show(ctx, &i18n, None);
                 assert_eq!(res, None);
             });
@@ -4784,7 +4796,7 @@ mod tests {
                 ..Default::default()
             };
             bake_sketch.open_with(true, &[[255, 0, 0, 255], [0, 255, 0, 255]], false, false, Some([0, 0, 0]), Some([0, 0, 0]), true);
-            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
+            run_test_pass(&ctx, |ctx| {
                 let res = bake_sketch.show(ctx, &i18n);
                 assert_eq!(res, None);
             });

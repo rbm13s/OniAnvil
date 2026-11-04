@@ -338,10 +338,11 @@ mod tests {
         ];
         let p = PathBuf::from("C:/test/settings.json");
 
-        let _ = ctx.run_ui(egui::RawInput::default(), |ui| {
+        let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
             let action = show_start_screen(ui, &i18n, &recents, &p, None);
             assert!(matches!(action, StartScreenAction::None));
         });
+        output.textures_delta.clear();
     }
 
     #[test]
@@ -350,9 +351,10 @@ mod tests {
         let i18n = I18n::new(Language::English);
         let p = PathBuf::from("C:/test/settings.json");
 
-        let _ = ctx.run_ui(egui::RawInput::default(), |ui| {
+        let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
             let action = show_start_screen(ui, &i18n, &[], &p, None);
             assert!(matches!(action, StartScreenAction::None));
         });
+        output.textures_delta.clear();
     }
 }
