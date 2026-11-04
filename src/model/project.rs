@@ -8,6 +8,18 @@ use image::{Rgba, RgbaImage};
 use std::collections::HashSet;
 use std::path::PathBuf;
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct SketchSampleCache {
+    pub precision: crate::model::sketch::PixelPrecisionMode,
+    pub alpha_threshold: u8,
+    pub crisp_lines: bool,
+    pub frame_w: u32,
+    pub frame_h: u32,
+    pub sketch_dims: (u32, u32),
+    pub transform_key: (u32, u32, i32, i32, i32, bool, bool),
+    pub grid: Vec<Option<[u8; 4]>>,
+}
+
 pub struct Project {
     pub metadata: ProjectMetadata,
     pub atlas_rgba: RgbaImage,
@@ -17,6 +29,7 @@ pub struct Project {
     pub canvas_dirty: bool,
     pub sketch_dirty: bool,
     pub has_unsaved_changes: bool,
+    pub sketch_sample_cache: Option<SketchSampleCache>,
 }
 
 impl Default for Project {
@@ -39,6 +52,7 @@ impl Project {
             canvas_dirty: true,
             sketch_dirty: true,
             has_unsaved_changes: false,
+            sketch_sample_cache: None,
         };
         proj.ensure_layers_initialized();
         proj
@@ -58,6 +72,7 @@ impl Project {
             canvas_dirty: true,
             sketch_dirty: true,
             has_unsaved_changes: false,
+            sketch_sample_cache: None,
         };
         proj.ensure_layers_initialized();
         proj
@@ -396,6 +411,7 @@ impl Project {
         relative_path: Option<String>,
         embedded_base64: Option<String>,
     ) {
+        self.sketch_sample_cache = None;
         self.sketch_rgba = img;
         self.metadata.sketch.relative_path = relative_path;
         self.metadata.sketch.embedded_base64 = embedded_base64;
@@ -457,36 +473,67 @@ impl Project {
             BakePaletteSource::OriginalColors => None,
         };
 
-        // Step 1: Sample raw sketch grid
-        let mut sampled_grid: Vec<Option<[u8; 4]>> = vec![None; (fw * fh) as usize];
-        for ly in 0..(fh as i32) {
-            for lx in 0..(fw as i32) {
-                let idx = (ly as u32 * fw + lx as u32) as usize;
-                sampled_grid[idx] = self.metadata.sketch.sample_pixel_area(
-                    sketch_img,
-                    fw,
-                    fh,
-                    lx,
-                    ly,
-                    settings.pixel_precision,
-                    settings.alpha_threshold,
-                    None,
-                    settings.crisp_pixels_and_lines,
-                );
-            }
-        }
+        // Step 1: Sample raw sketch grid (accelerated via sample context and cache)
+        let sw = sketch_img.width();
+        let sh = sketch_img.height();
+        let transform_key = self.metadata.sketch.cache_key();
 
-        // Step 2: Pre-Bake Color Adjustments (Brightness, Contrast, Saturation)
-        if settings.brightness != 0 || settings.contrast != 0 || settings.saturation != 0 {
-            for col in sampled_grid.iter_mut().flatten() {
-                *col = crate::model::sketch::adjust_rgba_color(
-                    *col,
-                    settings.brightness,
-                    settings.contrast,
-                    settings.saturation,
-                );
+        let cache_valid = match &self.sketch_sample_cache {
+            Some(c) => {
+                c.precision == settings.pixel_precision
+                    && c.alpha_threshold == settings.alpha_threshold
+                    && c.crisp_lines == settings.crisp_pixels_and_lines
+                    && c.frame_w == fw
+                    && c.frame_h == fh
+                    && c.sketch_dims == (sw, sh)
+                    && c.transform_key == transform_key
             }
-        }
+            None => false,
+        };
+
+        let mut sampled_grid = if cache_valid {
+            self.sketch_sample_cache.as_ref().unwrap().grid.clone()
+        } else {
+            let sample_ctx = match self.metadata.sketch.get_sample_context(fw, fh, sw, sh) {
+                Some(ctx) => ctx,
+                None => return false,
+            };
+            let mut grid: Vec<Option<[u8; 4]>> = vec![None; (fw * fh) as usize];
+            for ly in 0..(fh as i32) {
+                for lx in 0..(fw as i32) {
+                    let idx = (ly as u32 * fw + lx as u32) as usize;
+                    grid[idx] = crate::model::sketch::SketchReferenceState::sample_pixel_area_with_ctx(
+                        sketch_img,
+                        &sample_ctx,
+                        lx,
+                        ly,
+                        settings.pixel_precision,
+                        settings.alpha_threshold,
+                        None,
+                        settings.crisp_pixels_and_lines,
+                    );
+                }
+            }
+            self.sketch_sample_cache = Some(SketchSampleCache {
+                precision: settings.pixel_precision,
+                alpha_threshold: settings.alpha_threshold,
+                crisp_lines: settings.crisp_pixels_and_lines,
+                frame_w: fw,
+                frame_h: fh,
+                sketch_dims: (sw, sh),
+                transform_key,
+                grid: grid.clone(),
+            });
+            grid
+        };
+
+        // Step 2: Pre-Bake Color Adjustments (Brightness, Contrast, Saturation) with 256-LUT
+        crate::model::sketch::adjust_color_grid(
+            &mut sampled_grid,
+            settings.brightness,
+            settings.contrast,
+            settings.saturation,
+        );
 
         // Step 2.5: Background Removal on ORIGINAL sampled sketch (if chosen)
         if settings.remove_background && settings.bg_target == crate::model::sketch::BackgroundRemovalTarget::Original {
@@ -2129,6 +2176,39 @@ mod tests {
         assert_eq!(*proj.atlas_rgba.get_pixel(0, 0), Rgba([0, 0, 0, 0]));
         // Inner pixel was quantized to red and preserved
         assert_eq!(*proj.atlas_rgba.get_pixel(2, 2), Rgba([255, 0, 0, 255]));
+    }
+
+    #[test]
+    fn test_bake_sketch_cache_hit_and_invalidation() {
+        let meta = ProjectMetadata::new_config("bake_cache_test".to_string(), 8, 8, 1, 1, None);
+        let mut proj = Project::new(meta);
+        let mut sketch = RgbaImage::from_pixel(16, 16, Rgba([100, 150, 200, 255]));
+        sketch.put_pixel(4, 4, Rgba([255, 50, 50, 255]));
+        proj.set_sketch_image(Some(sketch), None, None);
+
+        assert!(proj.sketch_sample_cache.is_none());
+
+        let sel = SelectionMask::default();
+        let settings = BakeSketchSettings::default();
+
+        // First bake: populates cache
+        assert!(proj.bake_sketch_advanced(0, &settings, &sel));
+        assert!(proj.sketch_sample_cache.is_some());
+        let cached_grid = proj.sketch_sample_cache.as_ref().unwrap().grid.clone();
+
+        // Second bake with different brightness: should reuse cached sample grid!
+        let mut settings_bright = settings.clone();
+        settings_bright.brightness = 25;
+        assert!(proj.bake_sketch_advanced(0, &settings_bright, &sel));
+        assert!(proj.sketch_sample_cache.is_some());
+        assert_eq!(proj.sketch_sample_cache.as_ref().unwrap().grid, cached_grid);
+
+        // Modifying transform (e.g. rotation): should recompute cache
+        let old_transform_key = proj.sketch_sample_cache.as_ref().unwrap().transform_key;
+        proj.metadata.sketch.rotation_deg = 45.0;
+        assert!(proj.bake_sketch_advanced(0, &settings, &sel));
+        assert!(proj.sketch_sample_cache.is_some());
+        assert_ne!(proj.sketch_sample_cache.as_ref().unwrap().transform_key, old_transform_key);
     }
 
     #[test]
