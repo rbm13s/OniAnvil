@@ -49,22 +49,29 @@ This skill provides step-by-step guidance for safely releasing a new version of 
      Select-Object id, status, conclusion, head_branch, name
    ```
    Wait until all matrix targets succeed:
-   - WebAssembly (wasm32) Check
+   - WebAssembly (HTML5)
    - Linux (Debian / Ubuntu x86_64)
    - macOS Universal (Apple Silicon + Intel)
    - Windows (x86_64)
-   - Publish GitHub Release (automatically generates categorized "What's Changed" notes via `generate_changelog`)
+   - Publish GitHub Release & Deploy to itch.io (generates changelog, releases assets, pushes to itch.io via Butler)
 
-2. **Verify Published Release Assets**:
+2. **Verify Published Release Assets & itch.io Channels**:
    ```powershell
    (Invoke-RestMethod -Uri "https://api.github.com/repos/rbm13s/OniAnvil/releases/tags/vX.Y.Z").assets |
      Select-Object name, size
    ```
-   Ensure all 4 binary packages are attached:
+   Ensure all 5 release packages are attached:
    - `OniAnvil-X.Y.Z-windows-x86_64.zip`
    - `onianvil_X.Y.Z_amd64.deb`
    - `OniAnvil-X.Y.Z-linux-x86_64.tar.gz`
    - `OniAnvil-X.Y.Z-macos-universal.zip`
+   - `OniAnvil-X.Y.Z-html5.zip`
+
+   Verify Butler logs in the GitHub Actions `Publish GitHub Release & Deploy to itch.io` job:
+   - `rbm13s/onianvil:windows`
+   - `rbm13s/onianvil:linux`
+   - `rbm13s/onianvil:osx`
+   - `rbm13s/onianvil:html5`
 
 > [!CAUTION]
 > NEVER proceed to Phase 3 if any desktop build failed or if release assets are missing or unverified.

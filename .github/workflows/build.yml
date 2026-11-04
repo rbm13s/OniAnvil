@@ -14,10 +14,10 @@ env:
 
 jobs:
   # ============================================================================
-  # 0. WebAssembly Check (wasm32-unknown-unknown)
+  # 0. WebAssembly (wasm32-unknown-unknown) — HTML5 Web Package
   # ============================================================================
-  check-wasm:
-    name: WebAssembly (wasm32) Check
+  build-wasm:
+    name: WebAssembly (HTML5)
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
@@ -28,11 +28,30 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
 
+      - name: Install Trunk
+        run: |
+          wget -qO- https://github.com/trunk-rs/trunk/releases/download/v0.21.14/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf- -C /usr/local/bin
+          trunk --version
+
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Check wasm32 target
-        run: cargo check --target wasm32-unknown-unknown
+      - name: Build WebAssembly app with Trunk
+        run: |
+          trunk build index.html --release --dist dist/web --public-url ./
+
+      - name: Package WebAssembly HTML5 zip
+        run: |
+          VERSION=$(grep '^version' Cargo.toml | head -n1 | cut -d '"' -f2)
+          cd dist/web
+          zip -q -r "../../OniAnvil-${VERSION}-html5.zip" .
+          cd ../..
+
+      - name: Upload WebAssembly artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OniAnvil-WebAssembly-HTML5
+          path: OniAnvil-*-html5.zip
 
   # ============================================================================
   # 1. Linux (Debian / Ubuntu x86_64) — Portable .tar.gz + Debian .deb package
@@ -268,11 +287,11 @@ jobs:
           path: OniAnvil-*-windows-x86_64.zip
 
   # ============================================================================
-  # 4. Automatic GitHub Release when pushing a version tag (e.g. v0.1.0)
+  # 4. Automatic GitHub Release & itch.io Deploy when pushing a version tag (e.g. v1.2.0)
   # ============================================================================
   release:
-    name: Publish GitHub Release
-    needs: [check-wasm, build-linux, build-macos, build-windows]
+    name: Publish GitHub Release & Deploy to itch.io
+    needs: [build-wasm, build-linux, build-macos, build-windows]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
@@ -286,6 +305,12 @@ jobs:
 
       - name: Generate structured changelog
         run: cargo run --manifest-path tools/generate_changelog/Cargo.toml -- --repo "rbm13s/OniAnvil" --tag "${{ github.ref_name }}" --output release_notes.md
+
+      - name: Output changelog to job summary
+        run: |
+          if [ -f release_notes.md ]; then
+            cat release_notes.md >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
@@ -302,3 +327,62 @@ jobs:
             release-assets/onianvil_*_amd64.deb
             release-assets/OniAnvil-*-macos-universal.zip
             release-assets/OniAnvil-*-windows-x86_64.zip
+            release-assets/OniAnvil-*-html5.zip
+
+      # ========================================================================
+      # 5. Deploy to itch.io via Butler
+      # ========================================================================
+      - name: Install Butler (itch.io CLI)
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          if [ -z "$BUTLER_API_KEY" ]; then
+            echo "::warning ::BUTLER_API_KEY secret is not configured; skipping itch.io deployment."
+            exit 0
+          fi
+          curl -L -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          unzip -q -o butler.zip -d /usr/local/bin
+          chmod +x /usr/local/bin/butler
+          butler -V
+
+      - name: Deploy builds to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          if [ -z "$BUTLER_API_KEY" ]; then
+            echo "::warning ::BUTLER_API_KEY secret is not configured; skipping itch.io deployment."
+            exit 0
+          fi
+
+          VERSION="${{ github.ref_name }}"
+          USER_VER="${VERSION#v}"
+
+          echo "Deploying version ${USER_VER} to itch.io (rbm13s/onianvil)..."
+
+          # 1. Windows x86_64
+          WIN_ASSET=$(ls release-assets/OniAnvil-*-windows-x86_64.zip 2>/dev/null | head -n 1)
+          if [ -n "$WIN_ASSET" ] && [ -f "$WIN_ASSET" ]; then
+            echo "Pushing Windows asset: $WIN_ASSET"
+            butler push "$WIN_ASSET" rbm13s/onianvil:windows --userversion "$USER_VER"
+          fi
+
+          # 2. Linux x86_64 portable
+          LINUX_ASSET=$(ls release-assets/OniAnvil-*-linux-x86_64.tar.gz 2>/dev/null | head -n 1)
+          if [ -n "$LINUX_ASSET" ] && [ -f "$LINUX_ASSET" ]; then
+            echo "Pushing Linux asset: $LINUX_ASSET"
+            butler push "$LINUX_ASSET" rbm13s/onianvil:linux --userversion "$USER_VER"
+          fi
+
+          # 3. macOS Universal
+          MAC_ASSET=$(ls release-assets/OniAnvil-*-macos-universal.zip 2>/dev/null | head -n 1)
+          if [ -n "$MAC_ASSET" ] && [ -f "$MAC_ASSET" ]; then
+            echo "Pushing macOS asset: $MAC_ASSET"
+            butler push "$MAC_ASSET" rbm13s/onianvil:osx --userversion "$USER_VER"
+          fi
+
+          # 4. WebAssembly (HTML5)
+          HTML5_ASSET=$(ls release-assets/OniAnvil-*-html5.zip 2>/dev/null | head -n 1)
+          if [ -n "$HTML5_ASSET" ] && [ -f "$HTML5_ASSET" ]; then
+            echo "Pushing HTML5 asset: $HTML5_ASSET"
+            butler push "$HTML5_ASSET" rbm13s/onianvil:html5 --userversion "$USER_VER"
+          fi

@@ -379,3 +379,5 @@ Whenever preparing or cutting a new release, all contributors and agents **must 
 - **Release Automation & Archive Versioning:**
   - Changed GitHub Actions CI trigger from push-on-main to release-tags (`v*`) and manual dispatch (`workflow_dispatch`), preventing redundant workflow runs.
   - Archive outputs now include the application version in their filenames across all platforms (`OniAnvil-1.2.0-windows-x86_64.zip`, `OniAnvil-1.2.0-linux-x86_64.tar.gz`, `OniAnvil-1.2.0-macos-universal.zip`).
+  - Added automated WebAssembly (HTML5) compilation via Trunk in CI, packaging `OniAnvil-<version>-html5.zip` with relative public URLs (`./`) for browser hosting.
+  - Automated cross-platform itch.io deployment via Butler CLI on every tagged release (`v*`), uploading to `rbm13s/onianvil` across 4 channels: `windows`, `linux`, `osx`, and `html5`.
