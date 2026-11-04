@@ -675,7 +675,12 @@ pub fn show_right_dock(
                                 .on_hover_text(i18n.tr("tooltip.palette_extract"))
                                 .clicked()
                             {
-                                let extracted = project.extract_unique_colors(64);
+                                let limit = project
+                                    .metadata
+                                    .target_color_limit
+                                    .map(|l| l as usize)
+                                    .unwrap_or(1024);
+                                let extracted = project.extract_unique_colors(limit);
                                 if !extracted.is_empty() {
                                     project.metadata.palette.colors = extracted.clone();
                                     for swap in &mut project.metadata.palette.swaps {

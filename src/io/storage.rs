@@ -218,7 +218,12 @@ impl IoManager {
 
         let mut project = Project::from_loaded(metadata, active_rgba, file_path.clone());
         if json_bytes.is_none() {
-            let extracted = project.extract_unique_colors(64);
+            let limit = project
+                .metadata
+                .target_color_limit
+                .map(|l| l as usize)
+                .unwrap_or(1024);
+            let extracted = project.extract_unique_colors(limit);
             if !extracted.is_empty() {
                 project.metadata.palette.colors = extracted;
             }

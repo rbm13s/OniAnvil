@@ -1707,7 +1707,12 @@ impl Project {
         proj.has_unsaved_changes = true;
         proj.rebuild_atlas_from_frames(&frames);
 
-        let extracted = proj.extract_unique_colors(64);
+        let limit = proj
+            .metadata
+            .target_color_limit
+            .map(|l| l as usize)
+            .unwrap_or(1024);
+        let extracted = proj.extract_unique_colors(limit);
         if !extracted.is_empty() {
             proj.metadata.palette.colors = extracted.clone();
             if let Some(first_swap) = proj.metadata.palette.swaps.first_mut() {
@@ -1826,7 +1831,12 @@ impl Project {
         let mut proj = Self::new(meta);
         proj.rebuild_atlas_from_frames(&padded_frames);
 
-        let extracted = proj.extract_unique_colors(64);
+        let limit = proj
+            .metadata
+            .target_color_limit
+            .map(|l| l as usize)
+            .unwrap_or(1024);
+        let extracted = proj.extract_unique_colors(limit);
         if !extracted.is_empty() {
             proj.metadata.palette.colors = extracted.clone();
             if let Some(first_swap) = proj.metadata.palette.swaps.first_mut() {
