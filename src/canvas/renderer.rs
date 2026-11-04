@@ -15,7 +15,7 @@ use crate::tools::stroke::{
     bresenham_line, dither_passes, expand_stamp_points, filter_pixel_perfect,
 };
 use crate::tools::transforms::nudge_selection_region;
-use crate::tools::{ToolKind, ToolSettings};
+use crate::tools::{SelectionMode, ToolKind, ToolSettings};
 use egui::epaint::{Mesh, Vertex};
 use egui::{
     Color32, Context, Painter, PointerButton, Pos2, Rect, Sense, TextureHandle, TextureOptions, Ui,
@@ -32,6 +32,7 @@ struct ActiveStroke {
     raw_points: Vec<(i32, i32)>,
     base_atlas: RgbaImage,
     moving_selection: bool,
+    base_selection: SelectionMask,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -62,6 +63,7 @@ pub struct CanvasRenderer {
     dragging_sym_x: bool,
     dragging_sym_y: bool,
     pub selection: SelectionMask,
+    pub intersect_candidate: Option<SelectionMask>,
     pub active_pivot_target: Option<usize>,
 }
 
@@ -392,6 +394,7 @@ impl CanvasRenderer {
         );
 
         let base_draw_color = match (tool, button) {
+            (ToolKind::Eraser, PointerButton::Secondary) => tools.bg_color,
             (ToolKind::Eraser, _) => [0, 0, 0, 0],
             (_, PointerButton::Secondary) => tools.bg_color,
             _ => tools.fg_color,
@@ -417,6 +420,13 @@ impl CanvasRenderer {
                 }
 
                 let existing = *atlas_rgba.get_pixel(ax, ay);
+                if tool == ToolKind::Eraser && button == PointerButton::Secondary {
+                    if existing.0 != tools.fg_color {
+                        continue;
+                    }
+                    atlas_rgba.put_pixel(ax, ay, Rgba(tools.bg_color));
+                    continue;
+                }
                 if tools.lock_alpha && existing[3] == 0 {
                     continue;
                 }
@@ -522,15 +532,18 @@ impl CanvasRenderer {
             }
         }
 
-        let (space_down, alt_down, shift_down) = ui.input(|i| {
+        let (space_down, alt_down, shift_down, ctrl_down) = ui.input(|i| {
             (
                 i.key_down(egui::Key::Space),
                 i.modifiers.alt,
                 i.modifiers.shift,
+                i.modifiers.ctrl || i.modifiers.command,
             )
         });
 
-        let effective_tool = if alt_down {
+        let effective_tool = if let Some(stroke) = &self.active_stroke {
+            stroke.tool
+        } else if alt_down && !(tools.active_tool == ToolKind::RectSelect && shift_down) {
             ToolKind::Eyedropper
         } else {
             tools.active_tool
@@ -889,6 +902,7 @@ impl CanvasRenderer {
                                     raw_points: vec![(lx, ly)],
                                     base_atlas: project.atlas_rgba.clone(),
                                     moving_selection: false,
+                                    base_selection: self.selection.clone(),
                                 });
                             }
                             ToolKind::Curve => {}
@@ -907,7 +921,15 @@ impl CanvasRenderer {
                                     ToolKind::RectSelect | ToolKind::Lasso
                                 );
                                 if !layer_locked || is_sel_tool {
+                                    let has_sel_mod = shift_down || alt_down || ctrl_down;
+                                    let is_non_replace_mode =
+                                        tools.selection_mode != SelectionMode::Replace;
+                                    let is_secondary = btn == PointerButton::Secondary;
+
                                     let moving_sel = is_sel_tool
+                                        && !has_sel_mod
+                                        && !is_non_replace_mode
+                                        && !is_secondary
                                         && !layer_locked
                                         && !self.selection.is_empty()
                                         && self.selection.contains(lx, ly);
@@ -955,6 +977,7 @@ impl CanvasRenderer {
                                         raw_points: vec![(lx, ly)],
                                         base_atlas: project.atlas_rgba.clone(),
                                         moving_selection: moving_sel,
+                                        base_selection: self.selection.clone(),
                                     });
                                 }
                             }
@@ -1069,22 +1092,77 @@ impl CanvasRenderer {
                                         project.has_unsaved_changes = true;
                                     }
                                     ToolKind::RectSelect => {
-                                        self.selection.set_rect(
-                                            stroke.start_local,
-                                            (lx, ly),
-                                            project.metadata.frame_width,
-                                            project.metadata.frame_height,
-                                        );
+                                        let current_mode =
+                                            if stroke.button == PointerButton::Secondary {
+                                                SelectionMode::Subtract
+                                            } else if ctrl_down && shift_down {
+                                                SelectionMode::Intersect
+                                            } else if alt_down && shift_down {
+                                                SelectionMode::Subtract
+                                            } else if shift_down {
+                                                SelectionMode::Add
+                                            } else {
+                                                tools.selection_mode
+                                            };
+                                        if current_mode == SelectionMode::Intersect {
+                                            self.selection = stroke.base_selection.clone();
+                                            let mut cand = SelectionMask::default();
+                                            cand.set_rect(
+                                                stroke.start_local,
+                                                (lx, ly),
+                                                project.metadata.frame_width,
+                                                project.metadata.frame_height,
+                                            );
+                                            self.intersect_candidate = Some(cand);
+                                        } else {
+                                            self.intersect_candidate = None;
+                                            let mut updated = stroke.base_selection.clone();
+                                            updated.modify_rect(
+                                                stroke.start_local,
+                                                (lx, ly),
+                                                project.metadata.frame_width,
+                                                project.metadata.frame_height,
+                                                current_mode,
+                                            );
+                                            self.selection = updated;
+                                        }
                                     }
                                     ToolKind::Lasso => {
                                         if stroke.raw_points.last() != Some(&(lx, ly)) {
                                             stroke.raw_points.push((lx, ly));
                                             if stroke.raw_points.len() >= 3 {
-                                                self.selection.set_polygon(
-                                                    &stroke.raw_points,
-                                                    project.metadata.frame_width,
-                                                    project.metadata.frame_height,
-                                                );
+                                                let current_mode =
+                                                    if stroke.button == PointerButton::Secondary {
+                                                        SelectionMode::Subtract
+                                                    } else if ctrl_down && shift_down {
+                                                        SelectionMode::Intersect
+                                                    } else if alt_down && shift_down {
+                                                        SelectionMode::Subtract
+                                                    } else if shift_down {
+                                                        SelectionMode::Add
+                                                    } else {
+                                                        tools.selection_mode
+                                                    };
+                                                if current_mode == SelectionMode::Intersect {
+                                                    self.selection = stroke.base_selection.clone();
+                                                    let mut cand = SelectionMask::default();
+                                                    cand.set_polygon(
+                                                        &stroke.raw_points,
+                                                        project.metadata.frame_width,
+                                                        project.metadata.frame_height,
+                                                    );
+                                                    self.intersect_candidate = Some(cand);
+                                                } else {
+                                                    self.intersect_candidate = None;
+                                                    let mut updated = stroke.base_selection.clone();
+                                                    updated.modify_polygon(
+                                                        &stroke.raw_points,
+                                                        project.metadata.frame_width,
+                                                        project.metadata.frame_height,
+                                                        current_mode,
+                                                    );
+                                                    self.selection = updated;
+                                                }
                                             }
                                         }
                                     }
@@ -1116,21 +1194,67 @@ impl CanvasRenderer {
                     }
                 }
             } else if let Some(finished) = self.active_stroke.take() {
+                self.intersect_candidate = None;
                 if finished.moving_selection {
                     // Selection movement finished
                 } else if finished.tool == ToolKind::RectSelect {
+                    let finished_mode = if finished.button == PointerButton::Secondary {
+                        SelectionMode::Subtract
+                    } else if ctrl_down && shift_down {
+                        SelectionMode::Intersect
+                    } else if alt_down && shift_down {
+                        SelectionMode::Subtract
+                    } else if shift_down {
+                        SelectionMode::Add
+                    } else {
+                        tools.selection_mode
+                    };
+
                     if finished.start_local == finished.last_local {
-                        self.selection.clear();
+                        if finished_mode == SelectionMode::Replace {
+                            self.selection.clear();
+                        } else {
+                            self.selection = finished.base_selection;
+                        }
+                    } else {
+                        let mut final_sel = finished.base_selection;
+                        final_sel.modify_rect(
+                            finished.start_local,
+                            finished.last_local,
+                            project.metadata.frame_width,
+                            project.metadata.frame_height,
+                            finished_mode,
+                        );
+                        self.selection = final_sel;
                     }
                 } else if finished.tool == ToolKind::Lasso {
-                    if finished.raw_points.len() <= 2 {
-                        self.selection.clear();
+                    let finished_mode = if finished.button == PointerButton::Secondary {
+                        SelectionMode::Subtract
+                    } else if ctrl_down && shift_down {
+                        SelectionMode::Intersect
+                    } else if alt_down && shift_down {
+                        SelectionMode::Subtract
+                    } else if shift_down {
+                        SelectionMode::Add
                     } else {
-                        self.selection.set_polygon(
+                        tools.selection_mode
+                    };
+
+                    if finished.raw_points.len() <= 2 {
+                        if finished_mode == SelectionMode::Replace {
+                            self.selection.clear();
+                        } else {
+                            self.selection = finished.base_selection;
+                        }
+                    } else {
+                        let mut final_sel = finished.base_selection;
+                        final_sel.modify_polygon(
                             &finished.raw_points,
                             project.metadata.frame_width,
                             project.metadata.frame_height,
+                            finished_mode,
                         );
+                        self.selection = final_sel;
                     }
                 } else if matches!(
                     finished.tool,
@@ -1499,18 +1623,11 @@ impl CanvasRenderer {
             );
         }
 
-        let lasso_preview = self.active_stroke.as_ref().and_then(|s| {
-            if s.tool == ToolKind::Lasso && !s.moving_selection {
-                Some(s.raw_points.as_slice())
-            } else {
-                None
-            }
-        });
         draw_selection_overlay(
             &painter,
             active_frame_rect,
             &self.selection,
-            lasso_preview,
+            self.intersect_candidate.as_ref(),
             viewport.zoom,
         );
 
@@ -1614,5 +1731,76 @@ impl CanvasRenderer {
             project.active_frame,
             viewport.zoom,
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::metadata::ProjectMetadata;
+    use crate::tools::selection::SelectionMask;
+    use image::RgbaImage;
+
+    #[test]
+    fn test_eraser_right_click_color_replace() {
+        let mut atlas = RgbaImage::new(4, 4);
+        let red = [255, 0, 0, 255];
+        let blue = [0, 0, 255, 255];
+        let green = [0, 255, 0, 255];
+
+        // Fill (0, 0) with red, (1, 0) with blue
+        atlas.put_pixel(0, 0, image::Rgba(red));
+        atlas.put_pixel(1, 0, image::Rgba(blue));
+
+        let meta = ProjectMetadata::default();
+        let selection = SelectionMask::default();
+        let viewport = ViewportState::default();
+        let tools = ToolSettings {
+            fg_color: red,
+            bg_color: green,
+            ..Default::default()
+        };
+
+        // Apply Eraser with Secondary button at (0, 0) -> should change red to green
+        CanvasRenderer::apply_point_stamp(
+            &mut atlas,
+            &meta,
+            &selection,
+            &viewport,
+            &tools,
+            ToolKind::Eraser,
+            PointerButton::Secondary,
+            0,
+            (0, 0),
+        );
+        assert_eq!(atlas.get_pixel(0, 0).0, green);
+
+        // Apply Eraser with Secondary button at (1, 0) (blue) -> should NOT change because it does not match fg_color
+        CanvasRenderer::apply_point_stamp(
+            &mut atlas,
+            &meta,
+            &selection,
+            &viewport,
+            &tools,
+            ToolKind::Eraser,
+            PointerButton::Secondary,
+            0,
+            (1, 0),
+        );
+        assert_eq!(atlas.get_pixel(1, 0).0, blue);
+
+        // Apply Eraser with Primary button at (1, 0) -> should clear to transparent
+        CanvasRenderer::apply_point_stamp(
+            &mut atlas,
+            &meta,
+            &selection,
+            &viewport,
+            &tools,
+            ToolKind::Eraser,
+            PointerButton::Primary,
+            0,
+            (1, 0),
+        );
+        assert_eq!(atlas.get_pixel(1, 0).0, [0, 0, 0, 0]);
     }
 }

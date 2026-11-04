@@ -2,6 +2,16 @@ use crate::tools::fill::color_matches;
 use crate::tools::stroke::bresenham_line;
 use image::RgbaImage;
 use std::collections::{HashSet, VecDeque};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum SelectionMode {
+    #[default]
+    Replace,
+    Add,
+    Subtract,
+    Intersect,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SelectionModifyShape {
@@ -84,6 +94,55 @@ impl SelectionMask {
         }
     }
 
+    pub fn modify_rect(
+        &mut self,
+        p0: (i32, i32),
+        p1: (i32, i32),
+        max_w: u32,
+        max_h: u32,
+        mode: SelectionMode,
+    ) {
+        let min_x = p0.0.min(p1.0).max(0);
+        let max_x = p0.0.max(p1.0).min(max_w as i32 - 1);
+        let min_y = p0.1.min(p1.1).max(0);
+        let max_y = p0.1.max(p1.1).min(max_h as i32 - 1);
+
+        if min_x > max_x || min_y > max_y {
+            if matches!(mode, SelectionMode::Replace | SelectionMode::Intersect) {
+                self.clear();
+            }
+            return;
+        }
+
+        match mode {
+            SelectionMode::Replace => {
+                self.set_rect(p0, p1, max_w, max_h);
+            }
+            SelectionMode::Add => {
+                for y in min_y..=max_y {
+                    for x in min_x..=max_x {
+                        self.pixels.insert((x, y));
+                    }
+                }
+                self.update_rect_bounds_from_pixels();
+            }
+            SelectionMode::Subtract => {
+                for y in min_y..=max_y {
+                    for x in min_x..=max_x {
+                        self.pixels.remove(&(x, y));
+                    }
+                }
+                self.update_rect_bounds_from_pixels();
+            }
+            SelectionMode::Intersect => {
+                self.pixels.retain(|(x, y)| {
+                    *x >= min_x && *x <= max_x && *y >= min_y && *y <= max_y
+                });
+                self.update_rect_bounds_from_pixels();
+            }
+        }
+    }
+
     pub fn select_all(&mut self, max_w: u32, max_h: u32) {
         self.set_rect(
             (0, 0),
@@ -106,11 +165,10 @@ impl SelectionMask {
         self.rect_bounds = None;
     }
 
-    pub fn set_polygon(&mut self, polygon: &[(i32, i32)], max_w: u32, max_h: u32) {
-        self.pixels.clear();
+    pub fn rasterize_polygon(polygon: &[(i32, i32)], max_w: u32, max_h: u32) -> HashSet<(i32, i32)> {
+        let mut pixels = HashSet::new();
         if polygon.is_empty() {
-            self.rect_bounds = None;
-            return;
+            return pixels;
         }
 
         let iw = max_w.max(1) as i32;
@@ -119,15 +177,10 @@ impl SelectionMask {
         if polygon.len() < 3 {
             for &(px, py) in polygon {
                 if px >= 0 && px < iw && py >= 0 && py < ih {
-                    self.pixels.insert((px, py));
+                    pixels.insert((px, py));
                 }
             }
-            let min_x = polygon.iter().map(|p| p.0).min().unwrap_or(0).clamp(0, iw - 1);
-            let max_x = polygon.iter().map(|p| p.0).max().unwrap_or(0).clamp(0, iw - 1);
-            let min_y = polygon.iter().map(|p| p.1).min().unwrap_or(0).clamp(0, ih - 1);
-            let max_y = polygon.iter().map(|p| p.1).max().unwrap_or(0).clamp(0, ih - 1);
-            self.rect_bounds = Some((min_x, min_y, max_x, max_y));
-            return;
+            return pixels;
         }
 
         let raw_min_x = polygon.iter().map(|p| p.0).min().unwrap_or(0);
@@ -135,7 +188,6 @@ impl SelectionMask {
         let raw_min_y = polygon.iter().map(|p| p.1).min().unwrap_or(0);
         let raw_max_y = polygon.iter().map(|p| p.1).max().unwrap_or(0);
 
-        // Include 1px exterior margin outside polygon and canvas bounds
         let grid_min_x = raw_min_x.min(0) - 1;
         let grid_max_x = raw_max_x.max(iw - 1) + 1;
         let grid_min_y = raw_min_y.min(0) - 1;
@@ -145,7 +197,7 @@ impl SelectionMask {
         let h = (grid_max_y - grid_min_y + 1) as usize;
 
         if w == 0 || h == 0 || w.checked_mul(h).is_none_or(|size| size > 16_000_000) {
-            return;
+            return pixels;
         }
 
         let mut is_boundary = vec![false; w * h];
@@ -162,9 +214,6 @@ impl SelectionMask {
             }
         }
 
-        // 4-connected flood-fill from exterior boundary of the grid.
-        // Because Bresenham is 8-connected, 4-connected flood fill cannot penetrate
-        // diagonal or orthogonal boundaries, leaving all interior enclosed pixels unvisited.
         let mut visited = vec![false; w * h];
         let mut stack = Vec::with_capacity(2 * (w + h));
 
@@ -211,11 +260,6 @@ impl SelectionMask {
             }
         }
 
-        let mut min_sel_x = i32::MAX;
-        let mut max_sel_x = i32::MIN;
-        let mut min_sel_y = i32::MAX;
-        let mut max_sel_y = i32::MIN;
-
         for gy in 0..h {
             let y = gy as i32 + grid_min_y;
             if y < 0 || y >= ih {
@@ -228,22 +272,57 @@ impl SelectionMask {
                 }
                 let idx = gy * w + gx;
                 if !visited[idx] {
-                    self.pixels.insert((x, y));
-                    min_sel_x = min_sel_x.min(x);
-                    max_sel_x = max_sel_x.max(x);
-                    min_sel_y = min_sel_y.min(y);
-                    max_sel_y = max_sel_y.max(y);
+                    pixels.insert((x, y));
                 }
             }
         }
 
-        if self.pixels.is_empty() {
-            self.rect_bounds = None;
-        } else {
-            self.rect_bounds = Some((min_sel_x, min_sel_y, max_sel_x, max_sel_y));
-        }
+        pixels
     }
 
+    pub fn set_polygon(&mut self, polygon: &[(i32, i32)], max_w: u32, max_h: u32) {
+        self.modify_polygon(polygon, max_w, max_h, SelectionMode::Replace);
+    }
+
+    pub fn modify_polygon(
+        &mut self,
+        polygon: &[(i32, i32)],
+        max_w: u32,
+        max_h: u32,
+        mode: SelectionMode,
+    ) {
+        if polygon.is_empty() {
+            if matches!(mode, SelectionMode::Replace | SelectionMode::Intersect) {
+                self.clear();
+            }
+            return;
+        }
+
+        let poly_pixels = Self::rasterize_polygon(polygon, max_w, max_h);
+
+        match mode {
+            SelectionMode::Replace => {
+                self.pixels = poly_pixels;
+                self.update_rect_bounds_from_pixels();
+            }
+            SelectionMode::Add => {
+                for p in poly_pixels {
+                    self.pixels.insert(p);
+                }
+                self.update_rect_bounds_from_pixels();
+            }
+            SelectionMode::Subtract => {
+                for p in poly_pixels {
+                    self.pixels.remove(&p);
+                }
+                self.update_rect_bounds_from_pixels();
+            }
+            SelectionMode::Intersect => {
+                self.pixels.retain(|p| poly_pixels.contains(p));
+                self.update_rect_bounds_from_pixels();
+            }
+        }
+    }
     pub fn translate(&mut self, dx: i32, dy: i32, max_w: u32, max_h: u32, wrap_around: bool) {
         let iw = max_w.max(1) as i32;
         let ih = max_h.max(1) as i32;
@@ -536,5 +615,115 @@ mod tests {
         assert_eq!(expand_mask.pixels.len(), 25);
         assert!(expand_mask.contains(1, 1));
         assert!(expand_mask.contains(5, 5));
+    }
+
+    #[test]
+    fn test_selection_modify_rect_replace() {
+        let mut mask = SelectionMask::default();
+        mask.set_rect((0, 0), (2, 2), 16, 16);
+        assert_eq!(mask.pixels.len(), 9);
+
+        mask.modify_rect((5, 5), (7, 7), 16, 16, SelectionMode::Replace);
+        assert_eq!(mask.pixels.len(), 9);
+        assert!(!mask.contains(0, 0));
+        assert!(mask.contains(5, 5));
+        assert!(mask.contains(7, 7));
+        assert_eq!(mask.rect_bounds, Some((5, 5, 7, 7)));
+    }
+
+    #[test]
+    fn test_selection_modify_rect_add() {
+        let mut mask = SelectionMask::default();
+        mask.set_rect((0, 0), (2, 2), 16, 16);
+        assert_eq!(mask.pixels.len(), 9);
+
+        // Add overlapping rect (2, 2)..(4, 4) (9 pixels, overlapping at (2, 2))
+        mask.modify_rect((2, 2), (4, 4), 16, 16, SelectionMode::Add);
+        assert_eq!(mask.pixels.len(), 17);
+        assert!(mask.contains(0, 0));
+        assert!(mask.contains(2, 2));
+        assert!(mask.contains(4, 4));
+        assert_eq!(mask.rect_bounds, Some((0, 0, 4, 4)));
+    }
+
+    #[test]
+    fn test_selection_modify_rect_subtract() {
+        let mut mask = SelectionMask::default();
+        mask.set_rect((0, 0), (4, 4), 16, 16); // 5x5 = 25 pixels
+        assert_eq!(mask.pixels.len(), 25);
+
+        // Subtract center 3x3
+        mask.modify_rect((1, 1), (3, 3), 16, 16, SelectionMode::Subtract);
+        assert_eq!(mask.pixels.len(), 16);
+        assert!(mask.contains(0, 0));
+        assert!(mask.contains(4, 4));
+        assert!(!mask.contains(1, 1));
+        assert!(!mask.contains(2, 2));
+        assert!(!mask.contains(3, 3));
+    }
+
+    #[test]
+    fn test_selection_modify_rect_intersect() {
+        let mut mask = SelectionMask::default();
+        mask.set_rect((0, 0), (3, 3), 16, 16); // 4x4 = 16 pixels
+        assert_eq!(mask.pixels.len(), 16);
+
+        // Intersect with (2, 2)..(5, 5) -> overlap is (2, 2)..(3, 3) = 4 pixels
+        mask.modify_rect((2, 2), (5, 5), 16, 16, SelectionMode::Intersect);
+        assert_eq!(mask.pixels.len(), 4);
+        assert!(mask.contains(2, 2));
+        assert!(mask.contains(2, 3));
+        assert!(mask.contains(3, 2));
+        assert!(mask.contains(3, 3));
+        assert!(!mask.contains(0, 0));
+        assert_eq!(mask.rect_bounds, Some((2, 2, 3, 3)));
+    }
+
+    #[test]
+    fn test_selection_modify_rect_intersect_disjoint() {
+        let mut mask = SelectionMask::default();
+        mask.set_rect((0, 0), (1, 1), 16, 16);
+
+        mask.modify_rect((5, 5), (6, 6), 16, 16, SelectionMode::Intersect);
+        assert!(mask.is_empty());
+        assert_eq!(mask.rect_bounds, None);
+    }
+
+    #[test]
+    fn test_selection_modify_polygon_add_subtract_intersect() {
+        let mut mask = SelectionMask::default();
+        mask.set_rect((0, 0), (3, 3), 16, 16); // 16 pixels
+        assert_eq!(mask.pixels.len(), 16);
+
+        // Add a triangle polygon (3, 3)..(6, 3)..(3, 6)
+        let tri = vec![(3, 3), (6, 3), (3, 6)];
+        mask.modify_polygon(&tri, 16, 16, SelectionMode::Add);
+        assert!(mask.contains(0, 0));
+        assert!(mask.contains(3, 3));
+        assert!(mask.contains(5, 3));
+        assert!(mask.contains(3, 5));
+
+        // Subtract the original rect (0, 0)..(2, 2)
+        let box_poly = vec![(0, 0), (2, 0), (2, 2), (0, 2)];
+        mask.modify_polygon(&box_poly, 16, 16, SelectionMode::Subtract);
+        assert!(!mask.contains(0, 0));
+        assert!(!mask.contains(1, 1));
+        assert!(mask.contains(3, 3));
+
+        // Intersect with bounding area around (3, 3)
+        let inter_poly = vec![(3, 3), (4, 3), (4, 4), (3, 4)];
+        mask.modify_polygon(&inter_poly, 16, 16, SelectionMode::Intersect);
+        assert!(mask.contains(3, 3));
+        assert!(!mask.contains(5, 3));
+    }
+
+    #[test]
+    fn test_selection_modify_rect_subtract_all() {
+        let mut mask = SelectionMask::default();
+        mask.set_rect((2, 2), (3, 3), 16, 16);
+
+        mask.modify_rect((0, 0), (10, 10), 16, 16, SelectionMode::Subtract);
+        assert!(mask.is_empty());
+        assert_eq!(mask.rect_bounds, None);
     }
 }

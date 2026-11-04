@@ -6,7 +6,7 @@ use crate::model::palette::PaletteSortCriterion;
 use crate::model::project::Project;
 use crate::model::sketch::QuickPeekMode;
 use crate::theme::*;
-use crate::tools::{DitherPattern, GradientDither, GradientKind, SymmetryMode, ToolKind, ToolSettings};
+use crate::tools::{DitherPattern, GradientDither, GradientKind, SelectionMode, SymmetryMode, ToolKind, ToolSettings};
 use egui::{Color32, Panel, Ui};
 
 #[derive(Default)]
@@ -925,7 +925,40 @@ pub fn show_top_bars(
                     ui.checkbox(&mut tools.wand_global, i18n.tr("context.wand_global"))
                         .on_hover_text(i18n.tr("tooltip.wand_global"));
                 }
-                ToolKind::RectSelect | ToolKind::Lasso | ToolKind::Eyedropper | ToolKind::PivotPoint => {
+                ToolKind::RectSelect | ToolKind::Lasso => {
+                    ui.label(i18n.tr("context.selection_mode"));
+                    ui.selectable_value(
+                        &mut tools.selection_mode,
+                        SelectionMode::Replace,
+                        i18n.tr("context.sel_mode_replace"),
+                    )
+                    .on_hover_text(i18n.tr("tooltip.sel_mode_replace"));
+
+                    ui.selectable_value(
+                        &mut tools.selection_mode,
+                        SelectionMode::Add,
+                        i18n.tr("context.sel_mode_add"),
+                    )
+                    .on_hover_text(i18n.tr("tooltip.sel_mode_add"));
+
+                    ui.selectable_value(
+                        &mut tools.selection_mode,
+                        SelectionMode::Subtract,
+                        i18n.tr("context.sel_mode_subtract"),
+                    )
+                    .on_hover_text(i18n.tr("tooltip.sel_mode_subtract"));
+
+                    ui.selectable_value(
+                        &mut tools.selection_mode,
+                        SelectionMode::Intersect,
+                        i18n.tr("context.sel_mode_intersect"),
+                    )
+                    .on_hover_text(i18n.tr("tooltip.sel_mode_intersect"));
+
+                    ui.checkbox(&mut tools.wrap_around, i18n.tr("context.wrap_around"))
+                        .on_hover_text(i18n.tr("tooltip.wrap_around"));
+                }
+                ToolKind::Eyedropper | ToolKind::PivotPoint => {
                     ui.checkbox(&mut tools.wrap_around, i18n.tr("context.wrap_around"))
                         .on_hover_text(i18n.tr("tooltip.wrap_around"));
                 }

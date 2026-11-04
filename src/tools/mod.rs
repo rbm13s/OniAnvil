@@ -5,6 +5,8 @@ pub mod shapes;
 pub mod stroke;
 pub mod transforms;
 
+pub use selection::SelectionMode;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -242,6 +244,7 @@ pub struct ToolSettings {
     pub gradient_kind: GradientKind,
     pub gradient_dither: GradientDither,
     pub tolerance: u8,
+    pub selection_mode: SelectionMode,
 }
 
 impl Default for ToolSettings {
@@ -264,6 +267,7 @@ impl Default for ToolSettings {
             gradient_kind: GradientKind::Linear,
             gradient_dither: GradientDither::None,
             tolerance: 0,
+            selection_mode: SelectionMode::default(),
         }
     }
 }

@@ -2,6 +2,7 @@ use crate::canvas::viewport::{BackgroundMode, CanvasViewMode, ViewportState};
 use crate::model::metadata::ProjectMetadata;
 use crate::tools::selection::SelectionMask;
 use crate::tools::SymmetryMode;
+use std::collections::HashSet;
 use egui::{Color32, FontId, Painter, Pos2, Rect, Stroke, Vec2};
 
 pub fn draw_canvas_background(
@@ -207,7 +208,14 @@ pub fn draw_symmetry_axes(
     }
 }
 
-pub fn draw_marching_ants_segment(painter: &Painter, p_start: Pos2, p_end: Pos2, phase: f32) {
+pub fn draw_marching_ants_segment_colored(
+    painter: &Painter,
+    p_start: Pos2,
+    p_end: Pos2,
+    phase: f32,
+    stroke_dark: Stroke,
+    stroke_light: Stroke,
+) {
     let (a, b) = if p_start.x + p_start.y <= p_end.x + p_end.y {
         (p_start, p_end)
     } else {
@@ -218,8 +226,6 @@ pub fn draw_marching_ants_segment(painter: &Painter, p_start: Pos2, p_end: Pos2,
     if len < 0.25 {
         return;
     }
-    let stroke_dark = Stroke::new(1.5, Color32::from_rgb(15, 15, 15));
-    let stroke_light = Stroke::new(1.5, Color32::from_rgb(250, 250, 250));
     painter.line_segment([a, b], stroke_dark);
 
     let unit = dir / len;
@@ -238,15 +244,53 @@ pub fn draw_marching_ants_segment(painter: &Painter, p_start: Pos2, p_end: Pos2,
     }
 }
 
+#[allow(dead_code)]
+pub fn draw_marching_ants_segment(painter: &Painter, p_start: Pos2, p_end: Pos2, phase: f32) {
+    let stroke_dark = Stroke::new(1.5, Color32::from_rgb(15, 15, 15));
+    let stroke_light = Stroke::new(1.5, Color32::from_rgb(250, 250, 250));
+    draw_marching_ants_segment_colored(painter, p_start, p_end, phase, stroke_dark, stroke_light);
+}
+
+fn draw_mask_marching_ants(
+    painter: &Painter,
+    active_frame_rect: Rect,
+    pixels: &HashSet<(i32, i32)>,
+    zoom: f32,
+    phase: f32,
+    stroke_dark: Stroke,
+    stroke_light: Stroke,
+) {
+    for &(x, y) in pixels {
+        let min = Pos2::new(
+            active_frame_rect.min.x + x as f32 * zoom,
+            active_frame_rect.min.y + y as f32 * zoom,
+        );
+        let r = Rect::from_min_size(min, Vec2::splat(zoom));
+        if !pixels.contains(&(x - 1, y)) {
+            draw_marching_ants_segment_colored(painter, r.left_top(), r.left_bottom(), phase, stroke_dark, stroke_light);
+        }
+        if !pixels.contains(&(x + 1, y)) {
+            draw_marching_ants_segment_colored(painter, r.right_top(), r.right_bottom(), phase, stroke_dark, stroke_light);
+        }
+        if !pixels.contains(&(x, y - 1)) {
+            draw_marching_ants_segment_colored(painter, r.left_top(), r.right_top(), phase, stroke_dark, stroke_light);
+        }
+        if !pixels.contains(&(x, y + 1)) {
+            draw_marching_ants_segment_colored(painter, r.left_bottom(), r.right_bottom(), phase, stroke_dark, stroke_light);
+        }
+    }
+}
+
 pub fn draw_selection_overlay(
     painter: &Painter,
     active_frame_rect: Rect,
     selection: &SelectionMask,
-    lasso_preview: Option<&[(i32, i32)]>,
+    intersect_candidate: Option<&SelectionMask>,
     zoom: f32,
 ) {
-    let has_lasso = lasso_preview.map(|pts| pts.len() >= 2).unwrap_or(false);
-    if selection.is_empty() && !has_lasso {
+    let has_main = !selection.is_empty();
+    let has_cand = intersect_candidate.map(|c| !c.is_empty()).unwrap_or(false);
+    if !has_main && !has_cand {
         return;
     }
 
@@ -254,43 +298,36 @@ pub fn draw_selection_overlay(
     ctx.request_repaint_after(std::time::Duration::from_millis(50));
     let phase = (ctx.input(|i| i.time) * 18.0).rem_euclid(8.0) as f32;
 
-    for &(x, y) in &selection.pixels {
-        let min = Pos2::new(
-            active_frame_rect.min.x + x as f32 * zoom,
-            active_frame_rect.min.y + y as f32 * zoom,
+    if has_main {
+        let stroke_dark = Stroke::new(1.5, Color32::from_rgb(15, 15, 15));
+        let stroke_light = Stroke::new(1.5, Color32::from_rgb(250, 250, 250));
+        draw_mask_marching_ants(
+            painter,
+            active_frame_rect,
+            &selection.pixels,
+            zoom,
+            phase,
+            stroke_dark,
+            stroke_light,
         );
-        let r = Rect::from_min_size(min, Vec2::splat(zoom));
-        if !selection.pixels.contains(&(x - 1, y)) {
-            draw_marching_ants_segment(painter, r.left_top(), r.left_bottom(), phase);
-        }
-        if !selection.pixels.contains(&(x + 1, y)) {
-            draw_marching_ants_segment(painter, r.right_top(), r.right_bottom(), phase);
-        }
-        if !selection.pixels.contains(&(x, y - 1)) {
-            draw_marching_ants_segment(painter, r.left_top(), r.right_top(), phase);
-        }
-        if !selection.pixels.contains(&(x, y + 1)) {
-            draw_marching_ants_segment(painter, r.left_bottom(), r.right_bottom(), phase);
-        }
     }
 
-    if let Some(pts) = lasso_preview {
-        if pts.len() >= 2 {
-            for pair in pts.windows(2) {
-                let p0 = Pos2::new(
-                    active_frame_rect.min.x + (pair[0].0 as f32 + 0.5) * zoom,
-                    active_frame_rect.min.y + (pair[0].1 as f32 + 0.5) * zoom,
-                );
-                let p1 = Pos2::new(
-                    active_frame_rect.min.x + (pair[1].0 as f32 + 0.5) * zoom,
-                    active_frame_rect.min.y + (pair[1].1 as f32 + 0.5) * zoom,
-                );
-                draw_marching_ants_segment(painter, p0, p1, phase);
-            }
+    if let Some(cand) = intersect_candidate {
+        if !cand.is_empty() {
+            let stroke_dark = Stroke::new(1.5, Color32::from_rgb(10, 35, 60));
+            let stroke_light = Stroke::new(1.5, Color32::from_rgb(0, 230, 255));
+            draw_mask_marching_ants(
+                painter,
+                active_frame_rect,
+                &cand.pixels,
+                zoom,
+                phase,
+                stroke_dark,
+                stroke_light,
+            );
         }
     }
 }
-
 pub fn draw_preview_pixels_and_cursor(
     painter: &Painter,
     active_frame_rect: Rect,
