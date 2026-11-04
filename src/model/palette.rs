@@ -784,6 +784,61 @@ pub fn color_luminance(c: [u8; 4]) -> f32 {
     0.299 * (c[0] as f32) + 0.587 * (c[1] as f32) + 0.114 * (c[2] as f32)
 }
 
+/// Checks whether a color is considered neutral/achromatic (black, white, or gray)
+/// so that it doesn't get assigned arbitrary hue and pollute chromatic sorting.
+pub fn is_color_neutral(c: [u8; 4]) -> bool {
+    let r = c[0] as i32;
+    let g = c[1] as i32;
+    let b = c[2] as i32;
+    let max = r.max(g).max(b);
+    let min = r.min(g).min(b);
+    let delta = max - min;
+
+    // Extreme darks (almost black) or extreme brights (almost white)
+    if max <= 16 || min >= 245 {
+        return true;
+    }
+
+    // Low chroma delta between RGB components
+    if delta <= 12 {
+        return true;
+    }
+
+    // In HSL terms: low saturation (< 0.12)
+    let (_, s, _) = rgb_to_hsl(c[0], c[1], c[2]);
+    s < 0.12
+}
+
+/// Perceptual saturation / colorfulness calculation.
+/// Uses perceptual chroma weighted by lightness (so darks/shadows and blown-out whites don't dominate),
+/// combined with HSV saturation to reflect real colorfulness to the human eye.
+pub fn color_saturation(c: [u8; 4]) -> f32 {
+    let r = c[0] as f32;
+    let g = c[1] as f32;
+    let b = c[2] as f32;
+    let max = r.max(g).max(b);
+    let min = r.min(g).min(b);
+    let chroma = max - min; // 0..255
+
+    if max <= 16.0 || min >= 245.0 || chroma < 3.0 {
+        return 0.0;
+    }
+
+    // HSV saturation: chroma / max (0.0..1.0)
+    let s_hsv = chroma / max;
+
+    // Perceptual bell curve around midtones (lightness 0.2..0.8 is where saturation is most visible)
+    let lum = color_luminance(c) / 255.0; // 0.0..1.0
+    let weight = if lum < 0.5 {
+        (lum / 0.5).powf(0.8) // taper off smoothly to black
+    } else {
+        ((1.0 - lum) / 0.5).powf(0.8) // taper off smoothly to white
+    };
+
+    // Combined metric: pure gray = 0.0, vivid colors in midtones = up to ~255.0
+    chroma * (0.3 + 0.7 * s_hsv) * (0.2 + 0.8 * weight)
+}
+
 /// Sorts the palette colors in place according to the chosen criterion.
 pub fn sort_palette_colors(colors: &mut [ [u8; 4] ], criterion: PaletteSortCriterion) {
     match criterion {
@@ -792,18 +847,33 @@ pub fn sort_palette_colors(colors: &mut [ [u8; 4] ], criterion: PaletteSortCrite
         }
         PaletteSortCriterion::Hue => {
             colors.sort_by(|a, b| {
-                let (ha, sa, la) = rgb_to_hsl(a[0], a[1], a[2]);
-                let (hb, sb, lb) = rgb_to_hsl(b[0], b[1], b[2]);
-                let neutral_a = sa < 0.05;
-                let neutral_b = sb < 0.05;
+                let neutral_a = is_color_neutral(*a);
+                let neutral_b = is_color_neutral(*b);
+
                 match (neutral_a, neutral_b) {
+                    // Neutrals (blacks, grays, whites) go to the front, sorted by luminance
                     (true, false) => std::cmp::Ordering::Less,
                     (false, true) => std::cmp::Ordering::Greater,
-                    (true, true) => la.total_cmp(&lb),
-                    (false, false) => ha
-                        .total_cmp(&hb)
-                        .then_with(|| la.total_cmp(&lb))
-                        .then_with(|| sa.total_cmp(&sb)),
+                    (true, true) => {
+                        let la = color_luminance(*a);
+                        let lb = color_luminance(*b);
+                        la.total_cmp(&lb)
+                    }
+                    (false, false) => {
+                        let (ha, _, la) = rgb_to_hsl(a[0], a[1], a[2]);
+                        let (hb, _, lb) = rgb_to_hsl(b[0], b[1], b[2]);
+
+                        // Quantize hue into bins (~12 degrees) so colors of the same general hue
+                        // family form neat gradient runs sorted by luminance/chroma
+                        let bin_a = (ha / 12.0).floor() as i32;
+                        let bin_b = (hb / 12.0).floor() as i32;
+
+                        bin_a
+                            .cmp(&bin_b)
+                            .then_with(|| ha.total_cmp(&hb))
+                            .then_with(|| la.total_cmp(&lb))
+                            .then_with(|| color_saturation(*a).total_cmp(&color_saturation(*b)))
+                    }
                 }
             });
         }
@@ -812,13 +882,48 @@ pub fn sort_palette_colors(colors: &mut [ [u8; 4] ], criterion: PaletteSortCrite
                 let la = color_luminance(*a);
                 let lb = color_luminance(*b);
                 la.total_cmp(&lb)
+                    .then_with(|| {
+                        let (ha, _, _) = rgb_to_hsl(a[0], a[1], a[2]);
+                        let (hb, _, _) = rgb_to_hsl(b[0], b[1], b[2]);
+                        ha.total_cmp(&hb)
+                    })
+                    .then_with(|| color_saturation(*a).total_cmp(&color_saturation(*b)))
             });
         }
         PaletteSortCriterion::Saturation => {
             colors.sort_by(|a, b| {
-                let (_, sa, la) = rgb_to_hsl(a[0], a[1], a[2]);
-                let (_, sb, lb) = rgb_to_hsl(b[0], b[1], b[2]);
-                sa.total_cmp(&sb).then_with(|| la.total_cmp(&lb))
+                let sa = color_saturation(*a);
+                let sb = color_saturation(*b);
+                let neutral_a = sa < 1.0;
+                let neutral_b = sb < 1.0;
+
+                match (neutral_a, neutral_b) {
+                    (true, false) => std::cmp::Ordering::Less,
+                    (false, true) => std::cmp::Ordering::Greater,
+                    (true, true) => {
+                        let la = color_luminance(*a);
+                        let lb = color_luminance(*b);
+                        la.total_cmp(&lb)
+                    }
+                    (false, false) => {
+                        // Sort by saturation bin (~15 units) first, then within bin by hue -> luminance
+                        let bin_a = (sa / 15.0).floor() as i32;
+                        let bin_b = (sb / 15.0).floor() as i32;
+                        bin_a
+                            .cmp(&bin_b)
+                            .then_with(|| sa.total_cmp(&sb))
+                            .then_with(|| {
+                                let (ha, _, _) = rgb_to_hsl(a[0], a[1], a[2]);
+                                let (hb, _, _) = rgb_to_hsl(b[0], b[1], b[2]);
+                                ha.total_cmp(&hb)
+                            })
+                            .then_with(|| {
+                                let la = color_luminance(*a);
+                                let lb = color_luminance(*b);
+                                la.total_cmp(&lb)
+                            })
+                    }
+                }
             });
         }
     }
@@ -1076,6 +1181,39 @@ mod tests {
         sort_palette_colors(&mut cols, PaletteSortCriterion::Reverse);
         assert_eq!(cols[0], [255, 255, 255, 255]);
         assert_eq!(*cols.last().unwrap(), [0, 0, 0, 255]);
+
+        // Hue sort: Neutrals (Black, White) come first, followed by chromatic colors
+        let mut hue_cols = vec![
+            [128, 0, 0, 255],     // Dark Red
+            [5, 5, 5, 255],       // Near Black (Neutral)
+            [0, 255, 0, 255],     // Green
+            [250, 250, 250, 255], // Near White (Neutral)
+            [255, 0, 0, 255],     // Bright Red
+            [0, 0, 255, 255],     // Blue
+        ];
+        sort_palette_colors(&mut hue_cols, PaletteSortCriterion::Hue);
+        // Neutrals first
+        assert_eq!(hue_cols[0], [5, 5, 5, 255]);
+        assert_eq!(hue_cols[1], [250, 250, 250, 255]);
+        // Red colors grouped together
+        assert_eq!(hue_cols[2], [128, 0, 0, 255]);
+        assert_eq!(hue_cols[3], [255, 0, 0, 255]);
+        // Green then Blue
+        assert_eq!(hue_cols[4], [0, 255, 0, 255]);
+        assert_eq!(hue_cols[5], [0, 0, 255, 255]);
+
+        // Saturation sort: Pure neutrals have chroma 0, followed by low chroma, then high chroma
+        let mut sat_cols = vec![
+            [255, 0, 0, 255],   // Chroma = 255
+            [10, 10, 10, 255],  // Chroma = 0
+            [100, 90, 90, 255], // Chroma = 10
+            [200, 50, 50, 255], // Chroma = 150
+        ];
+        sort_palette_colors(&mut sat_cols, PaletteSortCriterion::Saturation);
+        assert_eq!(sat_cols[0], [10, 10, 10, 255]);
+        assert_eq!(sat_cols[1], [100, 90, 90, 255]);
+        assert_eq!(sat_cols[2], [200, 50, 50, 255]);
+        assert_eq!(sat_cols[3], [255, 0, 0, 255]);
 
         // Nearest palette color test
         let palette = vec![[255, 0, 0, 255], [0, 0, 255, 255]];
