@@ -427,12 +427,12 @@ All image effects include a real-time **Live Preview** checkbox that previews mo
 
 Download pre-compiled, self-contained binaries from the **[GitHub Releases Page](https://github.com/rbm13s/OniAnvil/releases/latest)**:
 
-- **Windows**: Download `OniAnvil-windows-x86_64.zip`, extract, and double-click `OniAnvil.exe`.
-- **Linux**: Download `OniAnvil-linux-x86_64.tar.gz` (portable) or install the `onianvil_*_amd64.deb` Debian/Ubuntu package:
+- **Windows**: Download `OniAnvil-1.2.0-windows-x86_64.zip`, extract, and double-click `OniAnvil.exe`.
+- **Linux**: Download `OniAnvil-1.2.0-linux-x86_64.tar.gz` (portable) or install the `onianvil_1.2.0_amd64.deb` Debian/Ubuntu package:
   ```bash
-  sudo dpkg -i onianvil_*_amd64.deb
+  sudo dpkg -i onianvil_1.2.0_amd64.deb
   ```
-- **macOS**: Download `OniAnvil-macos-universal.zip`, extract, and drag `OniAnvil.app` to your Applications folder. Universal binary runs natively on both Apple Silicon (M1/M2/M3/M4) and Intel Macs.
+- **macOS**: Download `OniAnvil-1.2.0-macos-universal.zip`, extract, and drag `OniAnvil.app` to your Applications folder. Universal binary runs natively on both Apple Silicon (M1/M2/M3/M4) and Intel Macs.
 - **Web**: Run directly in your browser without installing anything: **[Launch WebAssembly App](https://rbm13s.github.io/OniAnvil/app/)**.
   > [!WARNING]
   > The WebAssembly (browser) build has an **Experimental** status. Due to browser sandbox constraints, WebGL/WebGPU differences, and clipboard limitations, you may encounter minor graphical glitches or performance bottlenecks compared to the native desktop version. For production work, native desktop builds are strongly recommended.

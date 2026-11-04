@@ -157,9 +157,9 @@ Rust ile yazılmış yüksek performanslı çapraz platform piksel sanatı iş i
 ## Getting Started
 
 ### Standalone Binaries
-- **Windows**: Download `OniAnvil-windows-x86_64.zip`, extract, and launch `onianvil.exe`.
-- **Linux**: Download `OniAnvil-linux-x86_64.tar.gz` (portable) or install `onianvil_*_amd64.deb`.
-- **macOS**: Download `OniAnvil-macos-universal.zip`, extract, and drag `OniAnvil.app` to Applications.
+- **Windows**: Download `OniAnvil-1.2.0-windows-x86_64.zip`, extract, and launch `onianvil.exe`.
+- **Linux**: Download `OniAnvil-1.2.0-linux-x86_64.tar.gz` (portable) or install `onianvil_1.2.0_amd64.deb`.
+- **macOS**: Download `OniAnvil-1.2.0-macos-universal.zip`, extract, and drag `OniAnvil.app` to Applications.
 - **Web**: Run directly in your browser without installing anything: **[Launch WebAssembly App](https://rbm13s.github.io/OniAnvil/app/?lang=tr)**.
   > [!WARNING]
   > The WebAssembly (browser) build has an **Experimental** status. Due to browser sandbox constraints, WebGL/WebGPU differences, and clipboard limitations, you may encounter minor graphical glitches or performance bottlenecks. For production work, native desktop builds are strongly recommended.

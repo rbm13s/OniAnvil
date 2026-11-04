@@ -424,12 +424,12 @@
 
 Загрузите готовые автономные исполняемые файлы со **[страницы релизов GitHub](https://github.com/rbm13s/OniAnvil/releases/latest)**:
 
-- **Windows**: Скачайте `OniAnvil-windows-x86_64.zip`, распакуйте и запустите `OniAnvil.exe`.
-- **Linux**: Скачайте архив `OniAnvil-linux-x86_64.tar.gz` (портативный) или установите пакет `onianvil_*_amd64.deb` для Debian/Ubuntu:
+- **Windows**: Скачайте `OniAnvil-1.2.0-windows-x86_64.zip`, распакуйте и запустите `OniAnvil.exe`.
+- **Linux**: Скачайте архив `OniAnvil-1.2.0-linux-x86_64.tar.gz` (портативный) или установите пакет `onianvil_1.2.0_amd64.deb` для Debian/Ubuntu:
   ```bash
   sudo dpkg -i onianvil_*_amd64.deb
   ```
-- **macOS**: Скачайте `OniAnvil-macos-universal.zip`, распакуйте и перетащите `OniAnvil.app` в папку «Программы». Универсальный бинарник работает как на Apple Silicon (M1/M2/M3/M4), так и на Intel.
+- **macOS**: Скачайте `OniAnvil-1.2.0-macos-universal.zip`, распакуйте и перетащите `OniAnvil.app` в папку «Программы». Универсальный бинарник работает как на Apple Silicon (M1/M2/M3/M4), так и на Intel.
 - **Web**: Запуск прямо в браузере без установки: **[Открыть WebAssembly-версию](https://rbm13s.github.io/OniAnvil/app/?lang=ru)**.
   > [!WARNING]
   > Веб-сборка (WebAssembly) имеет статус **Experimental (экспериментальная)**. Из-за ограничений браузерной песочницы, драйверов WebGL/WebGPU и системного буфера обмена в ней могут присутствовать графические артефакты или баги. Для комфортной и регулярной работы настоятельно рекомендуется использовать нативные десктопные версии.
