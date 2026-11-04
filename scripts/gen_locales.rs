@@ -183,6 +183,8 @@ fn build_markdown_language_bar(current_code: &str, in_docs_dir: bool) -> String 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let sync_locales = args.iter().any(|a| a == "--sync-locales" || a == "--locales");
+    let check_keys = args.iter().any(|a| a == "--check-keys");
+    let merge_parts = args.iter().any(|a| a == "--merge-parts");
 
     let en_path = Path::new("assets/locales/en.json");
     let ru_path = Path::new("assets/locales/ru.json");
@@ -190,10 +192,88 @@ fn main() {
     let en_text = fs::read_to_string(en_path).expect("Read en.json");
     let ru_text = fs::read_to_string(ru_path).expect("Read ru.json");
 
+    let en_ordered_keys: Vec<String> = en_text
+        .lines()
+        .filter_map(|line| {
+            let trimmed = line.trim();
+            if let Some(rest) = trimmed.strip_prefix('"') {
+                let key = rest.split('"').next()?;
+                let remainder = &rest[key.len()..];
+                if remainder.starts_with('"') && remainder[1..].trim_start().starts_with(':') {
+                    return Some(key.to_string());
+                }
+            }
+            None
+        })
+        .collect();
+
     let en_map: BTreeMap<String, String> = serde_json::from_str(&en_text).expect("Parse en.json");
     let ru_map: BTreeMap<String, String> = serde_json::from_str(&ru_text).expect("Parse ru.json");
 
-    println!("Base keys loaded: {} (en), {} (ru)", en_map.len(), ru_map.len());
+    println!("Base keys loaded: {} (en ordered: {}), {} (ru)", en_map.len(), en_ordered_keys.len(), ru_map.len());
+
+    if check_keys {
+        println!("Checking keys parity...");
+        assert_eq!(en_map.len(), en_ordered_keys.len());
+        println!("Middle key [399]: {}", en_ordered_keys[399]);
+        println!("Middle key [400]: {}", en_ordered_keys[400]);
+        return;
+    }
+
+    if merge_parts {
+        let target_langs = ["nl", "sv", "no", "da", "fi"];
+        for code in target_langs {
+            let p1_path = format!("assets/locales/{}_part1.json", code);
+            let p2_path = format!("assets/locales/{}_part2.json", code);
+            if !Path::new(&p1_path).exists() || !Path::new(&p2_path).exists() {
+                println!("Skipping {} (part files missing)", code);
+                continue;
+            }
+
+            let p1_text = fs::read_to_string(&p1_path).expect("Read part1");
+            let p2_text = fs::read_to_string(&p2_path).expect("Read part2");
+            let m1: BTreeMap<String, String> = serde_json::from_str(&p1_text).expect("Parse part1");
+            let m2: BTreeMap<String, String> = serde_json::from_str(&p2_text).expect("Parse part2");
+
+            let mut merged_lines = Vec::new();
+            merged_lines.push("{\n".to_string());
+
+            let mut missing = Vec::new();
+            let mut identical_to_en = Vec::new();
+
+            for (idx, k) in en_ordered_keys.iter().enumerate() {
+                let val = if let Some(v) = m1.get(k) {
+                    v
+                } else if let Some(v) = m2.get(k) {
+                    v
+                } else {
+                    missing.push(k.clone());
+                    en_map.get(k).unwrap()
+                };
+
+                let en_val = en_map.get(k).unwrap();
+                if val == en_val {
+                    identical_to_en.push((k.clone(), val.clone()));
+                }
+
+                let escaped_val = serde_json::to_string(val).unwrap();
+                let comma = if idx + 1 == en_ordered_keys.len() { "" } else { "," };
+                merged_lines.push(format!("  \"{}\": {}{}\n", k, escaped_val, comma));
+            }
+            merged_lines.push("}\n".to_string());
+
+            let out_path = format!("assets/locales/{}.json", code);
+            fs::write(&out_path, merged_lines.concat()).expect("Write merged JSON");
+            println!("Merged {} successfully ({} keys written)", out_path, en_ordered_keys.len());
+            if !missing.is_empty() {
+                println!("  WARNING: {} missing keys in {}: {:?}", missing.len(), code, missing);
+            }
+            println!("  Identical to EN count: {}", identical_to_en.len());
+            fs::remove_file(&p1_path).ok();
+            fs::remove_file(&p2_path).ok();
+        }
+        return;
+    }
 
     // Only update locale JSON files when explicitly asked with --sync-locales,
     // and always preserve all existing translated keys!
