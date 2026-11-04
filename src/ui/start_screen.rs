@@ -160,24 +160,24 @@ pub fn show_start_screen(
                             let font_id = egui::FontId::proportional(11.0);
                             let credit_prefix = i18n.tr("start.demo_cat_credit");
                             let author_text = "xzany (itch.io)";
-                            let w1 = ui.fonts(|f| {
-                                f.layout_no_wrap(
+                            let w1 = ui
+                                .painter()
+                                .layout_no_wrap(
                                     credit_prefix.to_string(),
                                     font_id.clone(),
                                     Color32::WHITE,
                                 )
                                 .size()
-                                .x
-                            });
-                            let w2 = ui.fonts(|f| {
-                                f.layout_no_wrap(
+                                .x;
+                            let w2 = ui
+                                .painter()
+                                .layout_no_wrap(
                                     author_text.to_string(),
                                     font_id,
                                     Color32::WHITE,
                                 )
                                 .size()
-                                .x
-                            });
+                                .x;
                             let spacing = 4.0;
                             let total_w = w1 + spacing + w2;
 
@@ -338,11 +338,9 @@ mod tests {
         ];
         let p = PathBuf::from("C:/test/settings.json");
 
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
-            egui::CentralPanel::default().show(ctx, |ui| {
-                let action = show_start_screen(ui, &i18n, &recents, &p, None);
-                assert!(matches!(action, StartScreenAction::None));
-            });
+        let _ = ctx.run_ui(egui::RawInput::default(), |ui| {
+            let action = show_start_screen(ui, &i18n, &recents, &p, None);
+            assert!(matches!(action, StartScreenAction::None));
         });
     }
 
@@ -352,11 +350,9 @@ mod tests {
         let i18n = I18n::new(Language::English);
         let p = PathBuf::from("C:/test/settings.json");
 
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
-            egui::CentralPanel::default().show(ctx, |ui| {
-                let action = show_start_screen(ui, &i18n, &[], &p, None);
-                assert!(matches!(action, StartScreenAction::None));
-            });
+        let _ = ctx.run_ui(egui::RawInput::default(), |ui| {
+            let action = show_start_screen(ui, &i18n, &[], &p, None);
+            assert!(matches!(action, StartScreenAction::None));
         });
     }
 }

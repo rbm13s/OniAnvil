@@ -119,7 +119,7 @@ impl NewProjectWizardState {
             .collapsible(false)
             .resizable(false)
             .pivot(egui::Align2::CENTER_CENTER)
-            .default_pos(ctx.screen_rect().center())
+            .default_pos(ctx.viewport_rect().center())
             .constrain(true)
             .show(ctx, |ui: &mut Ui| {
                 ui.set_min_width(380.0);
@@ -312,7 +312,7 @@ impl ReGridModalState {
             .collapsible(false)
             .resizable(false)
             .pivot(egui::Align2::CENTER_CENTER)
-            .default_pos(ctx.screen_rect().center())
+            .default_pos(ctx.viewport_rect().center())
             .constrain(true)
             .show(ctx, |ui| {
                 ui.set_min_width(300.0);
@@ -442,7 +442,7 @@ impl Resize9GridModalState {
             .collapsible(false)
             .resizable(false)
             .pivot(egui::Align2::CENTER_CENTER)
-            .default_pos(ctx.screen_rect().center())
+            .default_pos(ctx.viewport_rect().center())
             .constrain(true)
             .show(ctx, |ui| {
                 ui.set_min_width(310.0);
@@ -753,7 +753,7 @@ impl SheetSlicerModalState {
             .collapsible(false)
             .resizable(false)
             .pivot(egui::Align2::CENTER_CENTER)
-            .default_pos(ctx.screen_rect().center())
+            .default_pos(ctx.viewport_rect().center())
             .constrain(true)
             .show(ctx, |ui| {
                 ui.set_min_width(520.0);
@@ -808,14 +808,10 @@ impl SheetSlicerModalState {
                         self.auto_detect_grid();
                     }
                     if ui.button(format!("{FA_CHECK} {}", i18n.tr("modal.slicer.select_all"))).clicked() {
-                        for v in &mut self.selected_frames {
-                            *v = true;
-                        }
+                        self.selected_frames.fill(true);
                     }
                     if ui.button(format!("{FA_CLOSE} {}", i18n.tr("modal.slicer.deselect_all"))).clicked() {
-                        for v in &mut self.selected_frames {
-                            *v = false;
-                        }
+                        self.selected_frames.fill(false);
                     }
                 });
 
@@ -1063,7 +1059,7 @@ impl UnsavedChangesModalState {
             .collapsible(false)
             .resizable(false)
             .pivot(egui::Align2::CENTER_CENTER)
-            .default_pos(ctx.screen_rect().center())
+            .default_pos(ctx.viewport_rect().center())
             .constrain(true)
             .show(ctx, |ui| {
                 ui.set_min_width(390.0);
@@ -1166,7 +1162,7 @@ impl ExportScaledPngModalState {
             .collapsible(false)
             .resizable(false)
             .pivot(egui::Align2::CENTER_CENTER)
-            .default_pos(ctx.screen_rect().center())
+            .default_pos(ctx.viewport_rect().center())
             .constrain(true)
             .show(ctx, |ui| {
                 ui.set_min_width(320.0);
@@ -1293,7 +1289,7 @@ impl ExportGifModalState {
             .collapsible(false)
             .resizable(false)
             .pivot(egui::Align2::CENTER_CENTER)
-            .default_pos(ctx.screen_rect().center())
+            .default_pos(ctx.viewport_rect().center())
             .constrain(true)
             .show(ctx, |ui| {
                 ui.set_min_width(320.0);
@@ -1450,7 +1446,7 @@ impl ExportPackedAtlasModalState {
             .collapsible(false)
             .resizable(false)
             .pivot(egui::Align2::CENTER_CENTER)
-            .default_pos(ctx.screen_rect().center())
+            .default_pos(ctx.viewport_rect().center())
             .constrain(true)
             .show(ctx, |ui| {
                 ui.set_min_width(340.0);
@@ -1627,7 +1623,7 @@ impl ReplaceColorModalState {
             .resizable(false)
             .default_width(340.0)
             .pivot(egui::Align2::CENTER_CENTER)
-            .default_pos(ctx.screen_rect().center())
+            .default_pos(ctx.viewport_rect().center())
             .constrain(true)
             .show(ctx, |ui| {
                 ui.set_width(340.0);
@@ -1916,7 +1912,7 @@ impl ColorAdjustModalState {
             .resizable(false)
             .default_width(360.0)
             .pivot(egui::Align2::CENTER_CENTER)
-            .default_pos(ctx.screen_rect().center())
+            .default_pos(ctx.viewport_rect().center())
             .constrain(true)
             .show(ctx, |ui| {
                 ui.set_width(360.0);
@@ -2060,7 +2056,7 @@ impl ModifySelectionModalState {
             .resizable(false)
             .default_width(340.0)
             .pivot(egui::Align2::CENTER_CENTER)
-            .default_pos(ctx.screen_rect().center())
+            .default_pos(ctx.viewport_rect().center())
             .constrain(true)
             .show(ctx, |ui| {
                 ui.set_width(340.0);
@@ -2234,7 +2230,7 @@ impl OutlineFxModalState {
             .resizable(false)
             .default_width(340.0)
             .pivot(egui::Align2::CENTER_CENTER)
-            .default_pos(ctx.screen_rect().center())
+            .default_pos(ctx.viewport_rect().center())
             .constrain(true)
             .show(ctx, |ui| {
                 ui.set_width(340.0);
@@ -2426,7 +2422,7 @@ impl ConvolutionModalState {
             .resizable(false)
             .default_width(340.0)
             .pivot(egui::Align2::CENTER_CENTER)
-            .default_pos(ctx.screen_rect().center())
+            .default_pos(ctx.viewport_rect().center())
             .constrain(true)
             .show(ctx, |ui| {
                 ui.set_width(340.0);
@@ -2611,7 +2607,7 @@ impl RemapPaletteModalState {
             .resizable(false)
             .default_width(340.0)
             .pivot(egui::Align2::CENTER_CENTER)
-            .default_pos(ctx.screen_rect().center())
+            .default_pos(ctx.viewport_rect().center())
             .constrain(true)
             .show(ctx, |ui| {
                 ui.set_width(340.0);
@@ -2843,7 +2839,7 @@ impl BakeSketchModalState {
             .movable(true)
             .default_width(430.0)
             .pivot(egui::Align2::CENTER_CENTER)
-            .default_pos(ctx.screen_rect().center())
+            .default_pos(ctx.viewport_rect().center())
             .constrain(true)
             .show(ctx, |ui| {
                 ui.set_width(430.0);
@@ -3331,12 +3327,6 @@ impl BakeSketchModalState {
                 if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
                     close_requested = true;
                 }
-                if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                    triggered = Some(BakeSketchAction {
-                        settings: self.settings.clone(),
-                    });
-                    close_requested = true;
-                }
             });
 
         self.open = window_open && !close_requested;
@@ -3398,7 +3388,7 @@ impl RotateModalState {
             .resizable(false)
             .default_width(340.0)
             .pivot(egui::Align2::CENTER_CENTER)
-            .default_pos(ctx.screen_rect().center())
+            .default_pos(ctx.viewport_rect().center())
             .constrain(true)
             .show(ctx, |ui| {
                 ui.set_width(340.0);
@@ -3517,7 +3507,7 @@ pub fn show_recovery_modal(
         .collapsible(false)
         .resizable(false)
         .pivot(egui::Align2::CENTER_CENTER)
-        .default_pos(ctx.screen_rect().center())
+        .default_pos(ctx.viewport_rect().center())
         .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(340.0);
@@ -3579,7 +3569,7 @@ pub fn show_confirm_delete_frame_modal(
         .collapsible(false)
         .resizable(false)
         .pivot(egui::Align2::CENTER_CENTER)
-        .default_pos(ctx.screen_rect().center())
+        .default_pos(ctx.viewport_rect().center())
         .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(340.0);
@@ -3650,7 +3640,7 @@ pub fn show_confirm_delete_layer_modal(
         .collapsible(false)
         .resizable(false)
         .pivot(egui::Align2::CENTER_CENTER)
-        .default_pos(ctx.screen_rect().center())
+        .default_pos(ctx.viewport_rect().center())
         .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(340.0);
@@ -3727,7 +3717,7 @@ pub fn show_confirm_delete_skin_modal(
         .collapsible(false)
         .resizable(false)
         .pivot(egui::Align2::CENTER_CENTER)
-        .default_pos(ctx.screen_rect().center())
+        .default_pos(ctx.viewport_rect().center())
         .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(340.0);
@@ -3806,7 +3796,7 @@ pub fn show_confirm_delete_recent_modal(
         .collapsible(false)
         .resizable(false)
         .pivot(egui::Align2::CENTER_CENTER)
-        .default_pos(ctx.screen_rect().center())
+        .default_pos(ctx.viewport_rect().center())
         .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(340.0);
@@ -3879,7 +3869,7 @@ pub fn show_confirm_delete_palette_slot_modal(
         .collapsible(false)
         .resizable(false)
         .pivot(egui::Align2::CENTER_CENTER)
-        .default_pos(ctx.screen_rect().center())
+        .default_pos(ctx.viewport_rect().center())
         .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(340.0);
@@ -3954,7 +3944,7 @@ pub fn show_confirm_delete_pivot_point_modal(
         .collapsible(false)
         .resizable(false)
         .pivot(egui::Align2::CENTER_CENTER)
-        .default_pos(ctx.screen_rect().center())
+        .default_pos(ctx.viewport_rect().center())
         .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(340.0);
@@ -4028,7 +4018,7 @@ pub fn show_confirm_delete_tag_modal(
         .collapsible(false)
         .resizable(false)
         .pivot(egui::Align2::CENTER_CENTER)
-        .default_pos(ctx.screen_rect().center())
+        .default_pos(ctx.viewport_rect().center())
         .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(340.0);
@@ -4101,7 +4091,7 @@ pub fn show_about_modal(ctx: &Context, i18n: &I18n, open: &mut bool) {
         .collapsible(false)
         .resizable(false)
         .pivot(egui::Align2::CENTER_CENTER)
-        .default_pos(ctx.screen_rect().center())
+        .default_pos(ctx.viewport_rect().center())
         .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(320.0);
@@ -4164,7 +4154,7 @@ pub fn show_confirm_close_doc_modal(
         .collapsible(false)
         .resizable(false)
         .pivot(egui::Align2::CENTER_CENTER)
-        .default_pos(ctx.screen_rect().center())
+        .default_pos(ctx.viewport_rect().center())
         .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(360.0);
@@ -4252,7 +4242,7 @@ pub fn show_confirm_exit_app_modal(
         .collapsible(false)
         .resizable(false)
         .pivot(egui::Align2::CENTER_CENTER)
-        .default_pos(ctx.screen_rect().center())
+        .default_pos(ctx.viewport_rect().center())
         .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(320.0);
@@ -4430,6 +4420,9 @@ pub fn show_hotkeys_modal(ctx: &Context, open: &mut bool, i18n: &I18n) {
         ("Ctrl/Cmd+A / Shift+I", i18n.tr("modal.hotkeys.select_all")),
         ("Ctrl/Cmd+C / X / V", i18n.tr("modal.hotkeys.copy_paste")),
         ("Delete", i18n.tr("modal.hotkeys.delete_selection")),
+        ("Shift + Drag", i18n.tr("modal.hotkeys.sel_add")),
+        ("Alt+Shift / RMB Drag", i18n.tr("modal.hotkeys.sel_subtract")),
+        ("Ctrl/Cmd+Shift + Drag", i18n.tr("modal.hotkeys.sel_intersect")),
         ("Shift + R", i18n.tr("modal.hotkeys.replace_color")),
         ("Shift + O", i18n.tr("modal.hotkeys.outline_fx")),
         ("Ctrl/Cmd + Shift + R", i18n.tr("modal.hotkeys.rotate_arbitrary")),
@@ -4456,7 +4449,7 @@ pub fn show_hotkeys_modal(ctx: &Context, open: &mut bool, i18n: &I18n) {
         .collapsible(false)
         .resizable(false)
         .pivot(egui::Align2::CENTER_CENTER)
-        .default_pos(ctx.screen_rect().center())
+        .default_pos(ctx.viewport_rect().center())
         .constrain(true)
         .show(ctx, |ui| {
             ui.set_min_width(640.0);
@@ -4582,7 +4575,7 @@ mod tests {
         for lang in [crate::i18n::Language::Russian, crate::i18n::Language::English] {
             let i18n = I18n::new(lang);
             let mut open = true;
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
                 show_hotkeys_modal(ctx, &mut open, &i18n);
             });
             assert!(open);
@@ -4595,7 +4588,7 @@ mod tests {
         for lang in [crate::i18n::Language::Russian, crate::i18n::Language::English] {
             let i18n = I18n::new(lang);
             let mut open = true;
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
                 let confirmed = show_confirm_exit_app_modal(ctx, &i18n, &mut open);
                 assert!(!confirmed);
             });
@@ -4611,7 +4604,7 @@ mod tests {
 
             // 1. Delete skin modal
             let mut pending_skin = Some((1, "Skin 2".to_string()));
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
                 let res = show_confirm_delete_skin_modal(ctx, &i18n, &mut pending_skin);
                 assert_eq!(res, None);
             });
@@ -4619,7 +4612,7 @@ mod tests {
 
             // 2. Delete frame modal
             let mut pending_frame = Some(2);
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
                 let res = show_confirm_delete_frame_modal(ctx, &i18n, &mut pending_frame);
                 assert_eq!(res, None);
             });
@@ -4627,7 +4620,7 @@ mod tests {
 
             // 2b. Delete layer modal
             let mut pending_layer = Some((1, "Layer 2".to_string()));
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
                 let res = show_confirm_delete_layer_modal(ctx, &i18n, &mut pending_layer);
                 assert_eq!(res, None);
             });
@@ -4635,14 +4628,14 @@ mod tests {
 
             // 3. Close doc modal
             let mut pending_close = Some(0);
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
                 let res = show_confirm_close_doc_modal(ctx, &i18n, "cat_walk", &mut pending_close);
                 assert_eq!(res, None);
             });
             assert!(pending_close.is_some());
 
             // 4. Recovery modal
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
                 let res = show_recovery_modal(ctx, &i18n, true);
                 assert_eq!(res, None);
             });
@@ -4652,7 +4645,7 @@ mod tests {
                 open: true,
                 ..Default::default()
             };
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
                 let action = unsaved.show(ctx, &i18n);
                 assert_eq!(action, UnsavedAction::None);
             });
@@ -4660,7 +4653,7 @@ mod tests {
 
             // 6. Delete recent project modal
             let mut pending_recent = Some(PathBuf::from("hero.png"));
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
                 let res = show_confirm_delete_recent_modal(ctx, &i18n, &mut pending_recent);
                 assert_eq!(res, None);
             });
@@ -4668,7 +4661,7 @@ mod tests {
 
             // 7. Delete palette slot modal
             let mut pending_slot = Some((0, [255, 0, 0, 255]));
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
                 let res = show_confirm_delete_palette_slot_modal(ctx, &i18n, &mut pending_slot);
                 assert_eq!(res, None);
             });
@@ -4676,7 +4669,7 @@ mod tests {
 
             // 8. Delete pivot point modal
             let mut pending_pt = Some((0, "Head".to_string()));
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
                 let res = show_confirm_delete_pivot_point_modal(ctx, &i18n, &mut pending_pt);
                 assert_eq!(res, None);
             });
@@ -4684,7 +4677,7 @@ mod tests {
 
             // 9. Delete tag modal
             let mut pending_tag = Some((0, "Run".to_string()));
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
                 let res = show_confirm_delete_tag_modal(ctx, &i18n, &mut pending_tag);
                 assert_eq!(res, None);
             });
@@ -4693,7 +4686,7 @@ mod tests {
             // 10. Replace color modal
             let mut replace_color = ReplaceColorModalState::default();
             replace_color.open_with([255, 0, 0, 255], [0, 255, 0, 255], true);
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
                 let res = replace_color.show(
                     ctx,
                     &i18n,
@@ -4711,7 +4704,7 @@ mod tests {
                 open: true,
                 ..Default::default()
             };
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
                 let res = modify_sel.show(ctx, &i18n);
                 assert_eq!(res, None);
             });
@@ -4722,7 +4715,7 @@ mod tests {
                 open: true,
                 ..Default::default()
             };
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
                 let res = outline_fx.show(
                     ctx,
                     &i18n,
@@ -4739,7 +4732,7 @@ mod tests {
                 open: true,
                 ..Default::default()
             };
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
                 let res = convolution.show(ctx, &i18n);
                 assert_eq!(res, None);
             });
@@ -4750,7 +4743,7 @@ mod tests {
                 open: true,
                 ..Default::default()
             };
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
                 let res = remap_palette.show(ctx, &i18n);
                 assert_eq!(res, None);
             });
@@ -4761,7 +4754,7 @@ mod tests {
                 open: true,
                 ..Default::default()
             };
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
                 let res = rotate_modal.show(ctx, &i18n);
                 assert_eq!(res, None);
             });
@@ -4772,7 +4765,7 @@ mod tests {
                 open: true,
                 ..Default::default()
             };
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
                 let res = pack_modal.show(ctx, &i18n, None);
                 assert_eq!(res, None);
             });
@@ -4784,7 +4777,7 @@ mod tests {
                 ..Default::default()
             };
             bake_sketch.open_with(true, &[[255, 0, 0, 255], [0, 255, 0, 255]], false, false, Some([0, 0, 0]), Some([0, 0, 0]), true);
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_pass(egui::RawInput::default(), |ctx| {
                 let res = bake_sketch.show(ctx, &i18n);
                 assert_eq!(res, None);
             });

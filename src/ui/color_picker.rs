@@ -209,7 +209,7 @@ pub fn commit_recent_color(
     settings: Option<&mut AppSettings>,
     color: [u8; 4],
 ) {
-    let recent_id = Id::new("onianvil_recent_colors");
+    let recent_id = Id::unique("onianvil_recent_colors");
     if let Some(s) = settings {
         s.add_recent_color(color);
         ctx.data_mut(|d| d.insert_temp(recent_id, s.recent_colors.clone()));
@@ -232,7 +232,7 @@ pub fn get_recent_colors(
     if let Some(s) = settings {
         return s.recent_colors.clone();
     }
-    let recent_id = Id::new("onianvil_recent_colors");
+    let recent_id = Id::unique("onianvil_recent_colors");
     ctx.data(|d| d.get_temp(recent_id))
         .unwrap_or_else(default_recent_colors)
 }
@@ -652,7 +652,7 @@ pub fn show_color_picker_content(
 /// Sized modern color picker button with custom button rect dimensions.
 pub fn modern_color_picker_button_sized(
     ui: &mut Ui,
-    id_salt: impl std::hash::Hash,
+    id_salt: impl std::hash::Hash + std::fmt::Debug,
     color: &mut [u8; 4],
     i18n: &I18n,
     settings: Option<&mut AppSettings>,
@@ -662,10 +662,10 @@ pub fn modern_color_picker_button_sized(
     let state_id = popup_id.with("state");
     let (rect, mut response) = ui.allocate_exact_size(size, Sense::click());
 
-    let is_open = ui.memory(|mem| mem.is_popup_open(popup_id));
+    let is_open = egui::Popup::is_id_open(ui.ctx(), popup_id);
 
     if response.clicked() {
-        ui.memory_mut(|mem| mem.toggle_popup(popup_id));
+        egui::Popup::toggle_id(ui.ctx(), popup_id);
         if !is_open {
             ui.ctx().data_mut(|d| {
                 d.insert_temp(state_id, ColorPickerInternalState::new(*color));
@@ -703,12 +703,10 @@ pub fn modern_color_picker_button_sized(
 
     if is_open {
         let mut content_changed = false;
-        egui::popup_below_widget(
-            ui,
-            popup_id,
-            &response,
-            egui::PopupCloseBehavior::CloseOnClickOutside,
-            |ui| {
+        egui::Popup::new(popup_id, ui.ctx().clone(), &response, ui.layer_id())
+            .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+            .open_memory(None)
+            .show(|ui| {
                 egui::Frame::popup(ui.style())
                     .inner_margin(egui::Margin::same(10))
                     .corner_radius(8)
@@ -736,7 +734,7 @@ pub fn modern_color_picker_button_sized(
 /// Standard modern color picker button (`24.0 × 24.0` px).
 pub fn modern_color_picker_button(
     ui: &mut Ui,
-    id_salt: impl std::hash::Hash,
+    id_salt: impl std::hash::Hash + std::fmt::Debug,
     color: &mut [u8; 4],
     i18n: &I18n,
     settings: Option<&mut AppSettings>,
@@ -792,31 +790,27 @@ mod tests {
         let i18n = I18n::new(crate::i18n::Language::Russian);
         let mut settings = AppSettings::default();
         let mut color = [255, 128, 64, 255];
-        let state_id = Id::new("test_picker_render");
+        let state_id = Id::unique("test_picker_render");
 
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
-            egui::CentralPanel::default().show(ctx, |ui| {
-                let changed = show_color_picker_content(
-                    ui,
-                    state_id,
-                    &mut color,
-                    &i18n,
-                    Some(&mut settings),
-                );
-                assert!(!changed);
-            });
+        let _ = ctx.run_ui(egui::RawInput::default(), |ui| {
+            let changed = show_color_picker_content(
+                ui,
+                state_id,
+                &mut color,
+                &i18n,
+                Some(&mut settings),
+            );
+            assert!(!changed);
         });
 
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
-            egui::CentralPanel::default().show(ctx, |ui| {
-                let _resp = modern_color_picker_button(
-                    ui,
-                    "btn_test",
-                    &mut color,
-                    &i18n,
-                    Some(&mut settings),
-                );
-            });
+        let _ = ctx.run_ui(egui::RawInput::default(), |ui| {
+            let _resp = modern_color_picker_button(
+                ui,
+                "btn_test",
+                &mut color,
+                &i18n,
+                Some(&mut settings),
+            );
         });
     }
 }

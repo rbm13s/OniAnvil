@@ -3,21 +3,21 @@ use crate::io::settings::AppSettings;
 use crate::theme::FA_SWAP;
 use crate::tools::{ToolKind, ToolSettings};
 use crate::ui::color_picker::modern_color_picker_button;
-use egui::{Context, FontId, SidePanel, Ui, Vec2};
+use egui::{FontId, Panel, Ui, Vec2};
 
 pub fn show_left_dock(
-    ctx: &Context,
+    ui: &mut Ui,
     i18n: &I18n,
     tools: &mut ToolSettings,
     mut settings: Option<&mut AppSettings>,
 ) {
     let panel_w = if tools.two_columns { 106.0 } else { 58.0 };
 
-    SidePanel::left("onianvil_left_tool_dock")
+    Panel::left("onianvil_left_tool_dock")
         .resizable(false)
-        .exact_width(panel_w)
-        .frame(egui::Frame::side_top_panel(&ctx.style()).inner_margin(egui::Margin::symmetric(6, 4)))
-        .show(ctx, |ui: &mut Ui| {
+        .exact_size(panel_w)
+        .frame(egui::Frame::side_top_panel(ui.style()).inner_margin(egui::Margin::symmetric(6, 4)))
+        .show(ui, |ui: &mut Ui| {
             ui.vertical_centered(|ui| {
                 // Top control strip with « / » column collapse/expand toggle
                 ui.horizontal(|ui| {

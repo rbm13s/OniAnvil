@@ -6,7 +6,7 @@ use crate::model::project::Project;
 use crate::theme::*;
 use crate::ui::color_picker::modern_color_picker_button;
 use crate::ui::right_dock::PreviewState;
-use egui::{Color32, Context, ScrollArea, Stroke, TopBottomPanel, Ui, Vec2};
+use egui::{Color32, Panel, ScrollArea, Stroke, Ui, Vec2};
 
 #[derive(Default)]
 pub struct BottomDockActions {
@@ -18,7 +18,7 @@ pub struct BottomDockActions {
 }
 
 pub fn show_bottom_dock(
-    ctx: &Context,
+    ui: &mut Ui,
     i18n: &I18n,
     project: &mut Project,
     history: &mut HistoryStack,
@@ -30,11 +30,11 @@ pub fn show_bottom_dock(
     project.ensure_layers_initialized();
     let colors = theme.timeline_colors();
 
-    TopBottomPanel::bottom("onianvil_bottom_timeline_dock")
+    Panel::bottom("onianvil_bottom_timeline_dock")
         .resizable(true)
-        .default_height(235.0)
-        .height_range(135.0..=720.0)
-        .show(ctx, |ui: &mut Ui| {
+        .default_size(235.0)
+        .size_range(135.0..=720.0)
+        .show(ui, |ui: &mut Ui| {
             let mut deferred_add_layer = false;
 
             // Row 1: Playback transport, FPS, Frame & Layer operations, and Hold multiplier
@@ -531,7 +531,7 @@ pub fn show_bottom_dock(
                                     project.metadata.active_layer,
                                     idx,
                                 ));
-                                ui.memory_mut(|mem| mem.toggle_popup(popup_id));
+                                egui::Popup::toggle_id(ui.ctx(), popup_id);
                             }
                         }
                     });
@@ -919,15 +919,13 @@ pub fn show_bottom_dock(
                                     deferred_select_layer = Some(layer_idx);
                                     project.active_frame = idx;
                                     preview.current_frame = idx;
-                                    ui.memory_mut(|mem| mem.toggle_popup(popup_id));
+                                    egui::Popup::toggle_id(ui.ctx(), popup_id);
                                 }
 
-                                egui::popup_below_widget(
-                                    ui,
-                                    popup_id,
-                                    &resp,
-                                    egui::PopupCloseBehavior::CloseOnClickOutside,
-                                    |ui| {
+                                egui::Popup::new(popup_id, ui.ctx().clone(), &resp, ui.layer_id())
+                                    .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+                                    .open_memory(None)
+                                    .show(|ui| {
                                         ui.style_mut().wrap_mode =
                                             Some(egui::TextWrapMode::Extend);
                                         ui.label(
@@ -949,7 +947,7 @@ pub fn show_bottom_dock(
                                             .clicked()
                                         {
                                             actions.trigger_import_single_frame = Some(idx);
-                                            ui.memory_mut(|mem| mem.close_popup());
+                                            ui.close();
                                         }
                                         if ui
                                             .button(format!(
@@ -959,7 +957,7 @@ pub fn show_bottom_dock(
                                             .clicked()
                                         {
                                             actions.trigger_export_single_frame = Some(idx);
-                                            ui.memory_mut(|mem| mem.close_popup());
+                                            ui.close();
                                         }
                                         ui.separator();
                                         if ui
@@ -970,7 +968,7 @@ pub fn show_bottom_dock(
                                             .clicked()
                                         {
                                             deferred_dup = Some(idx);
-                                            ui.memory_mut(|mem| mem.close_popup());
+                                            ui.close();
                                         }
                                         if ui
                                             .button(format!(
@@ -980,7 +978,7 @@ pub fn show_bottom_dock(
                                             .clicked()
                                         {
                                             deferred_insert = Some(idx);
-                                            ui.memory_mut(|mem| mem.close_popup());
+                                            ui.close();
                                         }
                                         if ui
                                             .button(format!(
@@ -990,7 +988,7 @@ pub fn show_bottom_dock(
                                             .clicked()
                                         {
                                             deferred_create_linked = Some(idx);
-                                            ui.memory_mut(|mem| mem.close_popup());
+                                            ui.close();
                                         }
                                         if is_linked {
                                             if ui
@@ -1001,7 +999,7 @@ pub fn show_bottom_dock(
                                                 .clicked()
                                             {
                                                 deferred_unlink = Some(idx);
-                                                ui.memory_mut(|mem| mem.close_popup());
+                                                ui.close();
                                             }
                                         } else if total_frames > 1 {
                                             ui.menu_button(
@@ -1021,7 +1019,7 @@ pub fn show_bottom_dock(
                                                                 .clicked()
                                                         {
                                                             deferred_link_to = Some((idx, o));
-                                                            ui.memory_mut(|mem| mem.close_popup());
+                                                            ui.close();
                                                         }
                                                     }
                                                 },
@@ -1039,7 +1037,7 @@ pub fn show_bottom_dock(
                                                 .clicked()
                                         {
                                             deferred_swap = Some((idx, idx - 1));
-                                            ui.memory_mut(|mem| mem.close_popup());
+                                            ui.close();
                                         }
                                         if idx + 1 < total_frames
                                             && ui
@@ -1053,7 +1051,7 @@ pub fn show_bottom_dock(
                                                 .clicked()
                                         {
                                             deferred_swap = Some((idx, idx + 1));
-                                            ui.memory_mut(|mem| mem.close_popup());
+                                            ui.close();
                                         }
                                         if total_frames > 1 {
                                             ui.separator();
@@ -1068,7 +1066,7 @@ pub fn show_bottom_dock(
                                                 .clicked()
                                             {
                                                 actions.request_delete_frame = Some(idx);
-                                                ui.memory_mut(|mem| mem.close_popup());
+                                                ui.close();
                                             }
                                         }
                                     },
@@ -1082,18 +1080,12 @@ pub fn show_bottom_dock(
             // mouse wheel scrolls horizontally across frames; otherwise vertical wheel scrolls layer tracks.
             if let Some(hover_pos) = ui.input(|i| i.pointer.hover_pos()) {
                 if scroll_output.inner_rect.contains(hover_pos) {
-                    let wheel_delta = ui.input(|i| i.raw_scroll_delta);
+                    let wheel_delta = ui.input(|i| i.smooth_scroll_delta);
                     let shift_held = ui.input(|i| i.modifiers.shift);
                     let can_scroll_v =
                         scroll_output.content_size.y > scroll_output.inner_rect.height() + 2.0;
                     if wheel_delta.y != 0.0 && (!can_scroll_v || shift_held) {
-                        let max_scroll_x = (scroll_output.content_size.x
-                            - scroll_output.inner_rect.width())
-                        .max(0.0);
-                        let mut s = scroll_output.state;
-                        s.offset.x = (s.offset.x - wheel_delta.y).clamp(0.0, max_scroll_x);
-                        s.store(ui.ctx(), scroll_output.id);
-                        ui.ctx().request_repaint();
+                        ui.scroll_with_delta(Vec2::new(wheel_delta.y, 0.0));
                     }
                 }
             }
@@ -1222,9 +1214,9 @@ mod tests {
         let mut preview = PreviewState::default();
         let renderer = CanvasRenderer::default();
 
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+        let _ = ctx.run_ui(egui::RawInput::default(), |ui| {
             let actions = show_bottom_dock(
-                ctx,
+                ui,
                 &i18n,
                 &mut proj,
                 &mut history,
@@ -1247,9 +1239,9 @@ mod tests {
         let mut preview = PreviewState::default();
         let renderer = CanvasRenderer::default();
 
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+        let _ = ctx.run_ui(egui::RawInput::default(), |ui| {
             let actions = show_bottom_dock(
-                ctx,
+                ui,
                 &i18n,
                 &mut proj,
                 &mut history,
@@ -1273,9 +1265,9 @@ mod tests {
 
         for theme in AppTheme::ALL {
             theme.apply(&ctx);
-            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let _ = ctx.run_ui(egui::RawInput::default(), |ui| {
                 let actions = show_bottom_dock(
-                    ctx,
+                    ui,
                     &i18n,
                     &mut proj,
                     &mut history,

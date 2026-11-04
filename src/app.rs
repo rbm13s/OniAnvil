@@ -36,7 +36,7 @@ use crate::tools::selection::SelectionModifyShape;
 use crate::ui::right_dock::show_right_dock;
 use crate::ui::start_screen::{show_start_screen, StartScreenAction};
 use crate::ui::top_bar::show_top_bars;
-use egui::{Color32, Context, TopBottomPanel};
+use egui::{Color32, Context, Panel};
 use image::Rgba;
 use serde::{Deserialize, Serialize};
 
@@ -832,7 +832,7 @@ impl OniAnvilApp {
     }
 
     fn handle_shortcuts(&mut self, ctx: &Context) {
-        if ctx.wants_keyboard_input() {
+        if ctx.egui_wants_keyboard_input() {
             return;
         }
 
@@ -1340,7 +1340,8 @@ impl eframe::App for OniAnvilApp {
         }
     }
 
-    fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+        let ctx = &ui.ctx().clone();
         #[cfg(not(target_arch = "wasm32"))]
         {
             let is_minimized = ctx.input(|i| i.viewport().minimized.unwrap_or(false));
@@ -1348,7 +1349,7 @@ impl eframe::App for OniAnvilApp {
                 let current_size = ctx
                     .input(|i| i.viewport().inner_rect)
                     .map(|r| r.size())
-                    .unwrap_or_else(|| ctx.screen_rect().size());
+                    .unwrap_or_else(|| ctx.viewport_rect().size());
 
                 if (current_size.x < 900.0 || current_size.y < 560.0)
                     && current_size.x > 0.0
@@ -1429,7 +1430,7 @@ impl eframe::App for OniAnvilApp {
         });
 
         let top_actions = show_top_bars(
-            ctx,
+            ui,
             &mut self.i18n,
             active_doc_tuple,
             &mut self.tools,
@@ -1441,14 +1442,14 @@ impl eframe::App for OniAnvilApp {
 
         // Row 3: Project Tabs Bar immediately below contextual options bar (when documents are open)
         if !self.documents.is_empty() {
-            TopBottomPanel::top("onianvil_project_tabs_bar")
-                .exact_height(28.0)
+            Panel::top("onianvil_project_tabs_bar")
+                .exact_size(28.0)
                 .frame(
                     egui::Frame::NONE
-                        .fill(ctx.style().visuals.panel_fill)
-                        .stroke(ctx.style().visuals.widgets.noninteractive.bg_stroke),
+                        .fill(ui.style().visuals.panel_fill)
+                        .stroke(ui.style().visuals.widgets.noninteractive.bg_stroke),
                 )
-                .show(ctx, |ui| {
+                .show(ui, |ui| {
                     ui.horizontal_centered(|ui| {
                         ui.spacing_mut().item_spacing.x = 4.0;
                         let mut switch_to: Option<usize> = None;
@@ -1583,9 +1584,9 @@ impl eframe::App for OniAnvilApp {
                 });
         }
 
-        TopBottomPanel::bottom("onianvil_status_bar")
-            .exact_height(22.0)
-            .show(ctx, |ui| {
+        Panel::bottom("onianvil_status_bar")
+            .exact_size(22.0)
+            .show(ui, |ui| {
                 ui.horizontal_centered(|ui| {
                     ui.label(egui::RichText::new(&status_text).small());
 
@@ -1881,7 +1882,7 @@ impl eframe::App for OniAnvilApp {
             if self.logo_texture.is_none() {
                 self.logo_texture = crate::theme::load_app_logo_texture(ctx);
             }
-            egui::CentralPanel::default().show(ctx, |ui| {
+            egui::CentralPanel::default().show(ui, |ui| {
                 let start_action = show_start_screen(
                     ui,
                     &self.i18n,
@@ -1933,7 +1934,7 @@ impl eframe::App for OniAnvilApp {
             });
         } else {
             let old_cols = self.tools.two_columns;
-            show_left_dock(ctx, &self.i18n, &mut self.tools, Some(&mut self.settings));
+            show_left_dock(ui, &self.i18n, &mut self.tools, Some(&mut self.settings));
             if self.tools.two_columns != old_cols {
                 self.settings.tools_two_columns = self.tools.two_columns;
                 let _ = self.settings.save();
@@ -1954,7 +1955,7 @@ impl eframe::App for OniAnvilApp {
             if self.show_right_dock {
                 if let Some(doc) = self.documents.get_mut(self.active_doc_idx) {
                     let right_actions = show_right_dock(
-                        ctx,
+                        ui,
                         &self.i18n,
                         &mut doc.project,
                         &mut self.tools,
@@ -2096,7 +2097,7 @@ impl eframe::App for OniAnvilApp {
             if self.show_bottom_dock {
                 if let Some(doc) = self.documents.get_mut(self.active_doc_idx) {
                     let bottom_actions = show_bottom_dock(
-                        ctx,
+                        ui,
                         &self.i18n,
                         &mut doc.project,
                         &mut doc.history,
@@ -2134,7 +2135,7 @@ impl eframe::App for OniAnvilApp {
 
             if let Some(doc) = self.documents.get_mut(self.active_doc_idx) {
                 show_center_workspace(
-                    ctx,
+                    ui,
                     &self.i18n,
                     &mut doc.project,
                     &mut doc.viewport,
@@ -2790,14 +2791,11 @@ impl eframe::App for OniAnvilApp {
                             if settings_changed || frame_changed {
                                 doc.project.atlas_rgba = orig_rgba.clone();
                                 let sel = doc.renderer.selection.clone();
-                                let frames: Vec<usize> = if self.bake_sketch_modal.settings.all_frames {
-                                    (0..doc.project.metadata.frame_count as usize).collect()
-                                } else {
-                                    vec![doc.project.active_frame]
-                                };
-                                for f_idx in frames {
-                                    doc.project.bake_sketch_advanced(f_idx, &self.bake_sketch_modal.settings, &sel);
-                                }
+                                doc.project.bake_sketch_advanced(
+                                    doc.project.active_frame,
+                                    &self.bake_sketch_modal.settings,
+                                    &sel,
+                                );
                                 self.last_bake_sketch_preview_settings = Some(self.bake_sketch_modal.settings.clone());
                                 self.last_bake_sketch_preview_frame = Some(doc.project.active_frame);
                                 doc.project.canvas_dirty = true;
@@ -3033,7 +3031,7 @@ impl eframe::App for OniAnvilApp {
         show_about_modal(ctx, &self.i18n, &mut self.show_about_modal);
         show_hotkeys_modal(ctx, &mut self.show_hotkeys_modal, &self.i18n);
 
-        let recent_id = egui::Id::new("onianvil_recent_colors");
+        let recent_id = egui::Id::unique("onianvil_recent_colors");
         let ctx_recents: Option<Vec<[u8; 4]>> = ctx.data(|d| d.get_temp(recent_id));
         if let Some(recents) = ctx_recents {
             if recents != self.settings.recent_colors {

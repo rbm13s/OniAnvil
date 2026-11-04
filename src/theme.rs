@@ -639,7 +639,7 @@ impl AppTheme {
     }
 
     pub fn apply(self, ctx: &egui::Context) {
-        let mut style: Style = (*ctx.style()).clone();
+        let mut style: Style = (*ctx.global_style()).clone();
 
         if self == Self::System {
             let visuals = Visuals {
@@ -647,7 +647,7 @@ impl AppTheme {
                 ..Default::default()
             };
             style.visuals = visuals;
-            ctx.set_style(style);
+            ctx.set_global_style(style);
             return;
         }
 
@@ -735,7 +735,7 @@ impl AppTheme {
         style.spacing.window_margin = egui::Margin::same(8);
         style.visuals = visuals;
 
-        ctx.set_style(style);
+        ctx.set_global_style(style);
     }
 
     pub fn timeline_colors(self) -> TimelineColors {
@@ -1317,8 +1317,8 @@ mod tests {
             theme.apply(&ctx);
 
             // Verify strong text color contrasts with panel background across all themes
-            let is_panel_dark = is_dark_color(ctx.style().visuals.panel_fill);
-            let is_strong_dark = is_dark_color(ctx.style().visuals.strong_text_color());
+            let is_panel_dark = is_dark_color(ctx.global_style().visuals.panel_fill);
+            let is_strong_dark = is_dark_color(ctx.global_style().visuals.strong_text_color());
             assert_ne!(
                 is_panel_dark, is_strong_dark,
                 "Theme {:?} strong text color has insufficient contrast with panel background!",

@@ -6,10 +6,10 @@ use crate::model::project::Project;
 use crate::theme::*;
 use crate::tools::ToolSettings;
 use crate::ui::color_picker::modern_color_picker_button;
-use egui::{CentralPanel, Context, Ui};
+use egui::{CentralPanel, Ui};
 
 pub fn show_center_workspace(
-    ctx: &Context,
+    ui: &mut Ui,
     i18n: &I18n,
     project: &mut Project,
     viewport: &mut ViewportState,
@@ -18,8 +18,8 @@ pub fn show_center_workspace(
     renderer: &mut CanvasRenderer,
 ) {
     CentralPanel::default()
-        .frame(egui::Frame::NONE.fill(ctx.style().visuals.extreme_bg_color))
-        .show(ctx, |ui: &mut Ui| {
+        .frame(egui::Frame::NONE.fill(ui.visuals().extreme_bg_color))
+        .show(ui, |ui: &mut Ui| {
             // Subtle top viewport control strip
             egui::Frame::NONE
                 .fill(ui.visuals().panel_fill)

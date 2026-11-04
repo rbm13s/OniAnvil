@@ -465,7 +465,7 @@ impl IoManager {
         }
     }
 
-    pub fn handle_dropped_files(&self, dropped: &[egui::DroppedFile]) {
+    pub fn handle_dropped_files(&self, dropped: &[egui::DroppedFileHandle]) {
         if dropped.is_empty() {
             return;
         }
@@ -474,7 +474,7 @@ impl IoManager {
         {
             let mut png_paths: Vec<PathBuf> = dropped
                 .iter()
-                .filter_map(|f| f.path.clone())
+                .map(|f| f.path().to_path_buf())
                 .filter(|p| {
                     p.extension()
                         .and_then(|e| e.to_str())
@@ -509,8 +509,15 @@ impl IoManager {
             }
 
             for file in dropped {
-                if let Some(path) = &file.path {
+                let path = file.path();
+                if path.is_file() {
                     if let Ok(project) = Self::load_from_native_path(path) {
+                        self.push_event(IoEvent::ProjectLoaded(project));
+                        return;
+                    }
+                } else if let Ok(bytes) = file.bytes() {
+                    let name = file.path().file_name().and_then(|s| s.to_str()).unwrap_or("image.png");
+                    if let Ok(project) = Self::build_project_from_bytes(&bytes, None, Some(PathBuf::from(name))) {
                         self.push_event(IoEvent::ProjectLoaded(project));
                         return;
                     }
@@ -518,27 +525,21 @@ impl IoManager {
             }
         }
 
-        let mut png_bytes: Option<(String, Vec<u8>)> = None;
-        let mut json_bytes: Option<Vec<u8>> = None;
-
-        for file in dropped {
-            if let Some(bytes) = &file.bytes {
-                let name = file.name.clone();
-                if name.to_lowercase().ends_with(".png") {
-                    png_bytes = Some((name, bytes.to_vec()));
-                } else if name.to_lowercase().ends_with(".json") {
-                    json_bytes = Some(bytes.to_vec());
-                }
-            }
-        }
-
-        if let Some((name, p_bytes)) = png_bytes {
-            if let Ok(project) = Self::build_project_from_bytes(
-                &p_bytes,
-                json_bytes.as_deref(),
-                Some(PathBuf::from(name)),
-            ) {
-                self.push_event(IoEvent::ProjectLoaded(project));
+        #[cfg(target_arch = "wasm32")]
+        {
+            for file in dropped {
+                let f = file.clone();
+                let io_clone = self.clone();
+                let name = f.path().to_string_lossy().to_string();
+                wasm_bindgen_futures::spawn_local(async move {
+                    if let Ok(bytes) = f.bytes_async().await {
+                        if name.to_lowercase().ends_with(".png") {
+                            if let Ok(project) = Self::build_project_from_bytes(&bytes, None, Some(PathBuf::from(name))) {
+                                io_clone.push_event(IoEvent::ProjectLoaded(project));
+                            }
+                        }
+                    }
+                });
             }
         }
     }

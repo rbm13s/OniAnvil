@@ -109,7 +109,7 @@ mod tests {
         let ctx = egui::Context::default();
         theme::setup_custom_fonts(&ctx);
 
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+        let _ = ctx.run_ui(egui::RawInput::default(), |ui| {
             let font_id = egui::FontId::proportional(14.0);
             for sample in [
                 "#1",
@@ -127,7 +127,7 @@ mod tests {
                 "\u{f5c3}",
                 "\u{f5aa}",
             ] {
-                let galley = ctx.fonts(|f| f.layout_no_wrap(sample.to_string(), font_id.clone(), egui::Color32::WHITE));
+                let galley = ui.painter().layout_no_wrap(sample.to_string(), font_id.clone(), egui::Color32::WHITE);
                 assert!(galley.size().x > 0.0);
             }
         });

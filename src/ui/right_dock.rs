@@ -10,7 +10,7 @@ use crate::model::sketch::{QuickPeekMode, SketchLayerMode};
 use crate::theme::*;
 use crate::tools::ToolSettings;
 use crate::ui::color_picker::modern_color_picker_button;
-use egui::{Color32, Context, Pos2, Rect, ScrollArea, SidePanel, Stroke, Ui, Vec2};
+use egui::{Color32, Context, Panel, Pos2, Rect, ScrollArea, Stroke, Ui, Vec2};
 use std::time::Duration;
 
 #[derive(Default)]
@@ -314,7 +314,7 @@ fn draw_scrolling_motion_backdrop(painter: &egui::Painter, rect: Rect, scroll_of
 }
 
 pub fn show_right_dock(
-    ctx: &Context,
+    ui: &mut Ui,
     i18n: &I18n,
     project: &mut Project,
     tools: &mut ToolSettings,
@@ -324,11 +324,11 @@ pub fn show_right_dock(
 ) -> RightDockActions {
     let mut actions = RightDockActions::default();
 
-    SidePanel::right("onianvil_right_utility_dock")
+    Panel::right("onianvil_right_utility_dock")
         .resizable(true)
-        .default_width(275.0)
-        .width_range(235.0..=380.0)
-        .show(ctx, |ui: &mut Ui| {
+        .default_size(275.0)
+        .size_range(235.0..=380.0)
+        .show(ui, |ui: &mut Ui| {
             ScrollArea::vertical().show(ui, |ui| {
                 // 1. Live Animation Preview Panel
                 egui::CollapsingHeader::new(format!("{FA_PLAY} {}", i18n.tr("panel.preview.title")))
@@ -678,14 +678,12 @@ pub fn show_right_dock(
                                 .on_hover_text(i18n.tr("tooltip.palette_export_hex"));
                             let popup_id = cols[1].make_persistent_id("palette_export_menu_popup");
                             if export_btn.clicked() {
-                                cols[1].memory_mut(|mem| mem.toggle_popup(popup_id));
+                                egui::Popup::toggle_id(cols[1].ctx(), popup_id);
                             }
-                            egui::popup_below_widget(
-                                &cols[1],
-                                popup_id,
-                                &export_btn,
-                                egui::PopupCloseBehavior::CloseOnClickOutside,
-                                |ui| {
+                            egui::Popup::new(popup_id, cols[1].ctx().clone(), &export_btn, cols[1].layer_id())
+                                .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+                                .open_memory(None)
+                                .show(|ui| {
                                     ui.set_min_width(130.0);
                                     if ui
                                         .button(format!(
@@ -696,7 +694,7 @@ pub fn show_right_dock(
                                         .clicked()
                                     {
                                         actions.trigger_export_palette_png = true;
-                                        ui.memory_mut(|mem| mem.close_popup());
+                                        ui.close();
                                     }
                                     if ui
                                         .button(format!(
@@ -707,7 +705,7 @@ pub fn show_right_dock(
                                         .clicked()
                                     {
                                         actions.trigger_export_palette_hex = true;
-                                        ui.memory_mut(|mem| mem.close_popup());
+                                        ui.close();
                                     }
                                     if ui
                                         .button(format!(
@@ -717,10 +715,9 @@ pub fn show_right_dock(
                                         .clicked()
                                     {
                                         actions.trigger_export_palette_gpl = true;
-                                        ui.memory_mut(|mem| mem.close_popup());
+                                        ui.close();
                                     }
-                                },
-                            );
+                                });
                         });
 
                         ui.columns(2, |cols| {
@@ -732,34 +729,31 @@ pub fn show_right_dock(
                                 .on_hover_text(i18n.tr("tooltip.palette_sort"));
                             let sort_popup_id = cols[0].make_persistent_id("palette_sort_menu_popup");
                             if sort_btn.clicked() {
-                                cols[0].memory_mut(|mem| mem.toggle_popup(sort_popup_id));
+                                egui::Popup::toggle_id(cols[0].ctx(), sort_popup_id);
                             }
-                            egui::popup_below_widget(
-                                &cols[0],
-                                sort_popup_id,
-                                &sort_btn,
-                                egui::PopupCloseBehavior::CloseOnClickOutside,
-                                |ui| {
+                            egui::Popup::new(sort_popup_id, cols[0].ctx().clone(), &sort_btn, cols[0].layer_id())
+                                .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+                                .open_memory(None)
+                                .show(|ui| {
                                     ui.set_min_width(140.0);
                                     if ui.button(i18n.tr("panel.palette.sort_hue")).clicked() {
                                         actions.trigger_sort_palette = Some(PaletteSortCriterion::Hue);
-                                        ui.memory_mut(|mem| mem.close_popup());
+                                        ui.close();
                                     }
                                     if ui.button(i18n.tr("panel.palette.sort_luminance")).clicked() {
                                         actions.trigger_sort_palette = Some(PaletteSortCriterion::Luminance);
-                                        ui.memory_mut(|mem| mem.close_popup());
+                                        ui.close();
                                     }
                                     if ui.button(i18n.tr("panel.palette.sort_saturation")).clicked() {
                                         actions.trigger_sort_palette = Some(PaletteSortCriterion::Saturation);
-                                        ui.memory_mut(|mem| mem.close_popup());
+                                        ui.close();
                                     }
                                     ui.separator();
                                     if ui.button(i18n.tr("panel.palette.sort_reverse")).clicked() {
                                         actions.trigger_sort_palette = Some(PaletteSortCriterion::Reverse);
-                                        ui.memory_mut(|mem| mem.close_popup());
+                                        ui.close();
                                     }
-                                },
-                            );
+                                });
 
                             if cols[1]
                                 .add_sized(
@@ -1146,6 +1140,8 @@ pub fn show_right_dock(
                                     .logarithmic(true),
                             );
                         });
+
+
                         ui.horizontal(|ui| {
                             ui.label(i18n.tr("panel.sketch.rotation"));
                             ui.add(
@@ -1156,6 +1152,8 @@ pub fn show_right_dock(
                                 .suffix("°"),
                             );
                         });
+
+
                         ui.horizontal(|ui| {
                             ui.small(i18n.tr("panel.sketch.offset_x"));
                             ui.add(
@@ -1170,6 +1168,7 @@ pub fn show_right_dock(
                                     .range(-1024.0..=1024.0),
                             );
                         });
+
                         ui.horizontal(|ui| {
                             ui.toggle_value(
                                 &mut project.metadata.sketch.flip_h,
@@ -1230,6 +1229,8 @@ pub fn show_right_dock(
                                     .range(0..=5),
                             );
                         });
+
+
                         ui.horizontal(|ui| {
                             ui.label(i18n.tr("panel.onion.opacity"));
                             ui.add(egui::Slider::new(

@@ -7,7 +7,7 @@ use crate::model::project::Project;
 use crate::model::sketch::QuickPeekMode;
 use crate::theme::*;
 use crate::tools::{DitherPattern, GradientDither, GradientKind, SymmetryMode, ToolKind, ToolSettings};
-use egui::{Color32, Context, TopBottomPanel, Ui};
+use egui::{Color32, Panel, Ui};
 
 #[derive(Default)]
 pub struct TopBarActions {
@@ -61,7 +61,7 @@ pub struct TopBarActions {
 
 #[allow(clippy::too_many_arguments)]
 pub fn show_top_bars(
-    ctx: &Context,
+    ui: &mut Ui,
     i18n: &mut I18n,
     mut active_doc: Option<(&mut Project, &mut ViewportState, &HistoryStack)>,
     tools: &mut ToolSettings,
@@ -74,8 +74,8 @@ pub fn show_top_bars(
     let has_doc = active_doc.is_some();
     let mod_name = crate::i18n::cmd_or_ctrl_name();
 
-    TopBottomPanel::top("onianvil_main_menu_bar").show(ctx, |ui: &mut Ui| {
-        egui::menu::bar(ui, |ui| {
+    Panel::top("onianvil_main_menu_bar").show(ui, |ui: &mut Ui| {
+        egui::MenuBar::new().ui(ui, |ui| {
             ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
 
             // File Menu
@@ -89,7 +89,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.open_new_project_wizard = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add(
@@ -99,11 +99,11 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_open_project = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui.button(format!("{FA_PLAY} {}", i18n.tr("menu.file.open_demo"))).clicked() {
                     actions.open_demo_project = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -114,7 +114,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_close_project = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 ui.separator();
                 if ui
@@ -126,7 +126,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_save_project = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -137,16 +137,16 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_save_project_as = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 ui.separator();
                 if ui.button(format!("{FA_VIEW_ATLAS} {}", i18n.tr("menu.file.slicer"))).clicked() {
                     actions.trigger_open_slicer = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui.button(format!("{FA_IMPORT} {}", i18n.tr("menu.file.import_seq"))).clicked() {
                     actions.trigger_import_frame_sequence = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 ui.separator();
                 if ui
@@ -157,7 +157,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.open_export_png_modal = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -167,7 +167,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_export_frame_sequence = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -177,7 +177,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.open_export_gif_modal = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -187,7 +187,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_export_sprite_json = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -197,7 +197,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_export_aseprite = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -207,7 +207,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_export_godot_tres = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -217,7 +217,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.open_export_packed_atlas_modal = true;
-                    ui.close_menu();
+                    ui.close();
                 }
             });
 
@@ -235,7 +235,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_undo = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -246,7 +246,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_redo = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 ui.separator();
                 if ui
@@ -258,7 +258,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_copy = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -269,7 +269,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_cut = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -280,7 +280,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_paste = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 ui.separator();
                 if ui
@@ -292,7 +292,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_select_all = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -303,7 +303,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_invert_selection = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 ui.separator();
                 ui.checkbox(&mut tools.batch_mode, i18n.tr("menu.edit.batch_mode"));
@@ -316,7 +316,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_flip_h = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -326,7 +326,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_flip_v = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -336,7 +336,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_rotate_90 = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -346,7 +346,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.open_rotate_modal = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 ui.separator();
                 if ui
@@ -357,7 +357,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.open_outline_fx_modal = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -367,7 +367,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_auto_outline = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -377,7 +377,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_replace_color = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -387,7 +387,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_color_adjust = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -397,7 +397,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.open_convolution_modal = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -407,25 +407,25 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.open_remap_palette_modal = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 ui.menu_button(format!("{FA_SORT} {}", i18n.tr("menu.edit.sort_palette")), |ui| {
                     if ui.add_enabled(has_doc, egui::Button::new(i18n.tr("panel.palette.sort_hue"))).clicked() {
                         actions.trigger_sort_palette = Some(PaletteSortCriterion::Hue);
-                        ui.close_menu();
+                        ui.close();
                     }
                     if ui.add_enabled(has_doc, egui::Button::new(i18n.tr("panel.palette.sort_luminance"))).clicked() {
                         actions.trigger_sort_palette = Some(PaletteSortCriterion::Luminance);
-                        ui.close_menu();
+                        ui.close();
                     }
                     if ui.add_enabled(has_doc, egui::Button::new(i18n.tr("panel.palette.sort_saturation"))).clicked() {
                         actions.trigger_sort_palette = Some(PaletteSortCriterion::Saturation);
-                        ui.close_menu();
+                        ui.close();
                     }
                     ui.separator();
                     if ui.add_enabled(has_doc, egui::Button::new(i18n.tr("panel.palette.sort_reverse"))).clicked() {
                         actions.trigger_sort_palette = Some(PaletteSortCriterion::Reverse);
-                        ui.close_menu();
+                        ui.close();
                     }
                 });
                 if ui
@@ -436,7 +436,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_custom_brush = true;
-                    ui.close_menu();
+                    ui.close();
                 }
             });
 
@@ -452,7 +452,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_select_all = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -463,7 +463,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_invert_selection = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -474,7 +474,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_deselect = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 ui.separator();
                 if ui
@@ -485,28 +485,28 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.open_modify_selection_modal = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(has_doc, egui::Button::new(i18n.tr("menu.select.expand_1px")))
                     .clicked()
                 {
                     actions.trigger_expand_selection = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(has_doc, egui::Button::new(i18n.tr("menu.select.contract_1px")))
                     .clicked()
                 {
                     actions.trigger_contract_selection = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(has_doc, egui::Button::new(i18n.tr("menu.select.border_1px")))
                     .clicked()
                 {
                     actions.trigger_border_selection = true;
-                    ui.close_menu();
+                    ui.close();
                 }
             });
 
@@ -553,19 +553,19 @@ pub fn show_top_bars(
                     ui.separator();
                     if ui.button(format!("{FA_ZOOM_IN} {}", i18n.tr("menu.view.zoom_in"))).clicked() {
                         viewport.zoom_in();
-                        ui.close_menu();
+                        ui.close();
                     }
                     if ui.button(format!("{FA_ZOOM_OUT} {}", i18n.tr("menu.view.zoom_out"))).clicked() {
                         viewport.zoom_out();
-                        ui.close_menu();
+                        ui.close();
                     }
                     if ui.button(i18n.tr("menu.view.zoom_100")).clicked() {
                         viewport.set_zoom(1.0);
-                        ui.close_menu();
+                        ui.close();
                     }
                     if ui.button(format!("{FA_FIT} {}", i18n.tr("menu.view.zoom_fit"))).clicked() {
                         viewport.needs_fit_to_view = true;
-                        ui.close_menu();
+                        ui.close();
                     }
                 } else {
                     ui.checkbox(show_right_dock, i18n.tr("menu.view.right_dock"));
@@ -584,7 +584,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.open_regrid_modal = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -594,7 +594,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.open_resize9_modal = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui
                     .add_enabled(
@@ -604,7 +604,7 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.trigger_auto_crop = true;
-                    ui.close_menu();
+                    ui.close();
                 }
             });
 
@@ -631,7 +631,7 @@ pub fn show_top_bars(
                                     let is_selected = i18n.language() == candidate;
                                     if ui.selectable_label(is_selected, candidate.label()).clicked() {
                                         new_lang = Some(candidate);
-                                        ui.close_menu();
+                                        ui.close();
                                     }
                                 } else {
                                     ui.label("");
@@ -651,16 +651,16 @@ pub fn show_top_bars(
                 ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
                 if ui.button(format!("{FA_QUESTION} {}", i18n.tr("menu.help.hotkeys"))).clicked() {
                     actions.open_hotkeys_modal = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui.button(format!("{FA_PLAY} {}", i18n.tr("menu.file.open_demo"))).clicked() {
                     actions.open_demo_project = true;
-                    ui.close_menu();
+                    ui.close();
                 }
                 ui.separator();
                 if ui.button(format!("{FA_QUESTION} {}", i18n.tr("menu.help.about"))).clicked() {
                     actions.open_about_modal = true;
-                    ui.close_menu();
+                    ui.close();
                 }
             });
 
@@ -705,7 +705,7 @@ pub fn show_top_bars(
                             *current_theme = th;
                             th.apply(ui.ctx());
                             actions.theme_changed = Some(th);
-                            ui.close_menu();
+                            ui.close();
                         }
                     }
                 });
@@ -735,7 +735,7 @@ pub fn show_top_bars(
 
     // Row 2: Contextual Tool Options Bar immediately below the main menu bar (when a document is open)
     if let Some((project, viewport, history)) = active_doc {
-        TopBottomPanel::top("onianvil_contextual_options_bar").show(ctx, |ui: &mut Ui| {
+        Panel::top("onianvil_contextual_options_bar").show(ui, |ui: &mut Ui| {
         ui.horizontal_centered(|ui| {
             if ui
                 .add_enabled(history.can_undo(), egui::Button::new(FA_UNDO))

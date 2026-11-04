@@ -56,7 +56,7 @@ impl AutosaveService {
             let json_bytes = std::fs::read(&json_path).ok()?;
             let proj =
                 IoManager::build_project_from_bytes(&png_bytes, Some(&json_bytes), None).ok()?;
-            if proj.atlas_rgba.as_raw().chunks_exact(4).any(|p| p[3] > 0) {
+            if proj.atlas_rgba.as_raw().as_chunks::<4>().0.iter().any(|p| p[3] > 0) {
                 return Some(proj);
             }
             None
@@ -76,7 +76,7 @@ impl AutosaveService {
                 None,
             )
             .ok()?;
-            if proj.atlas_rgba.as_raw().chunks_exact(4).any(|p| p[3] > 0) {
+            if proj.atlas_rgba.as_raw().as_chunks::<4>().0.iter().any(|p| p[3] > 0) {
                 return Some(proj);
             }
             None
@@ -93,7 +93,7 @@ impl AutosaveService {
         }
 
         // Fast chunk-based alpha check without per-pixel point allocations
-        if !project.atlas_rgba.as_raw().chunks_exact(4).any(|p| p[3] > 0) {
+        if !project.atlas_rgba.as_raw().as_chunks::<4>().0.iter().any(|p| p[3] > 0) {
             return false;
         }
 
