@@ -255,29 +255,91 @@ pub fn draw_marching_ants_segment(painter: &Painter, p_start: Pos2, p_end: Pos2,
 fn draw_mask_marching_ants(
     painter: &Painter,
     active_frame_rect: Rect,
-    pixels: &HashSet<(i32, i32)>,
+    selection: &SelectionMask,
     zoom: f32,
     phase: f32,
     stroke_dark: Stroke,
     stroke_light: Stroke,
 ) {
-    for &(x, y) in pixels {
-        let min = Pos2::new(
-            active_frame_rect.min.x + x as f32 * zoom,
-            active_frame_rect.min.y + y as f32 * zoom,
-        );
-        let r = Rect::from_min_size(min, Vec2::splat(zoom));
-        if !pixels.contains(&(x - 1, y)) {
-            draw_marching_ants_segment_colored(painter, r.left_top(), r.left_bottom(), phase, stroke_dark, stroke_light);
+    if selection.is_empty() {
+        return;
+    }
+
+    // Fast-path: if selection is a pure rectangular marquee, draw exactly 4 boundary segments!
+    if let Some((min_x, min_y, max_x, max_y)) = selection.rect_bounds {
+        let expected_count = ((max_x - min_x + 1).max(0) as usize)
+            .saturating_mul((max_y - min_y + 1).max(0) as usize);
+        if expected_count == selection.pixels.len() {
+            let left = active_frame_rect.min.x + min_x as f32 * zoom;
+            let right = active_frame_rect.min.x + (max_x + 1) as f32 * zoom;
+            let top = active_frame_rect.min.y + min_y as f32 * zoom;
+            let bottom = active_frame_rect.min.y + (max_y + 1) as f32 * zoom;
+
+            let lt = Pos2::new(left, top);
+            let rt = Pos2::new(right, top);
+            let rb = Pos2::new(right, bottom);
+            let lb = Pos2::new(left, bottom);
+
+            draw_marching_ants_segment_colored(painter, lt, rt, phase, stroke_dark, stroke_light);
+            draw_marching_ants_segment_colored(painter, rt, rb, phase, stroke_dark, stroke_light);
+            draw_marching_ants_segment_colored(painter, lb, rb, phase, stroke_dark, stroke_light);
+            draw_marching_ants_segment_colored(painter, lt, lb, phase, stroke_dark, stroke_light);
+            return;
         }
-        if !pixels.contains(&(x + 1, y)) {
-            draw_marching_ants_segment_colored(painter, r.right_top(), r.right_bottom(), phase, stroke_dark, stroke_light);
+    }
+
+    // Generalized path: merge collinear pixel edges into long continuous line segments
+    let mut h_edges: BTreeMap<i32, Vec<i32>> = BTreeMap::new();
+    let mut v_edges: BTreeMap<i32, Vec<i32>> = BTreeMap::new();
+
+    for &(x, y) in &selection.pixels {
+        if !selection.pixels.contains(&(x, y - 1)) {
+            h_edges.entry(y).or_default().push(x);
         }
-        if !pixels.contains(&(x, y - 1)) {
-            draw_marching_ants_segment_colored(painter, r.left_top(), r.right_top(), phase, stroke_dark, stroke_light);
+        if !selection.pixels.contains(&(x, y + 1)) {
+            h_edges.entry(y + 1).or_default().push(x);
         }
-        if !pixels.contains(&(x, y + 1)) {
-            draw_marching_ants_segment_colored(painter, r.left_bottom(), r.right_bottom(), phase, stroke_dark, stroke_light);
+        if !selection.pixels.contains(&(x - 1, y)) {
+            v_edges.entry(x).or_default().push(y);
+        }
+        if !selection.pixels.contains(&(x + 1, y)) {
+            v_edges.entry(x + 1).or_default().push(y);
+        }
+    }
+
+    let origin = active_frame_rect.min;
+
+    for (y, mut xs) in h_edges {
+        xs.sort_unstable();
+        let mut i = 0;
+        while i < xs.len() {
+            let start_x = xs[i];
+            let mut end_x = start_x + 1;
+            while i + 1 < xs.len() && xs[i + 1] == end_x {
+                end_x += 1;
+                i += 1;
+            }
+            let p0 = Pos2::new(origin.x + start_x as f32 * zoom, origin.y + y as f32 * zoom);
+            let p1 = Pos2::new(origin.x + end_x as f32 * zoom, origin.y + y as f32 * zoom);
+            draw_marching_ants_segment_colored(painter, p0, p1, phase, stroke_dark, stroke_light);
+            i += 1;
+        }
+    }
+
+    for (x, mut ys) in v_edges {
+        ys.sort_unstable();
+        let mut i = 0;
+        while i < ys.len() {
+            let start_y = ys[i];
+            let mut end_y = start_y + 1;
+            while i + 1 < ys.len() && ys[i + 1] == end_y {
+                end_y += 1;
+                i += 1;
+            }
+            let p0 = Pos2::new(origin.x + x as f32 * zoom, origin.y + start_y as f32 * zoom);
+            let p1 = Pos2::new(origin.x + x as f32 * zoom, origin.y + end_y as f32 * zoom);
+            draw_marching_ants_segment_colored(painter, p0, p1, phase, stroke_dark, stroke_light);
+            i += 1;
         }
     }
 }
@@ -305,7 +367,7 @@ pub fn draw_selection_overlay(
         draw_mask_marching_ants(
             painter,
             active_frame_rect,
-            &selection.pixels,
+            selection,
             zoom,
             phase,
             stroke_dark,
@@ -320,7 +382,7 @@ pub fn draw_selection_overlay(
             draw_mask_marching_ants(
                 painter,
                 active_frame_rect,
-                &cand.pixels,
+                cand,
                 zoom,
                 phase,
                 stroke_dark,
