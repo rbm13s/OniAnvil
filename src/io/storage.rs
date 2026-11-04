@@ -25,6 +25,10 @@ pub enum IoEvent {
         name: String,
         rgba: RgbaImage,
     },
+    ImportPaletteImageLoaded {
+        name: String,
+        rgba: RgbaImage,
+    },
     PaletteLoaded(Vec<[u8; 4]>),
     PaletteSaved,
     ExportedPngSaved,
@@ -951,30 +955,48 @@ impl IoManager {
     }
 
     pub fn trigger_import_palette_dialog(&self, ctx: egui::Context) {
-        use crate::model::palette::{parse_palette_png, parse_palette_text};
+        use crate::model::palette::parse_palette_text;
 
         #[cfg(not(target_arch = "wasm32"))]
         {
             if let Some(path) = rfd::FileDialog::new()
-                .add_filter("Palette (.png, .hex, .pal)", &["png", "hex", "pal", "txt"])
+                .add_filter(
+                    "Palette / Image (.png, .hex, .pal, .jpg, .webp)",
+                    &["png", "hex", "pal", "txt", "gpl", "jpg", "jpeg", "webp"],
+                )
                 .pick_file()
             {
-                let is_png_ext = path
+                let is_img_ext = path
                     .extension()
                     .and_then(|s| s.to_str())
-                    .map(|s| s.eq_ignore_ascii_case("png"))
+                    .map(|s| {
+                        s.eq_ignore_ascii_case("png")
+                            || s.eq_ignore_ascii_case("jpg")
+                            || s.eq_ignore_ascii_case("jpeg")
+                            || s.eq_ignore_ascii_case("webp")
+                    })
                     .unwrap_or(false);
 
                 if let Ok(bytes) = std::fs::read(&path) {
-                    let cols = if is_png_ext || bytes.starts_with(b"\x89PNG") {
-                        parse_palette_png(&bytes).unwrap_or_default()
+                    let file_name = path
+                        .file_name()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("palette.png")
+                        .to_string();
+
+                    if is_img_ext || bytes.starts_with(b"\x89PNG") {
+                        if let Ok(dynamic_img) = image::load_from_memory(&bytes) {
+                            let rgba = dynamic_img.to_rgba8();
+                            self.push_event(IoEvent::ImportPaletteImageLoaded {
+                                name: file_name,
+                                rgba,
+                            });
+                        }
                     } else if let Ok(text) = String::from_utf8(bytes) {
-                        parse_palette_text(&text)
-                    } else {
-                        Vec::new()
-                    };
-                    if !cols.is_empty() {
-                        self.push_event(IoEvent::PaletteLoaded(cols));
+                        let cols = parse_palette_text(&text);
+                        if !cols.is_empty() {
+                            self.push_event(IoEvent::PaletteLoaded(cols));
+                        }
                     }
                 }
                 ctx.request_repaint();
@@ -986,21 +1008,34 @@ impl IoManager {
             let io_clone = self.clone();
             wasm_bindgen_futures::spawn_local(async move {
                 if let Some(file) = rfd::AsyncFileDialog::new()
-                    .add_filter("Palette (.png, .hex, .pal)", &["png", "hex", "pal", "txt"])
+                    .add_filter(
+                        "Palette / Image (.png, .hex, .pal, .jpg, .webp)",
+                        &["png", "hex", "pal", "txt", "gpl", "jpg", "jpeg", "webp"],
+                    )
                     .pick_file()
                     .await
                 {
-                    let name = file.file_name().to_lowercase();
+                    let name = file.file_name();
+                    let name_lower = name.to_lowercase();
                     let bytes = file.read().await;
-                    let cols = if name.ends_with(".png") || bytes.starts_with(b"\x89PNG") {
-                        parse_palette_png(&bytes).unwrap_or_default()
+                    let is_img = name_lower.ends_with(".png")
+                        || name_lower.ends_with(".jpg")
+                        || name_lower.ends_with(".jpeg")
+                        || name_lower.ends_with(".webp")
+                        || bytes.starts_with(b"\x89PNG");
+                    if is_img {
+                        if let Ok(dynamic_img) = image::load_from_memory(&bytes) {
+                            let rgba = dynamic_img.to_rgba8();
+                            io_clone.push_event(IoEvent::ImportPaletteImageLoaded {
+                                name,
+                                rgba,
+                            });
+                        }
                     } else if let Ok(text) = String::from_utf8(bytes) {
-                        parse_palette_text(&text)
-                    } else {
-                        Vec::new()
-                    };
-                    if !cols.is_empty() {
-                        io_clone.push_event(IoEvent::PaletteLoaded(cols));
+                        let cols = parse_palette_text(&text);
+                        if !cols.is_empty() {
+                            io_clone.push_event(IoEvent::PaletteLoaded(cols));
+                        }
                     }
                     ctx.request_repaint();
                 }
