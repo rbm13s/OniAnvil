@@ -9,7 +9,7 @@
 
 - **Project Name:** OniAnvil (`onianvil`)
 - **Repository:** `https://github.com/rbm13s/OniAnvil`
-- **Current Version:** `v1.2.0` (Production Release)
+- **Current Version:** `v1.2.1` (Production Release)
 - **License:** MIT License
 - **Author/Maintainer:** rbm13s & OniAnvil Contributors
 
