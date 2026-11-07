@@ -730,45 +730,111 @@ pub fn show_top_bars(
                 // Theme selector menu button with 35 retro, console, classic computer, modern and studio themes
                 ui.menu_button(format!("{FA_PALETTE} {}", i18n.tr("menu.theme")), |ui| {
                     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
-                    let mut prev_category = 0;
-                    for th in AppTheme::ALL {
-                        let category = match th {
-                            AppTheme::StudioDark | AppTheme::StudioLight | AppTheme::System => 1,
-                            AppTheme::CrtAmber | AppTheme::CrtGreen | AppTheme::CrtCyan => 2,
-                            AppTheme::Famicom
-                            | AppTheme::MegaDrive
-                            | AppTheme::Snes
-                            | AppTheme::GameBoy
-                            | AppTheme::GameBoyLight
-                            | AppTheme::SuperGameBoy
-                            | AppTheme::Ps1
-                            | AppTheme::Dreamcast
-                            | AppTheme::Ps2 => 3,
-                            AppTheme::ZxSpectrum
-                            | AppTheme::Commodore64
-                            | AppTheme::AmigaWorkbench
-                            | AppTheme::AtariSt
-                            | AppTheme::Msx
-                            | AppTheme::Apple2
-                            | AppTheme::DosCga
-                            | AppTheme::MacClassic
-                            | AppTheme::Windows98
-                            | AppTheme::Pico8 => 4,
-                            _ => 5,
-                        };
-                        if prev_category != 0 && category != prev_category {
-                            ui.separator();
-                        }
-                        prev_category = category;
 
-                        let selected = *current_theme == th;
-                        if ui.selectable_label(selected, i18n.tr(th.i18n_key())).clicked() {
-                            *current_theme = th;
-                            th.apply(ui.ctx());
-                            actions.theme_changed = Some(th);
-                            ui.close();
-                        }
-                    }
+                    let screen_h = ui.ctx().viewport_rect().height();
+                    let max_h = (screen_h - 30.0).clamp(480.0, 780.0);
+                    let menu_width = 245.0;
+
+                    egui::ScrollArea::vertical()
+                        .max_height(max_h)
+                        .auto_shrink([true, false])
+                        .show(ui, |ui| {
+                            ui.set_width(menu_width);
+
+                            let mut prev_category = 0;
+                            for th in AppTheme::ALL {
+                                let category = match th {
+                                    AppTheme::StudioDark | AppTheme::StudioLight | AppTheme::System => 1,
+                                    AppTheme::CrtAmber | AppTheme::CrtGreen | AppTheme::CrtCyan => 2,
+                                    AppTheme::Famicom
+                                    | AppTheme::MegaDrive
+                                    | AppTheme::Snes
+                                    | AppTheme::GameBoy
+                                    | AppTheme::GameBoyLight
+                                    | AppTheme::SuperGameBoy
+                                    | AppTheme::Ps1
+                                    | AppTheme::Dreamcast
+                                    | AppTheme::Ps2 => 3,
+                                    AppTheme::ZxSpectrum
+                                    | AppTheme::Commodore64
+                                    | AppTheme::AmigaWorkbench
+                                    | AppTheme::AtariSt
+                                    | AppTheme::Msx
+                                    | AppTheme::Apple2
+                                    | AppTheme::DosCga
+                                    | AppTheme::MacClassic
+                                    | AppTheme::Windows98
+                                    | AppTheme::Pico8 => 4,
+                                    _ => 5,
+                                };
+                                if prev_category != 0 && category != prev_category {
+                                    ui.separator();
+                                }
+                                prev_category = category;
+
+                                let is_selected = *current_theme == th;
+                                let (bg_color, dots) = th.swatch_colors();
+
+                                let row_height = 24.0;
+                                let (rect, resp) = ui.allocate_exact_size(
+                                    egui::vec2(menu_width, row_height),
+                                    egui::Sense::click(),
+                                );
+
+                                if resp.hovered() || is_selected {
+                                    let fill = if is_selected {
+                                        ui.visuals().selection.bg_fill.gamma_multiply(0.35)
+                                    } else {
+                                        ui.visuals().widgets.hovered.bg_fill
+                                    };
+                                    ui.painter().rect_filled(rect, 4.0, fill);
+                                }
+
+                                // DaisyUI-style swatch icon
+                                let swatch_size = 18.0;
+                                let swatch_rect = egui::Rect::from_min_size(
+                                    egui::pos2(rect.left() + 4.0, rect.center().y - swatch_size / 2.0),
+                                    egui::Vec2::splat(swatch_size),
+                                );
+                                draw_theme_swatch_icon(ui.painter(), swatch_rect, bg_color, dots);
+
+                                // Theme name
+                                let text_pos = egui::pos2(rect.left() + 28.0, rect.center().y);
+                                let text_color = if is_selected {
+                                    ui.visuals().selection.stroke.color
+                                } else if resp.hovered() {
+                                    ui.visuals().widgets.hovered.fg_stroke.color
+                                } else {
+                                    ui.visuals().text_color()
+                                };
+                                ui.painter().text(
+                                    text_pos,
+                                    egui::Align2::LEFT_CENTER,
+                                    i18n.tr(th.i18n_key()),
+                                    egui::FontId::proportional(13.0),
+                                    text_color,
+                                );
+
+                                // Right checkmark if active
+                                if is_selected {
+                                    let check_pos = egui::pos2(rect.right() - 8.0, rect.center().y);
+                                    ui.painter().text(
+                                        check_pos,
+                                        egui::Align2::RIGHT_CENTER,
+                                        "✓",
+                                        egui::FontId::proportional(14.0),
+                                        ui.visuals().selection.bg_fill,
+                                    );
+                                }
+
+                                if resp.clicked() {
+                                    *current_theme = th;
+                                    th.apply(ui.ctx());
+                                    actions.theme_changed = Some(th);
+                                    ui.close();
+                                }
+                            }
+                        });
                 });
 
                 ui.separator();

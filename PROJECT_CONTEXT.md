@@ -527,3 +527,81 @@ Comprehensive overhaul of the `PixelFlow` inbetweening algorithm in `src/model/i
   - Live preview regeneration is executed incrementally (1 frame pair per UI tick via `gen_in_progress`, `gen_pair_index`, `gen_total_pairs`), keeping the modal and timeline completely interactive without freezing the main thread.
 - **Visual Progress & Status Feedback:**
   - Added an interactive progress overlay on the preview viewport with a smooth progress bar, frame step counters `(k/N)`, and spinning indicator (`egui::Spinner`), providing immediate visual feedback when switching algorithms, directions, or parameters.
+
+---
+
+## 14. Interactive Canvas Size & 9-Grid Anchor Dialog (Crop & Expand)
+
+Dedicated, full-featured Canvas Size dialog allowing artists to enlarge or crop their existing sprite frames with 9-point directional anchoring, proportional constraints, and instant visual layout preview:
+
+### 14.1. Core Engine & Safety Guards (`src/model/project.rs`, `src/canvas/renderer.rs`)
+- **Multi-Layer Frame Resizing & Anchor Offset (`src/model/project.rs`):**
+  - `resize_frames_9grid` resizes all animation frames across every layer according to the 3×3 anchor grid:
+    - Anchor columns: 0 (Left), 1 (Center), 2 (Right).
+    - Anchor rows: 0 (Top), 1 (Center), 2 (Bottom).
+  - Shifts sprite origin (`pivot.origin_x`, `pivot.origin_y`) and gameplay action points across all frames by `(offset_x, offset_y)`.
+  - Accurately triggers `canvas_dirty = true`, `layers_dirty = true`, and `has_unsaved_changes = true`.
+- **Texture Size Invalidation & egui Dimension Safety (`src/canvas/renderer.rs`):**
+  - Added `CanvasRenderer::invalidate_textures(&mut self)` to drop atlas and layer GPU texture handles upon canvas dimension changes.
+  - Hardened `ensure_texture` to compare `handle.size() == color_image.size` before invoking `handle.set()`, dynamically reloading GPU textures if dimensions differ to prevent `egui` texture dimension mismatch panics.
+
+### 14.2. Modal Window & Visual Layout Diagram (`src/ui/modals.rs`)
+- **Proportional Constraints & Dimension Controls:**
+  - Width and Height inputs with drag values (range `1..=2048`).
+  - Proportional lock toggle (`FA_LOCK` / `FA_LOCK_OPEN`) maintaining the canvas aspect ratio on width/height edit.
+  - Quick delta indicators (`(+ΔW, +ΔH)` in green, `(-ΔW, -ΔH)` in warning orange/red).
+  - Quick presets: `+8`, `+16`, `×2`, `/2`, and `Reset`.
+  - Prominent warning banner when new canvas is smaller than the original, alerting that out-of-bounds pixels will be clipped.
+- **Interactive 9-Point Anchor Selector & Visual Layout Diagram:**
+  - 3×3 grid selector (`↖`, `↑`, `↗`, `←`, `•`, `→`, `↙`, `↓`, `↘`).
+  - Real-time layout diagram (`draw_canvas_resize_preview`):
+    - White boundary outline for the target canvas.
+    - Blue fill for retained original sprite content.
+    - Green fill & border for expansion margins (added space).
+    - Red fill & border for truncated regions outside the new bounds.
+    - Yellow pin indicating the selected anchor point.
+
+### 14.3. Navigation, Hotkeys & Internationalization (`src/ui/top_bar.rs`, `src/app.rs`, `assets/locales/`)
+- Accessible via:
+  - `Project -> Canvas Size (Crop / Expand)...`
+  - `Edit -> Canvas Size...`
+  - Global keyboard shortcut: `Ctrl+Alt+C` (Windows/Linux) / `Cmd+Alt+C` (macOS).
+- Clears active selection, triggers fit-to-view, records undo history, and displays status notification.
+- 100% key parity across all 37 languages verified by `test_locale_dictionaries_key_parity`.
+
+---
+
+## 15. Dynamic Project Title Synchronization & First-Save Workflow
+
+Hardened project title synchronization and first-save semantics across desktop and web:
+
+### 15.1. Dynamic Title Synchronization on "Save As" (`src/io/storage.rs`, `src/app.rs`)
+- **Metadata Synchronization:**
+  - `IoManager::save_to_native_path` automatically updates `meta_to_save.project_name` to match the target file stem (using `IoManager::project_name_from_path`), ensuring the companion `.onianvil.json` file is written with the exact newly selected name.
+  - When `IoEvent::ProjectSaved(Some(path))` is received, `doc.project.metadata.project_name` is updated to the chosen file stem.
+  - The document tab header and main window title immediately update from default `"sprite"` (or previous name) to the new saved project name.
+
+### 15.2. First-Time "Save Project" Delegation to "Save Project As" (`src/app.rs`, `src/io/storage.rs`)
+- **Seamless First Save Experience:**
+  - If a user creates a new project (or restores a recovery snapshot) where `project.file_path` is `None`, invoking "Save Project" (via menu or `Ctrl+S` / `Cmd+S`) automatically delegates to "Save Project As" (`force_dialog = true`), opening the native file dialog to choose target folder and name.
+  - Pre-populates the dialog starting folder with the existing file's directory if previously saved elsewhere.
+  - Upon saving, `project.file_path` is established so subsequent `Ctrl+S` invocations save directly to disk without prompting.
+
+---
+
+## 16. DaisyUI-Style Theme Swatch Icons & Scrollable Menu
+
+Overhaul of the theme selector in `src/theme.rs` and `src/ui/top_bar.rs`:
+
+### 16.1. DaisyUI-Style Theme Preview Swatches (`src/theme.rs`)
+- **Visual Identity Swatch (`AppTheme::swatch_colors`):**
+  - Each of the 35 retro, console, classic computer, and modern studio themes defines a background color matching its panel surface and a signature 4-color palette tuple (`[Color32; 4]`).
+  - Rendered via `draw_theme_swatch_icon`: a rounded capsule (`4 px` corner radius) with subtle stroke and a 2×2 grid of distinct circular accent dots.
+  - Active theme highlights with an accent checkmark (`✓`) at the right edge of the row.
+  - Authentic light console palettes and swatches for SNES (light lavender chassis + ABXY buttons), Sony PlayStation 1 (1994 light gray console + Green/Red/Blue/Pink gamepad symbols), and Sega Dreamcast (chalk white/gray + spiral orange/blue/yellow/green).
+  - Windows 98 theme features authentic light gray panels (`#C6C6C6`), standard Win32 `COLOR_APPWORKSPACE` medium gray canvas backdrop (`#808080`, replacing distracting teal), navy blue titlebar highlights (`#000080`), and high-contrast white text on selection.
+
+### 16.2. Viewport-Adaptive Scrollable Theme Menu (`src/ui/top_bar.rs`)
+- **Overflow & Clipping Elimination:**
+  - Wrapped theme items in `egui::ScrollArea::vertical()` with dynamic max height constrained by `(viewport_rect().height() - 30.0).clamp(480.0, 780.0)` and `.auto_shrink([true, false])`.
+  - Fixed compact width of `245.0 px` (eliminating wide empty margins) with spacious `24.0 px` row height, readable `13.0 pt` typography, and standard `18×18 px` swatches, showing 20+ themes simultaneously with zero horizontal waste.

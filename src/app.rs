@@ -1649,7 +1649,7 @@ impl eframe::App for OniAnvilApp {
                                                             doc.project.metadata.project_name, metrics
                                                         );
                                                         let text_color = if is_active {
-                                                            ui.visuals().widgets.active.fg_stroke.color
+                                                            ui.visuals().selection.stroke.color
                                                         } else {
                                                             ui.visuals().text_color()
                                                         };

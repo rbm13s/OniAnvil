@@ -146,6 +146,32 @@ pub fn contrast_fg(bg: Color32, preferred_fg: Color32) -> Color32 {
     }
 }
 
+/// Renders a DaisyUI-style theme preview swatch capsule with 4 signature accent dots.
+pub fn draw_theme_swatch_icon(
+    painter: &egui::Painter,
+    rect: egui::Rect,
+    bg: Color32,
+    dots: [Color32; 4],
+) {
+    painter.rect_filled(rect, 4.0, bg);
+    painter.rect_stroke(
+        rect,
+        4.0,
+        egui::Stroke::new(1.0, egui::Color32::from_white_alpha(45)),
+        egui::StrokeKind::Inside,
+    );
+
+    let c = rect.center();
+    let dx = rect.width() * 0.22;
+    let dy = rect.height() * 0.22;
+    let r = (rect.width() * 0.12).clamp(1.8, 2.5);
+
+    painter.circle_filled(egui::pos2(c.x - dx, c.y - dy), r, dots[0]);
+    painter.circle_filled(egui::pos2(c.x + dx, c.y - dy), r, dots[1]);
+    painter.circle_filled(egui::pos2(c.x - dx, c.y + dy), r, dots[2]);
+    painter.circle_filled(egui::pos2(c.x + dx, c.y + dy), r, dots[3]);
+}
+
 impl AppTheme {
     pub const ALL: [AppTheme; 35] = [
         AppTheme::StudioDark,
@@ -233,6 +259,7 @@ impl AppTheme {
             || self == Self::Windows98
             || self == Self::Dreamcast
             || self == Self::AtariSt
+            || self == Self::Ps1
     }
 
     pub fn palette(self) -> ThemePalette {
@@ -524,15 +551,15 @@ impl AppTheme {
                 Color32::from_rgb(230, 80, 120),
             ),
             Self::Ps1 => (
-                Color32::from_rgb(42, 43, 50),
-                Color32::from_rgb(26, 27, 32),
-                Color32::from_rgb(58, 60, 70),
-                Color32::from_rgb(76, 78, 92),
-                Color32::from_rgb(46, 75, 175),
-                Color32::from_rgb(68, 70, 82),
-                Color32::from_rgb(238, 90, 131),
-                Color32::from_rgb(235, 236, 242),
-                Color32::from_rgb(46, 67, 158),
+                Color32::from_rgb(216, 216, 222),
+                Color32::from_rgb(194, 194, 202),
+                Color32::from_rgb(228, 228, 234),
+                Color32::from_rgb(238, 238, 244),
+                Color32::from_rgb(182, 182, 194),
+                Color32::from_rgb(164, 164, 176),
+                Color32::from_rgb(65, 125, 245),
+                Color32::from_rgb(26, 26, 32),
+                Color32::from_rgb(65, 125, 245),
             ),
             Self::Dreamcast => (
                 Color32::from_rgb(238, 238, 242),
@@ -558,10 +585,10 @@ impl AppTheme {
             ),
             Self::Windows98 => (
                 Color32::from_rgb(198, 198, 198),
-                Color32::from_rgb(0, 128, 128),
+                Color32::from_rgb(128, 128, 128),
                 Color32::from_rgb(212, 212, 212),
                 Color32::from_rgb(228, 228, 228),
-                Color32::from_rgb(185, 185, 185),
+                Color32::from_rgb(180, 180, 180),
                 Color32::from_rgb(128, 128, 128),
                 Color32::from_rgb(0, 0, 128),
                 Color32::from_rgb(0, 0, 0),
@@ -635,6 +662,327 @@ impl AppTheme {
             text_primary,
             selection_bg,
             is_light,
+        }
+    }
+
+    /// Returns the background color and 4 signature accent dots for the theme preview swatch.
+    pub fn swatch_colors(self) -> (Color32, [Color32; 4]) {
+        match self {
+            Self::StudioDark => (
+                Color32::from_rgb(28, 28, 28),
+                [
+                    Color32::from_rgb(92, 92, 92),
+                    Color32::from_rgb(130, 130, 130),
+                    Color32::from_rgb(180, 180, 180),
+                    Color32::from_rgb(240, 240, 240),
+                ],
+            ),
+            Self::StudioLight => (
+                Color32::from_rgb(244, 244, 248),
+                [
+                    Color32::from_rgb(60, 100, 210),
+                    Color32::from_rgb(90, 95, 120),
+                    Color32::from_rgb(175, 178, 195),
+                    Color32::from_rgb(20, 20, 28),
+                ],
+            ),
+            Self::System => (
+                Color32::from_rgb(34, 34, 38),
+                [
+                    Color32::from_rgb(58, 130, 247),
+                    Color32::from_rgb(96, 165, 250),
+                    Color32::from_rgb(156, 163, 175),
+                    Color32::from_rgb(243, 244, 246),
+                ],
+            ),
+            Self::CrtAmber => (
+                Color32::from_rgb(26, 15, 0),
+                [
+                    Color32::from_rgb(255, 176, 0),
+                    Color32::from_rgb(255, 128, 0),
+                    Color32::from_rgb(255, 208, 64),
+                    Color32::from_rgb(255, 250, 224),
+                ],
+            ),
+            Self::CrtGreen => (
+                Color32::from_rgb(0, 21, 5),
+                [
+                    Color32::from_rgb(0, 255, 102),
+                    Color32::from_rgb(0, 204, 68),
+                    Color32::from_rgb(51, 255, 136),
+                    Color32::from_rgb(208, 255, 216),
+                ],
+            ),
+            Self::CrtCyan => (
+                Color32::from_rgb(0, 18, 26),
+                [
+                    Color32::from_rgb(0, 229, 255),
+                    Color32::from_rgb(0, 153, 204),
+                    Color32::from_rgb(102, 240, 255),
+                    Color32::from_rgb(224, 250, 255),
+                ],
+            ),
+            Self::Famicom => (
+                Color32::from_rgb(120, 24, 36),
+                [
+                    Color32::from_rgb(215, 170, 50),
+                    Color32::from_rgb(235, 195, 80),
+                    Color32::from_rgb(205, 56, 74),
+                    Color32::from_rgb(248, 242, 224),
+                ],
+            ),
+            Self::MegaDrive => (
+                Color32::from_rgb(24, 25, 28),
+                [
+                    Color32::from_rgb(0, 136, 255),
+                    Color32::from_rgb(255, 59, 48),
+                    Color32::from_rgb(235, 238, 245),
+                    Color32::from_rgb(120, 125, 138),
+                ],
+            ),
+            Self::Snes => (
+                Color32::from_rgb(208, 208, 218),
+                [
+                    Color32::from_rgb(123, 82, 171),
+                    Color32::from_rgb(79, 159, 235),
+                    Color32::from_rgb(245, 212, 66),
+                    Color32::from_rgb(76, 217, 100),
+                ],
+            ),
+            Self::GameBoy => (
+                Color32::from_rgb(48, 98, 48),
+                [
+                    Color32::from_rgb(15, 56, 15),
+                    Color32::from_rgb(48, 98, 48),
+                    Color32::from_rgb(139, 172, 15),
+                    Color32::from_rgb(155, 188, 15),
+                ],
+            ),
+            Self::GameBoyLight => (
+                Color32::from_rgb(16, 53, 48),
+                [
+                    Color32::from_rgb(0, 229, 176),
+                    Color32::from_rgb(0, 153, 128),
+                    Color32::from_rgb(51, 255, 208),
+                    Color32::from_rgb(208, 255, 245),
+                ],
+            ),
+            Self::SuperGameBoy => (
+                Color32::from_rgb(34, 38, 56),
+                [
+                    Color32::from_rgb(72, 104, 200),
+                    Color32::from_rgb(200, 72, 88),
+                    Color32::from_rgb(72, 200, 128),
+                    Color32::from_rgb(232, 232, 248),
+                ],
+            ),
+            Self::Ps1 => (
+                Color32::from_rgb(216, 216, 222),
+                [
+                    Color32::from_rgb(0, 200, 130),
+                    Color32::from_rgb(240, 60, 70),
+                    Color32::from_rgb(65, 125, 245),
+                    Color32::from_rgb(235, 90, 165),
+                ],
+            ),
+            Self::Dreamcast => (
+                Color32::from_rgb(238, 238, 242),
+                [
+                    Color32::from_rgb(255, 102, 0),
+                    Color32::from_rgb(0, 136, 255),
+                    Color32::from_rgb(255, 204, 0),
+                    Color32::from_rgb(0, 204, 102),
+                ],
+            ),
+            Self::Ps2 => (
+                Color32::from_rgb(13, 17, 26),
+                [
+                    Color32::from_rgb(0, 85, 255),
+                    Color32::from_rgb(0, 210, 255),
+                    Color32::from_rgb(127, 156, 245),
+                    Color32::from_rgb(224, 231, 255),
+                ],
+            ),
+            Self::ZxSpectrum => (
+                Color32::from_rgb(16, 16, 24),
+                [
+                    Color32::from_rgb(215, 0, 0),
+                    Color32::from_rgb(0, 215, 0),
+                    Color32::from_rgb(215, 215, 0),
+                    Color32::from_rgb(0, 0, 215),
+                ],
+            ),
+            Self::Commodore64 => (
+                Color32::from_rgb(56, 56, 144),
+                [
+                    Color32::from_rgb(104, 104, 216),
+                    Color32::from_rgb(160, 160, 255),
+                    Color32::from_rgb(136, 112, 48),
+                    Color32::from_rgb(255, 255, 255),
+                ],
+            ),
+            Self::AmigaWorkbench => (
+                Color32::from_rgb(0, 85, 170),
+                [
+                    Color32::from_rgb(255, 136, 0),
+                    Color32::from_rgb(255, 255, 255),
+                    Color32::from_rgb(0, 0, 0),
+                    Color32::from_rgb(85, 170, 255),
+                ],
+            ),
+            Self::AtariSt => (
+                Color32::from_rgb(220, 220, 220),
+                [
+                    Color32::from_rgb(0, 0, 0),
+                    Color32::from_rgb(0, 170, 0),
+                    Color32::from_rgb(170, 0, 0),
+                    Color32::from_rgb(85, 85, 85),
+                ],
+            ),
+            Self::Msx => (
+                Color32::from_rgb(16, 20, 40),
+                [
+                    Color32::from_rgb(64, 192, 64),
+                    Color32::from_rgb(80, 80, 240),
+                    Color32::from_rgb(224, 64, 64),
+                    Color32::from_rgb(240, 240, 240),
+                ],
+            ),
+            Self::Apple2 => (
+                Color32::from_rgb(10, 20, 10),
+                [
+                    Color32::from_rgb(51, 255, 51),
+                    Color32::from_rgb(0, 170, 0),
+                    Color32::from_rgb(102, 255, 102),
+                    Color32::from_rgb(204, 255, 204),
+                ],
+            ),
+            Self::DosCga => (
+                Color32::from_rgb(0, 0, 170),
+                [
+                    Color32::from_rgb(0, 170, 170),
+                    Color32::from_rgb(170, 0, 170),
+                    Color32::from_rgb(170, 170, 170),
+                    Color32::from_rgb(255, 255, 255),
+                ],
+            ),
+            Self::MacClassic => (
+                Color32::from_rgb(255, 255, 255),
+                [
+                    Color32::from_rgb(0, 0, 0),
+                    Color32::from_rgb(85, 85, 85),
+                    Color32::from_rgb(170, 170, 170),
+                    Color32::from_rgb(220, 220, 220),
+                ],
+            ),
+            Self::Windows98 => (
+                Color32::from_rgb(198, 198, 198),
+                [
+                    Color32::from_rgb(0, 0, 128),
+                    Color32::from_rgb(0, 128, 128),
+                    Color32::from_rgb(255, 255, 255),
+                    Color32::from_rgb(128, 128, 128),
+                ],
+            ),
+            Self::Pico8 => (
+                Color32::from_rgb(29, 43, 83),
+                [
+                    Color32::from_rgb(255, 0, 77),
+                    Color32::from_rgb(255, 163, 0),
+                    Color32::from_rgb(255, 236, 39),
+                    Color32::from_rgb(0, 228, 54),
+                ],
+            ),
+            Self::CyberpunkNeon => (
+                Color32::from_rgb(18, 19, 36),
+                [
+                    Color32::from_rgb(255, 0, 85),
+                    Color32::from_rgb(0, 240, 255),
+                    Color32::from_rgb(255, 230, 0),
+                    Color32::from_rgb(230, 249, 255),
+                ],
+            ),
+            Self::Synthwave => (
+                Color32::from_rgb(36, 23, 52),
+                [
+                    Color32::from_rgb(255, 42, 133),
+                    Color32::from_rgb(138, 43, 226),
+                    Color32::from_rgb(0, 240, 255),
+                    Color32::from_rgb(248, 231, 28),
+                ],
+            ),
+            Self::NordFrost => (
+                Color32::from_rgb(46, 52, 64),
+                [
+                    Color32::from_rgb(136, 192, 208),
+                    Color32::from_rgb(129, 161, 193),
+                    Color32::from_rgb(94, 129, 172),
+                    Color32::from_rgb(236, 239, 244),
+                ],
+            ),
+            Self::Dracula => (
+                Color32::from_rgb(40, 42, 54),
+                [
+                    Color32::from_rgb(189, 147, 249),
+                    Color32::from_rgb(255, 121, 198),
+                    Color32::from_rgb(139, 233, 253),
+                    Color32::from_rgb(80, 250, 123),
+                ],
+            ),
+            Self::TokyoNight => (
+                Color32::from_rgb(26, 27, 38),
+                [
+                    Color32::from_rgb(122, 162, 247),
+                    Color32::from_rgb(187, 154, 247),
+                    Color32::from_rgb(125, 207, 255),
+                    Color32::from_rgb(192, 202, 245),
+                ],
+            ),
+            Self::CatppuccinMocha => (
+                Color32::from_rgb(30, 30, 46),
+                [
+                    Color32::from_rgb(203, 166, 247),
+                    Color32::from_rgb(243, 139, 168),
+                    Color32::from_rgb(137, 180, 250),
+                    Color32::from_rgb(166, 227, 161),
+                ],
+            ),
+            Self::GruvboxDark => (
+                Color32::from_rgb(40, 40, 40),
+                [
+                    Color32::from_rgb(251, 73, 52),
+                    Color32::from_rgb(184, 187, 38),
+                    Color32::from_rgb(250, 189, 47),
+                    Color32::from_rgb(131, 165, 152),
+                ],
+            ),
+            Self::MonokaiPro => (
+                Color32::from_rgb(34, 31, 34),
+                [
+                    Color32::from_rgb(255, 97, 136),
+                    Color32::from_rgb(169, 220, 118),
+                    Color32::from_rgb(255, 216, 102),
+                    Color32::from_rgb(120, 220, 232),
+                ],
+            ),
+            Self::SolarizedDark => (
+                Color32::from_rgb(7, 54, 66),
+                [
+                    Color32::from_rgb(38, 139, 210),
+                    Color32::from_rgb(42, 161, 152),
+                    Color32::from_rgb(181, 137, 0),
+                    Color32::from_rgb(203, 75, 22),
+                ],
+            ),
+            Self::SolarizedLight => (
+                Color32::from_rgb(253, 246, 227),
+                [
+                    Color32::from_rgb(38, 139, 210),
+                    Color32::from_rgb(42, 161, 152),
+                    Color32::from_rgb(181, 137, 0),
+                    Color32::from_rgb(203, 75, 22),
+                ],
+            ),
         }
     }
 
@@ -857,7 +1205,7 @@ impl AppTheme {
                 clip_active_frame_bg: Color32::from_rgb(226, 226, 226),
                 clip_active_cell_bg: Color32::from_rgb(240, 240, 240),
                 clip_hdr_bg: Color32::from_rgb(180, 180, 180),
-                clip_hdr_active_layer_bg: Color32::from_rgb(0, 128, 128),
+                clip_hdr_active_layer_bg: Color32::from_rgb(0, 0, 128),
                 clip_hdr_active_cell_bg: Color32::from_rgb(0, 0, 128),
                 clip_hdr_text: Color32::from_rgb(0, 0, 0),
                 clip_hdr_active_text: Color32::WHITE,
@@ -865,7 +1213,7 @@ impl AppTheme {
                 thumb_bg: Color32::WHITE,
                 thumb_border: Some(Color32::from_rgb(128, 128, 128)),
                 clip_border: Color32::from_rgb(128, 128, 128),
-                clip_border_active_frame: Color32::from_rgb(0, 128, 128),
+                clip_border_active_frame: Color32::from_rgb(0, 0, 128),
                 clip_border_active_cell: Color32::from_rgb(0, 0, 128),
             },
             Self::CyberpunkNeon => TimelineColors {
