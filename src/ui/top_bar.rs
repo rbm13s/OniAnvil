@@ -309,6 +309,18 @@ pub fn show_top_bars(
                     ui.close();
                 }
                 ui.separator();
+                if ui
+                    .add_enabled(
+                        has_doc,
+                        egui::Button::new(format!("{FA_FIT} {}", i18n.tr("menu.edit.canvas_size")))
+                            .shortcut_text(format!("{mod_name}+Alt+C")),
+                    )
+                    .clicked()
+                {
+                    actions.open_resize9_modal = true;
+                    ui.close();
+                }
+                ui.separator();
                 ui.checkbox(&mut tools.batch_mode, i18n.tr("menu.edit.batch_mode"));
                 ui.separator();
                 if ui
@@ -617,7 +629,8 @@ pub fn show_top_bars(
                 if ui
                     .add_enabled(
                         has_doc,
-                        egui::Button::new(format!("{FA_FIT} {}", i18n.tr("menu.project.resize_9grid"))),
+                        egui::Button::new(format!("{FA_FIT} {}", i18n.tr("menu.project.resize_9grid")))
+                            .shortcut_text(format!("{mod_name}+Alt+C")),
                     )
                     .clicked()
                 {

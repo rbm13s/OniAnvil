@@ -1927,6 +1927,9 @@ impl Project {
         {
             self.atlas_rgba = active_img;
         }
+        self.canvas_dirty = true;
+        self.layers_dirty = true;
+        self.has_unsaved_changes = true;
     }
 
     /// Resizes all frames to `(new_w, new_h)` aligned to a 3×3 anchor `(anchor_col: 0..=2, anchor_row: 0..=2)`.
@@ -2018,6 +2021,9 @@ impl Project {
         {
             self.atlas_rgba = active_img;
         }
+        self.canvas_dirty = true;
+        self.layers_dirty = true;
+        self.has_unsaved_changes = true;
     }
 
     /// Automatically trims transparent borders around all frames, adjusting frame dimensions
@@ -3000,5 +3006,62 @@ mod tests {
             *l0.get_pixel(f1_ox + 1, f1_oy + 1),
             Rgba([0, 255, 0, 255])
         );
+    }
+
+    #[test]
+    fn test_resize_frames_9grid_expand_center() {
+        let meta = ProjectMetadata::new_config("Test".to_string(), 4, 4, 1, 1, None);
+        let mut proj = Project::new(meta);
+        proj.atlas_rgba.put_pixel(1, 1, Rgba([255, 0, 0, 255]));
+
+        // Expand from 4x4 to 8x8 with center anchor (1, 1)
+        proj.resize_frames_9grid(8, 8, 1, 1);
+
+        assert_eq!(proj.metadata.frame_width, 8);
+        assert_eq!(proj.metadata.frame_height, 8);
+        assert!(proj.canvas_dirty);
+        assert!(proj.layers_dirty);
+
+        // Center offset = (8 - 4) / 2 = 2.
+        // Old (1, 1) -> New (1 + 2, 1 + 2) = (3, 3)
+        assert_eq!(*proj.atlas_rgba.get_pixel(3, 3), Rgba([255, 0, 0, 255]));
+        // Old location (1, 1) should now be blank padding
+        assert_eq!(*proj.atlas_rgba.get_pixel(1, 1), Rgba([0, 0, 0, 0]));
+    }
+
+    #[test]
+    fn test_resize_frames_9grid_crop_top_left() {
+        let meta = ProjectMetadata::new_config("Test".to_string(), 8, 8, 1, 1, None);
+        let mut proj = Project::new(meta);
+        proj.atlas_rgba.put_pixel(0, 0, Rgba([10, 20, 30, 255]));
+        proj.atlas_rgba.put_pixel(6, 6, Rgba([40, 50, 60, 255]));
+
+        // Crop from 8x8 to 4x4 with top-left anchor (0, 0)
+        proj.resize_frames_9grid(4, 4, 0, 0);
+
+        assert_eq!(proj.metadata.frame_width, 4);
+        assert_eq!(proj.metadata.frame_height, 4);
+
+        // (0, 0) preserved
+        assert_eq!(*proj.atlas_rgba.get_pixel(0, 0), Rgba([10, 20, 30, 255]));
+        // Atlas dimensions are now 4x4, so (6, 6) is cropped away
+        assert_eq!(proj.atlas_rgba.width(), 4);
+        assert_eq!(proj.atlas_rgba.height(), 4);
+    }
+
+    #[test]
+    fn test_resize_frames_9grid_bottom_right() {
+        let meta = ProjectMetadata::new_config("Test".to_string(), 4, 4, 1, 1, None);
+        let mut proj = Project::new(meta);
+        proj.atlas_rgba.put_pixel(3, 3, Rgba([100, 200, 50, 255]));
+
+        // Expand from 4x4 to 6x6 with bottom-right anchor (2, 2)
+        // Offset = (6 - 4, 6 - 4) = (2, 2)
+        proj.resize_frames_9grid(6, 6, 2, 2);
+
+        assert_eq!(proj.metadata.frame_width, 6);
+        assert_eq!(proj.metadata.frame_height, 6);
+        // (3 + 2, 3 + 2) = (5, 5)
+        assert_eq!(*proj.atlas_rgba.get_pixel(5, 5), Rgba([100, 200, 50, 255]));
     }
 }

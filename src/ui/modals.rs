@@ -639,8 +639,12 @@ impl ReGridModalState {
 
 pub struct Resize9GridModalState {
     pub open: bool,
+    pub current_width: u32,
+    pub current_height: u32,
     pub new_width: u32,
     pub new_height: u32,
+    pub lock_aspect_ratio: bool,
+    pub aspect_ratio: f32,
     pub anchor_col: u8,
     pub anchor_row: u8,
 }
@@ -649,18 +653,27 @@ impl Default for Resize9GridModalState {
     fn default() -> Self {
         Self {
             open: false,
+            current_width: 32,
+            current_height: 32,
             new_width: 32,
             new_height: 32,
+            lock_aspect_ratio: false,
+            aspect_ratio: 1.0,
             anchor_col: 1,
-            anchor_row: 2, // Bottom-Center default for character sprites
+            anchor_row: 1, // Default Center
         }
     }
 }
 
 impl Resize9GridModalState {
     pub fn open_for(&mut self, project: &Project) {
-        self.new_width = project.metadata.frame_width.max(1);
-        self.new_height = project.metadata.frame_height.max(1);
+        let w = project.metadata.frame_width.max(1);
+        let h = project.metadata.frame_height.max(1);
+        self.current_width = w;
+        self.current_height = h;
+        self.new_width = w;
+        self.new_height = h;
+        self.aspect_ratio = w as f32 / h.max(1) as f32;
         self.open = true;
     }
 
@@ -680,44 +693,178 @@ impl Resize9GridModalState {
             .default_pos(ctx.viewport_rect().center())
             .constrain(true)
             .show(ctx, |ui| {
-                ui.set_min_width(310.0);
-                ui.horizontal(|ui| {
-                    ui.label(i18n.tr("modal.resize9.new_w"));
-                    ui.add(egui::DragValue::new(&mut self.new_width).range(1..=2048));
-                });
-                ui.horizontal(|ui| {
-                    ui.label(i18n.tr("modal.resize9.new_h"));
-                    ui.add(egui::DragValue::new(&mut self.new_height).range(1..=2048));
-                });
+                ui.set_min_width(400.0);
 
-                ui.add_space(6.0);
-                ui.label(i18n.tr("modal.resize9.anchor"));
-                let arrows = [
-                    ["↖", "↑", "↗"],
-                    ["←", "•", "→"],
-                    ["↙", "↓", "↘"],
-                ];
-                egui::Grid::new("resize_9grid_selector")
-                    .spacing([4.0, 4.0])
-                    .show(ui, |ui| {
-                        for r in 0..3_u8 {
-                            for c in 0..3_u8 {
-                                let selected = self.anchor_col == c && self.anchor_row == r;
-                                let btn = egui::Button::new(arrows[r as usize][c as usize])
-                                    .selected(selected)
-                                    .min_size(Vec2::splat(30.0));
-                                if ui.add(btn).clicked() {
-                                    self.anchor_col = c;
-                                    self.anchor_row = r;
+                // Current size header
+                ui.horizontal(|ui| {
+                    ui.label(i18n.tr("modal.resize9.current_size"));
+                    ui.strong(format!("{} × {} px", self.current_width, self.current_height));
+                });
+                ui.add_space(4.0);
+                ui.separator();
+                ui.add_space(4.0);
+
+                ui.horizontal(|ui| {
+                    // Left Column: Controls & Presets
+                    ui.vertical(|ui| {
+                        ui.set_width(240.0);
+
+                        // Width input
+                        ui.horizontal(|ui| {
+                            ui.label(i18n.tr("modal.resize9.new_w"));
+                            if ui.add(egui::DragValue::new(&mut self.new_width).range(1..=2048)).changed()
+                                && self.lock_aspect_ratio
+                                && self.aspect_ratio > 0.0
+                            {
+                                self.new_height = ((self.new_width as f32 / self.aspect_ratio).round() as u32).clamp(1, 2048);
+                            }
+                            let dw = self.new_width as i32 - self.current_width as i32;
+                            if dw > 0 {
+                                ui.colored_label(Color32::from_rgb(80, 200, 120), format!("(+{})", dw));
+                            } else if dw < 0 {
+                                ui.colored_label(Color32::from_rgb(255, 120, 80), format!("({})", dw));
+                            }
+                        });
+
+                        // Height input
+                        ui.horizontal(|ui| {
+                            ui.label(i18n.tr("modal.resize9.new_h"));
+                            if ui.add(egui::DragValue::new(&mut self.new_height).range(1..=2048)).changed()
+                                && self.lock_aspect_ratio
+                                && self.aspect_ratio > 0.0
+                            {
+                                self.new_width = ((self.new_height as f32 * self.aspect_ratio).round() as u32).clamp(1, 2048);
+                            }
+                            let dh = self.new_height as i32 - self.current_height as i32;
+                            if dh > 0 {
+                                ui.colored_label(Color32::from_rgb(80, 200, 120), format!("(+{})", dh));
+                            } else if dh < 0 {
+                                ui.colored_label(Color32::from_rgb(255, 120, 80), format!("({})", dh));
+                            }
+                        });
+
+                        ui.add_space(2.0);
+
+                        // Lock aspect ratio
+                        let lock_icon = if self.lock_aspect_ratio { FA_LOCK } else { FA_LOCK_OPEN };
+                        if ui
+                            .selectable_label(
+                                self.lock_aspect_ratio,
+                                format!("{lock_icon} {}", i18n.tr("modal.resize9.lock_aspect")),
+                            )
+                            .clicked()
+                        {
+                            self.lock_aspect_ratio = !self.lock_aspect_ratio;
+                            if self.lock_aspect_ratio && self.new_height > 0 {
+                                self.aspect_ratio = self.new_width as f32 / self.new_height as f32;
+                            }
+                        }
+
+                        ui.add_space(4.0);
+
+                        // Presets
+                        ui.horizontal(|ui| {
+                            if ui.small_button("+8").clicked() {
+                                self.new_width = (self.new_width + 8).min(2048);
+                                self.new_height = (self.new_height + 8).min(2048);
+                                if self.new_height > 0 {
+                                    self.aspect_ratio = self.new_width as f32 / self.new_height as f32;
                                 }
                             }
-                            ui.end_row();
+                            if ui.small_button("+16").clicked() {
+                                self.new_width = (self.new_width + 16).min(2048);
+                                self.new_height = (self.new_height + 16).min(2048);
+                                if self.new_height > 0 {
+                                    self.aspect_ratio = self.new_width as f32 / self.new_height as f32;
+                                }
+                            }
+                            if ui.small_button("×2").clicked() {
+                                self.new_width = (self.new_width * 2).min(2048);
+                                self.new_height = (self.new_height * 2).min(2048);
+                            }
+                            if ui.small_button("/2").clicked() {
+                                self.new_width = (self.new_width / 2).max(1);
+                                self.new_height = (self.new_height / 2).max(1);
+                            }
+                            if ui.small_button(format!("{FA_RESET} {}", i18n.tr("modal.resize9.preset_reset"))).clicked() {
+                                self.new_width = self.current_width;
+                                self.new_height = self.current_height;
+                                if self.new_height > 0 {
+                                    self.aspect_ratio = self.new_width as f32 / self.new_height as f32;
+                                }
+                            }
+                        });
+
+                        // Crop warning if dimensions are reduced
+                        let is_cropped = self.new_width < self.current_width || self.new_height < self.current_height;
+                        if is_cropped {
+                            ui.add_space(4.0);
+                            egui::Frame::new()
+                                .fill(Color32::from_rgb(55, 25, 25))
+                                .stroke(Stroke::new(1.0, Color32::from_rgb(200, 70, 70)))
+                                .corner_radius(4.0)
+                                .inner_margin(egui::Margin::same(6))
+                                .show(ui, |ui| {
+                                    ui.horizontal_wrapped(|ui| {
+                                        ui.label(RichText::new("⚠").color(Color32::from_rgb(255, 120, 80)).strong());
+                                        ui.label(
+                                            RichText::new(i18n.tr("modal.resize9.crop_warning"))
+                                                .color(Color32::from_rgb(255, 190, 180))
+                                                .small(),
+                                        );
+                                    });
+                                });
                         }
                     });
 
+                    ui.separator();
+
+                    // Right Column: 3x3 Anchor & Diagram Preview
+                    ui.vertical(|ui| {
+                        ui.label(i18n.tr("modal.resize9.anchor"));
+                        let arrows = [
+                            ["↖", "↑", "↗"],
+                            ["←", "•", "→"],
+                            ["↙", "↓", "↘"],
+                        ];
+                        egui::Grid::new("resize_9grid_selector")
+                            .spacing([4.0, 4.0])
+                            .show(ui, |ui| {
+                                for r in 0..3_u8 {
+                                    for c in 0..3_u8 {
+                                        let selected = self.anchor_col == c && self.anchor_row == r;
+                                        let btn = egui::Button::new(arrows[r as usize][c as usize])
+                                            .selected(selected)
+                                            .min_size(Vec2::splat(28.0));
+                                        if ui.add(btn).clicked() {
+                                            self.anchor_col = c;
+                                            self.anchor_row = r;
+                                        }
+                                    }
+                                    ui.end_row();
+                                }
+                            });
+
+                        ui.add_space(6.0);
+                        ui.label(RichText::new(i18n.tr("modal.resize9.preview")).small());
+                        draw_canvas_resize_preview(
+                            ui,
+                            self.current_width,
+                            self.current_height,
+                            self.new_width,
+                            self.new_height,
+                            self.anchor_col,
+                            self.anchor_row,
+                        );
+                    });
+                });
+
+                ui.add_space(8.0);
                 ui.separator();
                 ui.horizontal(|ui| {
-                    if ui.button(format!("{FA_CHECK} {}", i18n.tr("modal.resize9.apply"))).clicked() {
+                    let apply_btn = egui::Button::new(format!("{FA_CHECK} {}", i18n.tr("modal.resize9.apply")))
+                        .fill(Color32::from_rgb(38, 120, 70));
+                    if ui.add(apply_btn).clicked() {
                         applied = Some((
                             self.new_width,
                             self.new_height,
@@ -730,11 +877,141 @@ impl Resize9GridModalState {
                         close_requested = true;
                     }
                 });
+
+                if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                    applied = Some((
+                        self.new_width,
+                        self.new_height,
+                        self.anchor_col,
+                        self.anchor_row,
+                    ));
+                    close_requested = true;
+                }
+                if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                    close_requested = true;
+                }
             });
 
         self.open = window_open && !close_requested;
         applied
     }
+}
+
+fn draw_canvas_resize_preview(
+    ui: &mut Ui,
+    cur_w: u32,
+    cur_h: u32,
+    new_w: u32,
+    new_h: u32,
+    anchor_col: u8,
+    anchor_row: u8,
+) {
+    let ow = cur_w.max(1) as f32;
+    let oh = cur_h.max(1) as f32;
+    let nw = new_w.max(1) as f32;
+    let nh = new_h.max(1) as f32;
+
+    let offset_x = match anchor_col {
+        0 => 0.0,
+        1 => (nw - ow) / 2.0,
+        _ => nw - ow,
+    };
+    let offset_y = match anchor_row {
+        0 => 0.0,
+        1 => (nh - oh) / 2.0,
+        _ => nh - oh,
+    };
+
+    let min_x = 0.0_f32.min(offset_x);
+    let min_y = 0.0_f32.min(offset_y);
+    let max_x = nw.max(offset_x + ow);
+    let max_y = nh.max(offset_y + oh);
+    let span_w = (max_x - min_x).max(1.0);
+    let span_h = (max_y - min_y).max(1.0);
+
+    let (box_rect, _) = ui.allocate_exact_size(Vec2::new(100.0, 85.0), Sense::hover());
+    let painter = ui.painter_at(box_rect);
+    painter.rect_filled(box_rect, 4.0, Color32::from_black_alpha(100));
+    painter.rect_stroke(
+        box_rect,
+        4.0,
+        Stroke::new(1.0, Color32::from_white_alpha(30)),
+        StrokeKind::Inside,
+    );
+
+    let inner = box_rect.shrink(8.0);
+    let scale = (inner.width() / span_w).min(inner.height() / span_h).min(10.0);
+    let draw_w = span_w * scale;
+    let draw_h = span_h * scale;
+    let base_x = inner.center().x - (draw_w / 2.0) - (min_x * scale);
+    let base_y = inner.center().y - (draw_h / 2.0) - (min_y * scale);
+
+    let map_rect = |x0: f32, y0: f32, w: f32, h: f32| -> egui::Rect {
+        egui::Rect::from_min_size(
+            egui::pos2(base_x + x0 * scale, base_y + y0 * scale),
+            egui::vec2(w * scale, h * scale),
+        )
+    };
+
+    let r_new = map_rect(0.0, 0.0, nw, nh);
+    let r_old = map_rect(offset_x, offset_y, ow, oh);
+
+    // 1. If expanding, fill new canvas area with green tint
+    if nw > ow || nh > oh {
+        painter.rect_filled(r_new, 2.0, Color32::from_rgba_unmultiplied(35, 100, 55, 100));
+        painter.rect_stroke(
+            r_new,
+            2.0,
+            Stroke::new(1.0, Color32::from_rgb(60, 190, 100)),
+            StrokeKind::Inside,
+        );
+    }
+
+    // 2. If cropping, fill old rect areas outside new rect with red tint
+    if nw < ow || nh < oh {
+        painter.rect_filled(r_old, 2.0, Color32::from_rgba_unmultiplied(190, 45, 45, 100));
+        painter.rect_stroke(
+            r_old,
+            2.0,
+            Stroke::new(1.0, Color32::from_rgb(220, 60, 60)),
+            StrokeKind::Inside,
+        );
+    }
+
+    // 3. Overlap area (retained content)
+    let overlap = r_new.intersect(r_old);
+    if overlap.is_positive() {
+        painter.rect_filled(overlap, 2.0, Color32::from_rgba_unmultiplied(45, 120, 205, 180));
+        painter.rect_stroke(
+            overlap,
+            2.0,
+            Stroke::new(1.0, Color32::from_white_alpha(140)),
+            StrokeKind::Inside,
+        );
+    }
+
+    // 4. Bounding outline for new canvas
+    painter.rect_stroke(
+        r_new,
+        2.0,
+        Stroke::new(1.5, Color32::from_rgb(255, 255, 255)),
+        StrokeKind::Outside,
+    );
+
+    // 5. Anchor dot
+    let ax = match anchor_col {
+        0 => offset_x,
+        1 => offset_x + ow / 2.0,
+        _ => offset_x + ow,
+    };
+    let ay = match anchor_row {
+        0 => offset_y,
+        1 => offset_y + oh / 2.0,
+        _ => offset_y + oh,
+    };
+    let pt = egui::pos2(base_x + ax * scale, base_y + ay * scale);
+    painter.circle_filled(pt, 3.5, Color32::from_rgb(255, 220, 40));
+    painter.circle_stroke(pt, 3.5, Stroke::new(1.0, Color32::BLACK));
 }
 
 pub struct SheetSlicerModalState {
@@ -4993,6 +5270,7 @@ pub fn show_hotkeys_modal(ctx: &Context, open: &mut bool, i18n: &I18n) {
         ("Ctrl/Cmd + Shift + R", i18n.tr("modal.hotkeys.rotate_arbitrary")),
         ("Ctrl/Cmd + U", i18n.tr("modal.hotkeys.color_adjust")),
         ("Ctrl/Cmd + B", i18n.tr("modal.hotkeys.custom_brush")),
+        ("Ctrl/Cmd + Alt + C", i18n.tr("modal.hotkeys.canvas_size")),
     ];
 
     let timeline_items = [

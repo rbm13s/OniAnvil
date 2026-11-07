@@ -953,6 +953,7 @@ impl OniAnvilApp {
         let mut trigger_custom_brush = false;
         let mut trigger_outline_fx = false;
         let mut trigger_rotate_modal = false;
+        let mut trigger_resize9 = false;
 
         ctx.input(|i| {
             if i.key_pressed(egui::Key::F1) {
@@ -983,7 +984,11 @@ impl OniAnvilApp {
                     } => {
                         let is = |target: egui::Key| *key == target || *physical_key == Some(target);
                         if modifiers.command && is(egui::Key::C) {
-                            trigger_copy = true;
+                            if modifiers.alt {
+                                trigger_resize9 = true;
+                            } else {
+                                trigger_copy = true;
+                            }
                         }
                         if modifiers.command && is(egui::Key::X) {
                             trigger_cut = true;
@@ -1061,7 +1066,11 @@ impl OniAnvilApp {
                 trigger_invert_selection = true;
             }
             if i.modifiers.command && i.key_pressed(egui::Key::C) {
-                trigger_copy = true;
+                if i.modifiers.alt {
+                    trigger_resize9 = true;
+                } else {
+                    trigger_copy = true;
+                }
             }
             if i.modifiers.command && i.key_pressed(egui::Key::X) {
                 trigger_cut = true;
@@ -1200,6 +1209,11 @@ impl OniAnvilApp {
         }
         if trigger_redo {
             self.perform_redo();
+        }
+        if trigger_resize9 {
+            if let Some(doc) = self.documents.get(self.active_doc_idx) {
+                self.resize9_modal.open_for(&doc.project);
+            }
         }
         if trigger_copy {
             self.copy_selection(Some(ctx));
@@ -2379,10 +2393,16 @@ impl eframe::App for OniAnvilApp {
 
         if let Some((nw, nh, acol, arow)) = self.resize9_modal.show(ctx, &self.i18n) {
             if let Some(doc) = self.documents.get_mut(self.active_doc_idx) {
-                doc.record_history();
-                doc.project.resize_frames_9grid(nw, nh, acol, arow);
-                doc.renderer.selection.clear();
-                doc.viewport.needs_fit_to_view = true;
+                let ow = doc.project.metadata.frame_width;
+                let oh = doc.project.metadata.frame_height;
+                if nw != ow || nh != oh {
+                    doc.record_history();
+                    doc.project.resize_frames_9grid(nw, nh, acol, arow);
+                    doc.renderer.selection.clear();
+                    doc.renderer.invalidate_textures();
+                    doc.viewport.needs_fit_to_view = true;
+                    self.status_key = "app.status.canvas_resized";
+                }
             }
         }
 

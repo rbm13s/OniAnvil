@@ -122,6 +122,11 @@ pub struct CanvasRenderer {
 }
 
 impl CanvasRenderer {
+    pub fn invalidate_textures(&mut self) {
+        self.atlas_texture = None;
+        self.layer_textures.clear();
+    }
+
     pub fn ensure_texture(&mut self, ctx: &Context, project: &mut Project) -> &TextureHandle {
         if self.atlas_texture.is_none()
             || project.canvas_dirty
@@ -133,7 +138,17 @@ impl CanvasRenderer {
             project.sync_active_layer();
             let color_image = project.to_color_image();
             match &mut self.atlas_texture {
-                Some(handle) => handle.set(color_image, TextureOptions::NEAREST),
+                Some(handle) => {
+                    if handle.size() == color_image.size {
+                        handle.set(color_image, TextureOptions::NEAREST);
+                    } else {
+                        *handle = ctx.load_texture(
+                            "onianvil_atlas_texture",
+                            color_image,
+                            TextureOptions::NEAREST,
+                        );
+                    }
+                }
                 None => {
                     self.atlas_texture = Some(ctx.load_texture(
                         "onianvil_atlas_texture",
@@ -165,7 +180,15 @@ impl CanvasRenderer {
                         || self.layer_textures[idx].size() != l_size
                     {
                         let l_color = egui::ColorImage::from_rgba_unmultiplied(l_size, l_img.as_raw());
-                        self.layer_textures[idx].set(l_color, TextureOptions::NEAREST);
+                        if self.layer_textures[idx].size() == l_size {
+                            self.layer_textures[idx].set(l_color, TextureOptions::NEAREST);
+                        } else {
+                            self.layer_textures[idx] = ctx.load_texture(
+                                format!("onianvil_layer_texture_{}", idx),
+                                l_color,
+                                TextureOptions::NEAREST,
+                            );
+                        }
                     }
                 } else {
                     let l_color = egui::ColorImage::from_rgba_unmultiplied(l_size, l_img.as_raw());
