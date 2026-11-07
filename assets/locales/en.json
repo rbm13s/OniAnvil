@@ -22,7 +22,6 @@
   "app.status.skin_deleted": "Palette skin deleted",
   "app.update.available": "Update Available",
   "app.update.tooltip": "Click to open the latest release on GitHub",
-
   "menu.file": "File",
   "menu.file.new": "New Project...",
   "menu.file.open": "Open PNG / Project...",
@@ -35,7 +34,6 @@
   "menu.file.export_scaled": "Export Scaled PNG...",
   "menu.file.export_seq": "Export Frame Sequence (PNG)...",
   "menu.file.export_gif": "Export Animated GIF...",
-
   "menu.edit": "Edit",
   "menu.edit.undo": "Undo",
   "menu.edit.redo": "Redo",
@@ -44,7 +42,6 @@
   "menu.edit.flip_v": "Flip Vertical",
   "menu.edit.rotate_90": "Rotate 90° CW",
   "menu.edit.auto_outline": "1px Auto-Outline",
-
   "menu.view": "View",
   "menu.view.frame_mode": "Frame Mode",
   "menu.view.atlas_mode": "Atlas Mode",
@@ -60,19 +57,15 @@
   "menu.view.zoom_out": "Zoom Out",
   "menu.view.zoom_100": "Zoom 100%",
   "menu.view.zoom_fit": "Fit to View",
-
   "menu.project": "Project",
   "menu.project.regrid": "Re-Grid Atlas...",
   "menu.project.resize_9grid": "9-Grid Anchor Frame Resize...",
-
   "menu.language": "Language",
   "menu.language.en": "English",
   "menu.language.ru": "Русский",
-
   "menu.help": "Help",
   "menu.help.hotkeys": "Keyboard Shortcuts...",
   "menu.help.about": "About OniAnvil",
-
   "context.active_tool": "Tool:",
   "context.brush_size": "Size:",
   "context.pixel_perfect": "Pixel-Perfect",
@@ -101,7 +94,6 @@
   "context.peek_sketch": "Sketch Overlay",
   "context.peek_both": "Both",
   "context.filled_shape": "Filled",
-
   "tools.header": "Tools",
   "tools.pencil": "Pencil (B) — Draw freehand pixels (LMB: Foreground, RMB: Background)",
   "tools.pencil.title": "Pencil",
@@ -167,7 +159,6 @@
   "tools.fg": "FG",
   "tools.bg": "BG",
   "tools.swap_colors": "Swap Foreground and Background colors (X)",
-
   "viewport.mode.frame": "Frame",
   "viewport.mode.atlas": "Atlas",
   "viewport.zoom.fit": "Fit",
@@ -178,7 +169,6 @@
   "viewport.info.frame": "Frame:",
   "viewport.info.atlas": "Atlas:",
   "viewport.info.cursor": "XY:",
-
   "panel.preview.title": "Live Animation Preview",
   "panel.preview.play": "Play",
   "panel.preview.pause": "Pause",
@@ -196,7 +186,6 @@
   "panel.preview.motion_test": "Scrolling Motion Test",
   "panel.preview.scroll_x": "Scroll X:",
   "panel.preview.scroll_y": "Scroll Y:",
-
   "panel.palette.title": "Palette & Swaps",
   "panel.palette.preset": "Preset:",
   "panel.palette.apply_preset": "Load",
@@ -230,7 +219,6 @@
   "panel.palette.confirm_del_skin.title": "Delete Palette Skin",
   "panel.palette.confirm_del_skin.prompt": "Are you sure you want to delete skin",
   "panel.palette.confirm_del_skin.yes": "Yes, Delete Skin",
-
   "panel.sketch.title": "Sketch Reference & Onion Skin",
   "panel.sketch.load": "Load Reference...",
   "panel.sketch.clear": "Clear",
@@ -258,7 +246,6 @@
   "panel.onion.next_frames": "Next Frames:",
   "panel.onion.opacity": "Onion Opacity:",
   "panel.onion.tint": "Color Tint (Red / Green)",
-
   "panel.pivots.title": "Pivot & Action Points",
   "panel.pivots.show": "Show Gizmos on Canvas",
   "panel.pivots.origin_x": "Origin X:",
@@ -270,7 +257,6 @@
   "panel.pivots.add_point": "Add Point",
   "panel.pivots.default_point_name": "action_point",
   "panel.pivots.remove": "×",
-
   "timeline.title": "Animation Timeline",
   "timeline.fps": "FPS:",
   "timeline.frame": "Frame",
@@ -295,7 +281,6 @@
   "timeline.confirm_delete_layer.prompt": "Are you sure you want to delete layer",
   "timeline.confirm_delete_layer.yes": "Yes, Delete Layer",
   "timeline.confirm_delete_layer.no": "Cancel",
-
   "modal.new_project.title": "New Project Wizard",
   "modal.new_project.name": "Project Name:",
   "modal.new_project.default_name": "sprite",
@@ -312,7 +297,6 @@
   "modal.new_project.atlas_summary": "Resulting Atlas Dimensions:",
   "modal.new_project.create": "Create Project",
   "modal.new_project.cancel": "Cancel",
-
   "modal.about.title": "About OniAnvil",
   "modal.about.description": "Open-source (MIT), cross-platform pixel sprite and onion-skin animation studio built around game-ready atlases.",
   "modal.about.version": "Version:",
@@ -321,19 +305,16 @@
   "modal.about.credits_cat": "Cat demo sprite: ",
   "modal.about.disclaimer": "Provided free of charge under the MIT License \"AS IS\", without warranty of any kind. The authors bear no liability for any damages or data loss.",
   "modal.about.close": "Close",
-
   "modal.regrid.title": "Re-Grid Atlas",
   "modal.regrid.current": "Current Layout:",
   "modal.regrid.columns": "New Columns Count:",
   "modal.regrid.resulting": "New Atlas Size:",
   "modal.regrid.apply": "Apply Re-Grid",
-
   "modal.resize9.title": "9-Grid Anchor Frame Resize",
   "modal.resize9.anchor": "Alignment Anchor (3×3):",
   "modal.resize9.new_w": "New Frame Width (px):",
   "modal.resize9.new_h": "New Frame Height (px):",
   "modal.resize9.apply": "Resize All Frames",
-
   "modal.slicer.title": "Sheet Slicer & Importer",
   "modal.slicer.source_size": "Source PNG Size:",
   "modal.slicer.frame_w": "Frame Width (px):",
@@ -345,39 +326,32 @@
   "modal.slicer.out_cols": "Target Atlas Columns:",
   "modal.slicer.detected": "Detected Frames:",
   "modal.slicer.import": "Slice & Import Project",
-
   "modal.export_png.title": "Export Scaled PNG",
   "modal.export_png.scale": "Nearest-Neighbor Scale:",
   "modal.export_png.extrude": "Edge Extrusion / Padding:",
   "modal.export_png.output_size": "Output Dimensions:",
   "modal.export_png.export": "Export PNG...",
-
   "modal.export_gif.title": "Export Animated GIF",
   "modal.export_gif.scale": "Nearest-Neighbor Scale:",
   "modal.export_gif.range": "Frame Range:",
   "modal.export_gif.fps": "Playback FPS:",
   "modal.export_gif.export": "Export GIF...",
-
   "modal.recovery.title": "Autosave Recovery Available",
   "modal.recovery.prompt": "An unsaved recovery snapshot from a previous session was found.",
   "modal.recovery.restore": "Restore Snapshot",
   "modal.recovery.discard": "Discard",
-
   "modal.unsaved.title": "Unsaved Changes",
   "modal.unsaved.new_prompt": "The current project has unsaved changes. Do you want to create a new project anyway? All unsaved changes will be lost.",
   "modal.unsaved.close_prompt": "The current project has unsaved changes. Save changes before closing?",
   "modal.unsaved.save": "Save Project",
   "modal.unsaved.discard": "Discard & Proceed",
   "modal.unsaved.cancel": "Cancel",
-
   "modal.slicer.preview": "Slice Grid Preview",
   "modal.slicer.select_all": "Select All",
   "modal.slicer.deselect_all": "Deselect All",
   "modal.slicer.auto_detect": "Auto-Detect Grid",
   "modal.slicer.selected_count": "Selected Frames:",
-
   "modal.regrid.preview": "Layout Preview:",
-
   "menu.theme": "Theme",
   "theme.dark": "Studio Dark",
   "theme.light": "Studio Light",
@@ -414,9 +388,7 @@
   "theme.msx": "MSX System (1983)",
   "theme.apple2": "Apple II Phosphor (1977)",
   "theme.pc_dos": "IBM PC DOS / Norton (1981)",
-
   "tooltip.tools_columns": "Toggle single-column or double-column toolbar",
-
   "tooltip.undo": "Undo the last action (Ctrl/Cmd+Z)",
   "tooltip.redo": "Redo the previously undone action (Ctrl/Cmd+Y / Ctrl/Cmd+Shift+Z)",
   "tooltip.pixel_perfect": "Automatically remove 1px L-shaped corner doubles while drawing freehand",
@@ -495,11 +467,9 @@
   "tooltip.timeline_move_right": "Move frame later in the timeline",
   "tooltip.timeline_frame_menu": "Open frame actions menu (Import/Export frame PNG, Duplicate, Reorder, Delete)",
   "tooltip.timeline_add_tag": "Create a named animation tag spanning a frame range",
-
   "tabs.new": "New Project Tab",
   "tabs.close": "Close Tab",
   "tabs.rename_hint": "Double-click to rename project",
-
   "start.title": "OniAnvil",
   "start.subtitle": "Pixel Sprites & Onion-Skin Animation Studio",
   "start.new_project": "Create New Project...",
@@ -516,22 +486,18 @@
   "start.confirm_delete.yes": "Yes, Remove",
   "start.not_found": "file not found",
   "start.settings_saved_in": "Settings & theme are saved in",
-
   "panel.palette.confirm_del_slot.title": "Delete Palette Color",
   "panel.palette.confirm_del_slot.prompt": "Are you sure you want to delete this color from the palette?",
   "panel.palette.confirm_del_slot.yes": "Yes, Delete Color",
-
   "panel.pivot.confirm_del.title": "Delete Action Point",
   "panel.pivot.confirm_del.prompt": "Are you sure you want to delete action point",
   "panel.pivot.confirm_del.yes": "Yes, Delete Point",
-
   "timeline.confirm_del_tag.title": "Delete Animation Tag",
   "timeline.confirm_del_tag.prompt": "Are you sure you want to delete animation tag",
   "timeline.confirm_del_tag.yes": "Yes, Delete Tag",
   "tag.direction.forward": "Forward",
   "tag.direction.reverse": "Reverse",
   "tag.direction.pingpong": "Ping-Pong",
-
   "modal.close_doc.title": "Close Project",
   "modal.close_doc.prompt": "Save changes before closing?",
   "modal.close_doc.save": "Save Project",
@@ -541,7 +507,6 @@
   "modal.confirm_exit.prompt": "Are you sure you want to exit OniAnvil?",
   "modal.confirm_exit.yes": "Exit",
   "modal.confirm_exit.no": "Cancel",
-
   "modal.hotkeys.title": "Keyboard Shortcuts",
   "modal.hotkeys.sec_tools": "Drawing Tools",
   "modal.hotkeys.sec_canvas": "Canvas & Viewport",
@@ -559,7 +524,6 @@
   "modal.hotkeys.step_frame": "Previous / Next frame",
   "modal.hotkeys.deselect": "Deselect",
   "modal.hotkeys.close": "Close",
-
   "color_picker.title": "Color Picker",
   "color_picker.recent": "Recent Colors",
   "color_picker.hex": "HEX",
@@ -571,13 +535,11 @@
   "color_picker.old": "Old",
   "color_picker.new": "New",
   "color_picker.invalid_hex": "Invalid HEX (use #RRGGBB, #RGB or #RRGGBBAA)",
-
   "status.unsaved": "● Unsaved",
   "status.saved": "Saved",
   "status.atlas": "Atlas",
   "status.frame": "Frame",
   "status.selection": "Sel",
-
   "menu.edit.copy": "Copy",
   "menu.edit.cut": "Cut",
   "menu.edit.paste": "Paste",
@@ -586,7 +548,6 @@
   "menu.file.export_sprite_json": "Export Sprite Sheet JSON (.json)",
   "menu.file.export_palette_gpl": "Export Palette (.gpl)",
   "menu.file.export_palette_hex": "Export Palette (.hex)",
-
   "modal.hotkeys.brush_size": "Decrease / Increase brush size",
   "modal.hotkeys.copy_paste": "Copy / Paste selection",
   "modal.hotkeys.select_all": "Select all / Invert selection",
@@ -599,10 +560,8 @@
   "modal.hotkeys.axis_lock": "Straight line / 45° / 1:1 shape constraint",
   "modal.hotkeys.eraser_replace": "Replace foreground with background (Eraser)",
   "modal.hotkeys.zoom_keys": "Zoom in / Zoom out / Reset zoom",
-
   "timeline.current_time": "Time",
   "timeline.loop_tag": "Loop Active Tag",
-
   "menu.edit.replace_color": "Replace Color... (Shift+R)",
   "modal.replace_color.title": "Replace Color",
   "modal.replace_color.prompt": "Replace all occurrences of a color across the frame or project.",
@@ -623,7 +582,6 @@
   "modal.replace_color.apply": "Replace",
   "app.status.color_replaced": "Color replaced",
   "modal.hotkeys.replace_color": "Replace Color",
-
   "menu.edit.color_adjust": "Adjust HSV / Contrast... (Ctrl/Cmd+U)",
   "modal.color_adjust.title": "Hue / Saturation / Contrast",
   "modal.color_adjust.prompt": "Adjust color hue, saturation, brightness and contrast.",
@@ -635,17 +593,14 @@
   "modal.color_adjust.apply": "Apply",
   "app.status.colors_adjusted": "Colors adjusted",
   "modal.hotkeys.color_adjust": "Color Adjustments (HSV/Contrast)",
-
   "menu.project.auto_crop": "Auto-Crop Canvas (Trim Empty)",
   "app.status.canvas_cropped": "Canvas auto-cropped to artwork bounds",
   "app.status.canvas_already_trimmed": "Canvas is already tightly cropped",
-
   "menu.edit.custom_brush": "Create Brush from Selection (Ctrl/Cmd+B)",
   "app.status.brush_created": "Custom brush created from selection",
   "modal.hotkeys.custom_brush": "Create custom brush from selection",
   "context.custom_brush": "Custom Brush",
   "tooltip.reset_custom_brush": "Reset to standard brush",
-
   "context.gradient_kind": "Type:",
   "context.gradient_linear": "Linear",
   "context.gradient_radial": "Radial",
@@ -664,7 +619,6 @@
   "context.gradient_dither_50": "50% Checker",
   "modal.hotkeys.fill_or_gradient": "Flood Fill / Gradient",
   "app.status.gradient_applied": "Gradient applied",
-
   "menu.select": "Select",
   "menu.select.deselect": "Deselect (Esc / Ctrl/Cmd+D)",
   "menu.select.modify": "Modify Selection...",
@@ -687,10 +641,8 @@
   "app.status.selection_contracted": "Selection contracted",
   "app.status.selection_bordered": "Selection converted to border",
   "app.status.selection_cleared": "Selection cleared",
-
   "context.tolerance": "Tol:",
   "modal.replace_color.tolerance": "Tolerance:",
-
   "menu.edit.outline_fx": "Outline FX... (Shift+O)",
   "modal.outline_fx.title": "Outline FX Generator",
   "modal.outline_fx.prompt": "Generate an outline stroke around sprite artwork or selection.",
@@ -703,7 +655,6 @@
   "modal.outline_fx.apply": "Apply Outline",
   "app.status.outline_generated": "Outline generated",
   "modal.hotkeys.outline_fx": "Outline FX Generator",
-
   "menu.edit.convolution": "Convolution Matrix Filter...",
   "modal.convolution.title": "Convolution Matrix Filter",
   "modal.convolution.prompt": "Apply 3x3 spatial convolution matrix (Blur, Sharpen, Edge Detect, Emboss, or Custom).",
@@ -719,7 +670,6 @@
   "modal.convolution.preserve_alpha": "Preserve Alpha Channel",
   "modal.convolution.apply": "Apply Filter",
   "app.status.filter_applied": "Filter applied",
-
   "panel.palette.sort_btn": "Sort",
   "tooltip.palette_sort": "Sort palette colors by Hue, Luminance, or Saturation",
   "panel.palette.sort_hue": "Sort by Hue",
@@ -760,7 +710,6 @@
   "panel.palette.extract_sheet_title": "Current Sheet Atlas",
   "app.status.palette_extracted": "Palette extracted successfully",
   "menu.edit.extract_palette": "Extract Palette from Sheet...",
-
   "menu.edit.rotate_arbitrary": "Rotate Arbitrary... (Ctrl/Cmd+Shift+R)",
   "modal.rotate.title": "Rotate Selection / Frame",
   "modal.rotate.prompt": "Rotate the canvas or selection by an arbitrary angle using RotSprite or Nearest-Neighbor.",
@@ -774,12 +723,10 @@
   "modal.rotate.apply": "Rotate",
   "app.status.rotated": "Rotation applied",
   "modal.hotkeys.rotate_arbitrary": "Free Rotate Selection / Frame",
-
   "tooltip.timeline_frame_linked": "Linked Frame (shares artwork with linked frames)",
   "timeline.create_linked_frame": "Create Linked Copy",
   "timeline.unlink_frame": "Unlink Frame",
   "timeline.link_to_frame": "Link to Frame...",
-
   "menu.file.export_packed_atlas": "Export Packed Atlas...",
   "modal.pack_atlas.title": "Texture Atlas Packer",
   "modal.pack_atlas.prompt": "Pack all animation frames into a compact, game-ready texture atlas using 2D bin packing.",
@@ -791,7 +738,6 @@
   "modal.pack_atlas.efficiency": "Packing efficiency:",
   "modal.pack_atlas.export_btn": "Export PNG + JSON...",
   "app.status.atlas_packed": "Packed atlas exported",
-
   "modal.preview": "Live Preview",
   "timeline.layers": "Layers",
   "timeline.add_layer": "Add Layer",
@@ -866,5 +812,45 @@
   "modal.bake_sketch.lock_alpha_empty_tip": "Active layer is empty; locking alpha will result in no pixels.",
   "modal.bake_sketch.all_frames": "Apply to all animation frames",
   "modal.bake_sketch.selection_only": "In selection only",
-  "modal.bake_sketch.apply": "Bake to Sprite"
+  "modal.bake_sketch.apply": "Bake to Sprite",
+  "inbetween.title": "Insert Inbetween Frame(s) (Experimental)",
+  "inbetween.source_frame": "Source Frame",
+  "inbetween.target_frame": "Target Frame",
+  "inbetween.count": "Inbetween Frames",
+  "inbetween.frames_unit": "frames",
+  "inbetween.algorithm": "Algorithm",
+  "inbetween.pixel_flow": "Pixel Flow (Particle Vectors)",
+  "inbetween.dither_morph": "Dither Morph (Bayer Matrix)",
+  "inbetween.search_radius": "Search Radius",
+  "inbetween.scope": "Layer Scope",
+  "inbetween.all_layers": "All Layers (Preserve Separation)",
+  "inbetween.active_layer": "Active Layer Only",
+  "inbetween.loop_to_first": "Loop to Frame 1 on last frame",
+  "inbetween.subdivide_duration": "Subdivide source frame duration",
+  "inbetween.preview_title": "Animation Preview",
+  "inbetween.play": "Play",
+  "inbetween.pause": "Pause",
+  "inbetween.fps": "Preview FPS",
+  "inbetween.frame_source": "Source",
+  "inbetween.frame_target": "Target",
+  "inbetween.new_frame": "Inbetween",
+  "inbetween.btn_generate": "Generate Inbetweens",
+  "timeline.inbetween_frame": "Inbetween...",
+  "tooltip.timeline_inbetween": "Generate inbetween frames between this frame and the next",
+  "menu.project.inbetween": "Insert Inbetween Frame(s) (Experimental)...",
+  "app.status.inbetweens_generated": "Inbetween frame(s) generated successfully",
+  "inbetween.tab_single": "Selected Frame",
+  "inbetween.tab_all": "Entire Animation",
+  "inbetween.all_summary": "{orig} frames → {total} frames (+{added} inbetweens)",
+  "inbetween.cross_dissolve": "Cross Dissolve (Palette Snap)",
+  "inbetween.flow_direction": "Flow Direction",
+  "inbetween.direction_bidi": "Bidirectional (Balanced)",
+  "inbetween.direction_fwd": "Forward (Movement / Shrink)",
+  "inbetween.direction_rev": "Reverse (Explosion / Bloom)",
+  "inbetween.btn_generate_all": "Inbetween Entire Animation",
+  "timeline.inbetween_all": "Inbetween All...",
+  "tooltip.timeline_inbetween_all": "Generate inbetween frames between all frames of the animation",
+  "menu.project.inbetween_all": "Inbetween Entire Animation (Experimental)...",
+  "app.status.inbetweens_all_generated": "All animation frames interpolated successfully",
+  "inbetween.coherent_motion": "Coherent Motion (Rigid Clusters)"
 }

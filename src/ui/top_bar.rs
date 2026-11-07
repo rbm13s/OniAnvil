@@ -52,6 +52,8 @@ pub struct TopBarActions {
     pub trigger_custom_brush: bool,
     pub trigger_auto_crop: bool,
     pub open_regrid_modal: bool,
+    pub open_inbetween_modal: bool,
+    pub open_inbetween_all_modal: bool,
     pub open_resize9_modal: bool,
     pub open_about_modal: bool,
     pub open_hotkeys_modal: bool,
@@ -605,6 +607,26 @@ pub fn show_top_bars(
                     .clicked()
                 {
                     actions.open_resize9_modal = true;
+                    ui.close();
+                }
+                if ui
+                    .add_enabled(
+                        has_doc,
+                        egui::Button::new(format!("{FA_MAGIC_WAND} {}", i18n.tr("menu.project.inbetween"))),
+                    )
+                    .clicked()
+                {
+                    actions.open_inbetween_modal = true;
+                    ui.close();
+                }
+                if ui
+                    .add_enabled(
+                        has_doc,
+                        egui::Button::new(format!("{FA_GLOBE} {}", i18n.tr("menu.project.inbetween_all"))),
+                    )
+                    .clicked()
+                {
+                    actions.open_inbetween_all_modal = true;
                     ui.close();
                 }
                 if ui

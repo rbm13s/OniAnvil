@@ -4,3 +4,5 @@ pub mod metadata;
 pub mod palette;
 pub mod project;
 pub mod sketch;
+
+pub mod inbetween;

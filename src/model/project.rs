@@ -1194,8 +1194,267 @@ impl Project {
         });
     }
 
-    /// Creates a linked copy of frame `index` inserted at `index + 1`.
-    /// Changes in any frame in this linked group will synchronize across all linked frames.
+    /// Generates and inserts inbetween frames immediately after `source_idx`.
+    pub fn insert_inbetweens_at(
+        &mut self,
+        source_idx: usize,
+        config: &crate::model::inbetween::InbetweenConfig,
+    ) -> usize {
+        let total = self.metadata.frame_count.max(1) as usize;
+        if total == 0 {
+            return source_idx;
+        }
+        let safe_src = source_idx.min(total - 1);
+        let target_idx = if safe_src + 1 < total {
+            safe_src + 1
+        } else if config.loop_to_first {
+            0
+        } else {
+            return safe_src;
+        };
+
+        let n = config.frame_count.clamp(1, 8);
+        let palette = self.metadata.palette.colors.clone();
+        let insert_pos = safe_src + 1;
+
+        self.ensure_layers_initialized();
+        self.sync_active_layer();
+        let active_layer_idx = self
+            .metadata
+            .active_layer
+            .min(self.metadata.layers.len().saturating_sub(1));
+
+        let mut all_layer_frames: Vec<Vec<RgbaImage>> = Vec::with_capacity(self.metadata.layers.len());
+        for (l_idx, layer) in self.metadata.layers.iter().enumerate() {
+            let buf = layer.layer_rgba.as_ref().unwrap_or(&self.atlas_rgba);
+            let mut frames = self.extract_frames_from_atlas(buf);
+            let src_img = frames.get(safe_src).cloned().unwrap_or_else(|| {
+                RgbaImage::new(self.metadata.frame_width, self.metadata.frame_height)
+            });
+            let tgt_img = frames.get(target_idx).cloned().unwrap_or_else(|| {
+                RgbaImage::new(self.metadata.frame_width, self.metadata.frame_height)
+            });
+
+            let inbetweens = if config.scope == crate::model::inbetween::InbetweenScope::ActiveLayer
+                && l_idx != active_layer_idx
+            {
+                vec![src_img; n]
+            } else {
+                crate::model::inbetween::generate_inbetween_sequence(
+                    &src_img,
+                    &tgt_img,
+                    n,
+                    config.algorithm,
+                    config.flow_direction,
+                    config.search_radius,
+                    Some(&palette),
+                )
+            };
+
+            for (k, frame) in inbetweens.into_iter().enumerate() {
+                let pos = (insert_pos + k).min(frames.len());
+                frames.insert(pos, frame);
+            }
+            all_layer_frames.push(frames);
+        }
+
+        // Subdivide or clone duration/hold
+        if config.subdivide_duration {
+            let orig_hold = self
+                .metadata
+                .frames
+                .get(safe_src)
+                .map(|m| m.hold_multiplier)
+                .unwrap_or(1);
+            let new_hold = (orig_hold / (n as u32 + 1)).max(1);
+            if let Some(m) = self.metadata.frames.get_mut(safe_src) {
+                m.hold_multiplier = new_hold;
+            }
+            for k in 0..n {
+                let meta = FrameMeta {
+                    hold_multiplier: new_hold,
+                    linked_from: None,
+                    is_generated: true,
+                    ..Default::default()
+                };
+                let pos = (insert_pos + k).min(self.metadata.frames.len());
+                self.metadata.frames.insert(pos, meta);
+            }
+        } else {
+            for k in 0..n {
+                let mut meta = self
+                    .metadata
+                    .frames
+                    .get(safe_src)
+                    .cloned()
+                    .unwrap_or_default();
+                meta.linked_from = None;
+                meta.is_generated = true;
+                let pos = (insert_pos + k).min(self.metadata.frames.len());
+                self.metadata.frames.insert(pos, meta);
+            }
+        }
+
+        // Update tag ranges
+        for tag in &mut self.metadata.tags {
+            if tag.start_frame > safe_src {
+                tag.start_frame += n;
+            }
+            if tag.end_frame >= safe_src {
+                tag.end_frame += n;
+            }
+        }
+
+        // Update linked frames
+        for (i, meta) in self.metadata.frames.iter_mut().enumerate() {
+            if i < insert_pos || i >= insert_pos + n {
+                if let Some(target) = meta.linked_from {
+                    if target >= insert_pos {
+                        meta.linked_from = Some(target + n);
+                    }
+                }
+            }
+        }
+
+        if let Some(active_frames) = all_layer_frames.get(active_layer_idx) {
+            self.rebuild_atlas_from_frames(active_frames);
+        }
+        for (idx, frames) in all_layer_frames.into_iter().enumerate() {
+            let packed = self.pack_frames_into_atlas(&frames);
+            if let Some(layer) = self.metadata.layers.get_mut(idx) {
+                layer.layer_rgba = Some(packed);
+            }
+        }
+
+        self.metadata.frame_count = self.metadata.frames.len() as u32;
+        self.active_frame = insert_pos;
+        self.canvas_dirty = true;
+        insert_pos
+    }
+
+    /// Generates and inserts inbetween frames between every adjacent frame pair in the animation.
+    pub fn insert_inbetweens_all_frames(
+        &mut self,
+        config: &crate::model::inbetween::InbetweenConfig,
+    ) -> usize {
+        let total = self.metadata.frame_count as usize;
+        if total < 2 {
+            return 0;
+        }
+
+        let n = config.frame_count.clamp(1, 8);
+        let palette = self.metadata.palette.colors.clone();
+        let loop_anim = config.loop_to_first;
+        let pairs_count = if loop_anim { total } else { total - 1 };
+
+        self.ensure_layers_initialized();
+        self.sync_active_layer();
+        let active_layer_idx = self
+            .metadata
+            .active_layer
+            .min(self.metadata.layers.len().saturating_sub(1));
+
+        let mut all_layer_frames: Vec<Vec<RgbaImage>> = Vec::with_capacity(self.metadata.layers.len());
+        for (l_idx, layer) in self.metadata.layers.iter().enumerate() {
+            let buf = layer.layer_rgba.as_ref().unwrap_or(&self.atlas_rgba);
+            let frames = self.extract_frames_from_atlas(buf);
+            let mut new_frames = Vec::with_capacity(total * (n + 1));
+
+            for i in 0..pairs_count {
+                let next_idx = (i + 1) % total;
+                let src_img = frames.get(i).cloned().unwrap_or_else(|| {
+                    RgbaImage::new(self.metadata.frame_width, self.metadata.frame_height)
+                });
+                let tgt_img = frames.get(next_idx).cloned().unwrap_or_else(|| {
+                    RgbaImage::new(self.metadata.frame_width, self.metadata.frame_height)
+                });
+
+                new_frames.push(src_img.clone());
+
+                let inbetweens = if config.scope == crate::model::inbetween::InbetweenScope::ActiveLayer
+                    && l_idx != active_layer_idx
+                {
+                    vec![src_img; n]
+                } else {
+                    crate::model::inbetween::generate_inbetween_sequence(
+                        &src_img,
+                        &tgt_img,
+                        n,
+                        config.algorithm,
+                        config.flow_direction,
+                        config.search_radius,
+                        Some(&palette),
+                    )
+                };
+                new_frames.extend(inbetweens);
+            }
+
+            if !loop_anim {
+                if let Some(last_frame) = frames.get(total - 1) {
+                    new_frames.push(last_frame.clone());
+                }
+            }
+
+            all_layer_frames.push(new_frames);
+        }
+
+        // Reconstruct metadata frames
+        let mut new_meta_frames = Vec::with_capacity(total * (n + 1));
+        for i in 0..pairs_count {
+            let mut orig_meta = self.metadata.frames.get(i).cloned().unwrap_or_default();
+            orig_meta.linked_from = None;
+            let orig_hold = orig_meta.hold_multiplier;
+            let new_hold = if config.subdivide_duration {
+                (orig_hold / (n as u32 + 1)).max(1)
+            } else {
+                orig_hold
+            };
+            orig_meta.hold_multiplier = new_hold;
+            new_meta_frames.push(orig_meta);
+
+            for _ in 0..n {
+                new_meta_frames.push(FrameMeta {
+                    hold_multiplier: new_hold,
+                    linked_from: None,
+                    action_points: Vec::new(),
+                    is_generated: true,
+                });
+            }
+        }
+
+        if !loop_anim {
+            let mut last_meta = self.metadata.frames.get(total - 1).cloned().unwrap_or_default();
+            last_meta.linked_from = None;
+            new_meta_frames.push(last_meta);
+        }
+
+        let total_new_frames = new_meta_frames.len();
+        let inserted_count = total_new_frames.saturating_sub(total);
+
+        // Update tag ranges
+        for tag in &mut self.metadata.tags {
+            tag.start_frame *= n + 1;
+            tag.end_frame = (tag.end_frame * (n + 1) + n).min(total_new_frames.saturating_sub(1));
+        }
+
+        if let Some(active_frames) = all_layer_frames.get(active_layer_idx) {
+            self.rebuild_atlas_from_frames(active_frames);
+        }
+        for (idx, frames) in all_layer_frames.into_iter().enumerate() {
+            let packed = self.pack_frames_into_atlas(&frames);
+            if let Some(layer) = self.metadata.layers.get_mut(idx) {
+                layer.layer_rgba = Some(packed);
+            }
+        }
+
+        self.metadata.frames = new_meta_frames;
+        self.metadata.frame_count = total_new_frames as u32;
+        self.active_frame = 0;
+        self.canvas_dirty = true;
+        inserted_count
+    }
+
+
     pub fn create_linked_frame_after(&mut self, index: usize) {
         let total = self.metadata.frame_count.max(1) as usize;
         if total == 0 {
@@ -1209,6 +1468,7 @@ impl Project {
             hold_multiplier: 1,
             linked_from: Some(root),
             action_points: Vec::new(),
+            is_generated: false,
         };
         for ap_idx in 0..self.metadata.pivot.action_points.len() {
             if let Some((x, y)) = self.get_frame_action_point(safe_idx, ap_idx) {
@@ -1252,7 +1512,6 @@ impl Project {
         });
     }
 
-    /// Unlinks the frame at `index`, making its pixel content independent.
     pub fn unlink_frame(&mut self, index: usize) {
         if let Some(meta) = self.metadata.frames.get_mut(index) {
             meta.linked_from = None;
@@ -2400,4 +2659,59 @@ mod tests {
         assert!(proj.metadata.pivot.action_points.is_empty());
         assert!(proj.metadata.frames.iter().all(|f| f.action_points.is_empty()));
     }
+
+    #[test]
+    fn test_insert_inbetweens_at() {
+        use crate::model::inbetween::{FlowDirection, InbetweenAlgorithm, InbetweenConfig, InbetweenMode, InbetweenScope};
+        let meta = ProjectMetadata::new_config("anim".to_string(), 8, 8, 2, 2, None);
+        let mut proj = Project::new(meta);
+        assert_eq!(proj.metadata.frame_count, 2);
+
+        let config = InbetweenConfig {
+            frame_count: 2,
+            algorithm: InbetweenAlgorithm::PixelFlow,
+            flow_direction: FlowDirection::Bidirectional,
+            search_radius: 16,
+            scope: InbetweenScope::AllLayers,
+            loop_to_first: false,
+            subdivide_duration: true,
+            mode: InbetweenMode::SinglePair,
+        };
+
+        let inserted_pos = proj.insert_inbetweens_at(0, &config);
+        assert_eq!(inserted_pos, 1);
+        assert_eq!(proj.metadata.frame_count, 4);
+        assert_eq!(proj.active_frame, 1);
+        assert!(proj.metadata.frames[1].is_generated);
+        assert!(proj.metadata.frames[2].is_generated);
+    }
+
+    #[test]
+    fn test_insert_inbetweens_all_frames() {
+        use crate::model::inbetween::{FlowDirection, InbetweenAlgorithm, InbetweenConfig, InbetweenMode, InbetweenScope};
+        let meta = ProjectMetadata::new_config("anim_all".to_string(), 8, 8, 3, 3, None);
+        let mut proj = Project::new(meta);
+        assert_eq!(proj.metadata.frame_count, 3);
+
+        let config = InbetweenConfig {
+            frame_count: 1,
+            algorithm: InbetweenAlgorithm::PixelFlow,
+            flow_direction: FlowDirection::Bidirectional,
+            search_radius: 16,
+            scope: InbetweenScope::AllLayers,
+            loop_to_first: true,
+            subdivide_duration: true,
+            mode: InbetweenMode::AllFrames,
+        };
+
+        // 3 frames with loop_to_first and 1 inbetween each -> 3 + 3 = 6 frames
+        let inserted = proj.insert_inbetweens_all_frames(&config);
+        assert_eq!(inserted, 3);
+        assert_eq!(proj.metadata.frame_count, 6);
+        assert!(!proj.metadata.frames[0].is_generated);
+        assert!(proj.metadata.frames[1].is_generated);
+        assert!(!proj.metadata.frames[2].is_generated);
+        assert!(proj.metadata.frames[3].is_generated);
+    }
+
 }

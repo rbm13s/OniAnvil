@@ -12,6 +12,8 @@ use egui::{Color32, Panel, ScrollArea, Stroke, Ui, Vec2};
 pub struct BottomDockActions {
     pub trigger_import_single_frame: Option<usize>,
     pub trigger_export_single_frame: Option<usize>,
+    pub trigger_inbetween_modal: Option<usize>,
+    pub trigger_inbetween_all_modal: bool,
     pub request_delete_frame: Option<usize>,
     pub request_delete_tag: Option<(usize, String)>,
     pub request_delete_layer: Option<(usize, String)>,
@@ -151,6 +153,26 @@ pub fn show_bottom_dock(
                     });
                     let cur = project.active_frame;
                     project.duplicate_frame_at(cur);
+                }
+
+                if ui
+                    .button(format!("{FA_MAGIC_WAND} {}", i18n.tr("timeline.inbetween_frame")))
+                    .on_hover_text(i18n.tr("tooltip.timeline_inbetween"))
+                    .clicked()
+                {
+                    actions.trigger_inbetween_modal = Some(project.active_frame);
+                }
+
+                let can_inbetween_all = project.metadata.frame_count > 1;
+                if ui
+                    .add_enabled(
+                        can_inbetween_all,
+                        egui::Button::new(format!("{FA_GLOBE} {}", i18n.tr("timeline.inbetween_all"))),
+                    )
+                    .on_hover_text(i18n.tr("tooltip.timeline_inbetween_all"))
+                    .clicked()
+                {
+                    actions.trigger_inbetween_all_modal = true;
                 }
 
                 let can_delete = project.metadata.frame_count > 1;
@@ -501,11 +523,13 @@ pub fn show_bottom_dock(
                                 Stroke::new(1.0, tick_stroke),
                             );
 
+                            let is_gen = project.metadata.frames.get(idx).map(|m| m.is_generated).unwrap_or(false);
+                            let gen_tag = if is_gen { "(g)" } else { "" };
                             let label_str = match (hold > 1, is_linked) {
-                                (true, true) => format!("#{} {}x🔗", idx + 1, hold),
-                                (true, false) => format!("#{} ({}x)", idx + 1, hold),
-                                (false, true) => format!("#{} 🔗", idx + 1),
-                                (false, false) => format!("#{}", idx + 1),
+                                (true, true) => format!("#{}{} {}x🔗", idx + 1, gen_tag, hold),
+                                (true, false) => format!("#{}{} ({}x)", idx + 1, gen_tag, hold),
+                                (false, true) => format!("#{}{} 🔗", idx + 1, gen_tag),
+                                (false, false) => format!("#{}{}", idx + 1, gen_tag),
                             };
                             let ruler_text_col = if is_playhead || is_active {
                                 crate::theme::contrast_fg(r_bg, colors.ruler_text_active)
@@ -800,12 +824,14 @@ pub fn show_bottom_dock(
                                 };
                                 ui.painter().rect_filled(clip_hdr_rect, 2.0, clip_hdr_col);
 
+                                let is_gen = project.metadata.frames.get(idx).map(|m| m.is_generated).unwrap_or(false);
+                                let gen_tag = if is_gen { "(g)" } else { "" };
                                 let hdr_label = if is_linked {
-                                    format!("V{}:#{} 🔗", layer_idx + 1, idx + 1)
+                                    format!("V{}:#{}{} 🔗", layer_idx + 1, idx + 1, gen_tag)
                                 } else if hold > 1 {
-                                    format!("V{}:#{} {}x", layer_idx + 1, idx + 1, hold)
+                                    format!("V{}:#{}{} {}x", layer_idx + 1, idx + 1, gen_tag, hold)
                                 } else {
-                                    format!("V{}:#{}", layer_idx + 1, idx + 1)
+                                    format!("V{}:#{}{}", layer_idx + 1, idx + 1, gen_tag)
                                 };
                                 let clip_text_col = if is_active_cell {
                                     crate::theme::contrast_fg(clip_hdr_col, colors.clip_hdr_active_text)
@@ -968,6 +994,27 @@ pub fn show_bottom_dock(
                                             .clicked()
                                         {
                                             deferred_dup = Some(idx);
+                                            ui.close();
+                                        }
+                                        if ui
+                                            .button(format!(
+                                                "{FA_MAGIC_WAND} {}",
+                                                i18n.tr("timeline.inbetween_frame")
+                                            ))
+                                            .clicked()
+                                        {
+                                            actions.trigger_inbetween_modal = Some(idx);
+                                            ui.close();
+                                        }
+                                        if total_frames > 1
+                                            && ui
+                                                .button(format!(
+                                                    "{FA_GLOBE} {}",
+                                                    i18n.tr("timeline.inbetween_all")
+                                                ))
+                                                .clicked()
+                                        {
+                                            actions.trigger_inbetween_all_modal = true;
                                             ui.close();
                                         }
                                         if ui

@@ -7,6 +7,7 @@ use crate::io::updater::UpdateChecker;
 use crate::model::document::ProjectDocument;
 use crate::model::palette::{remap_pixels_to_palette_with_matcher, sort_palette_colors, PaletteColorMatcher, PaletteSortCriterion};
 use crate::model::project::Project;
+use crate::model::inbetween::InbetweenMode;
 use crate::theme::{setup_custom_fonts, AppTheme, FA_CLOSE, FA_PLUS};
 use crate::tools::fill::auto_outline_region;
 use crate::tools::transforms::{
@@ -29,7 +30,7 @@ use crate::ui::modals::{
     ExportScaledPngModalState, ModifySelectionMode, ModifySelectionModalState, NewProjectWizardState,
     OutlineFxAction, OutlineFxModalState,
     ReGridModalState, RecoveryAction, RemapPaletteAction, RemapPaletteModalState, ReplaceColorModalState, Resize9GridModalState, RotateAction, RotateModalState, SheetSlicerModalState,
-    BakeSketchAction, BakeSketchModalState, ExtractPaletteAction, ExtractPaletteModalState,
+    BakeSketchAction, BakeSketchModalState, ExtractPaletteAction, ExtractPaletteModalState, InbetweenModalState,
 };
 use crate::model::sketch::BakePaletteSource;
 use crate::tools::selection::SelectionModifyShape;
@@ -66,6 +67,7 @@ pub struct OniAnvilApp {
     pub update_checker: UpdateChecker,
     pub wizard: NewProjectWizardState,
     pub regrid_modal: ReGridModalState,
+    pub inbetween_modal: InbetweenModalState,
     pub resize9_modal: Resize9GridModalState,
     pub slicer_modal: SheetSlicerModalState,
     pub export_png_modal: ExportScaledPngModalState,
@@ -132,6 +134,7 @@ impl OniAnvilApp {
             update_checker,
             wizard: NewProjectWizardState::default(),
             regrid_modal: ReGridModalState::default(),
+            inbetween_modal: InbetweenModalState::default(),
             resize9_modal: Resize9GridModalState::default(),
             slicer_modal: SheetSlicerModalState::default(),
             export_png_modal: ExportScaledPngModalState::default(),
@@ -1883,6 +1886,16 @@ impl eframe::App for OniAnvilApp {
                 self.resize9_modal.open_for(&doc.project);
             }
         }
+        if top_actions.open_inbetween_modal {
+            if let Some(doc) = self.documents.get(self.active_doc_idx) {
+                self.inbetween_modal.open_for(doc.project.active_frame, &doc.project);
+            }
+        }
+        if top_actions.open_inbetween_all_modal {
+            if let Some(doc) = self.documents.get(self.active_doc_idx) {
+                self.inbetween_modal.open_for_all(&doc.project);
+            }
+        }
         if top_actions.open_about_modal {
             self.show_about_modal = true;
         }
@@ -2168,6 +2181,12 @@ impl eframe::App for OniAnvilApp {
                             ctx.clone(),
                         );
                     }
+                    if let Some(f_idx) = bottom_actions.trigger_inbetween_modal {
+                        self.inbetween_modal.open_for(f_idx, &doc.project);
+                    }
+                    if bottom_actions.trigger_inbetween_all_modal {
+                        self.inbetween_modal.open_for_all(&doc.project);
+                    }
                     if let Some(del_idx) = bottom_actions.request_delete_frame {
                         self.pending_delete_frame = Some(del_idx);
                     }
@@ -2266,6 +2285,29 @@ impl eframe::App for OniAnvilApp {
                 doc.project.resize_frames_9grid(nw, nh, acol, arow);
                 doc.renderer.selection.clear();
                 doc.viewport.needs_fit_to_view = true;
+            }
+        }
+
+        let inbetween_res = if let Some(doc) = self.documents.get(self.active_doc_idx) {
+            self.inbetween_modal.show(ctx, &self.i18n, &doc.project)
+        } else {
+            None
+        };
+        if let Some(config) = inbetween_res {
+            if let Some(doc) = self.documents.get_mut(self.active_doc_idx) {
+                doc.record_history();
+                match config.mode {
+                    InbetweenMode::SinglePair => {
+                        let src_idx = self.inbetween_modal.source_frame;
+                        doc.project.insert_inbetweens_at(src_idx, &config);
+                        self.status_key = "app.status.inbetweens_generated";
+                    }
+                    InbetweenMode::AllFrames => {
+                        doc.project.insert_inbetweens_all_frames(&config);
+                        self.status_key = "app.status.inbetweens_all_generated";
+                    }
+                }
+                doc.renderer.ensure_texture(ctx, &mut doc.project);
             }
         }
 
@@ -3183,6 +3225,7 @@ mod tests {
             update_checker: crate::io::updater::UpdateChecker::default(),
             wizard: NewProjectWizardState::default(),
             regrid_modal: ReGridModalState::default(),
+            inbetween_modal: InbetweenModalState::default(),
             resize9_modal: Resize9GridModalState::default(),
             slicer_modal: SheetSlicerModalState::default(),
             export_png_modal: ExportScaledPngModalState::default(),
@@ -3265,6 +3308,7 @@ mod tests {
             update_checker: crate::io::updater::UpdateChecker::default(),
             wizard: NewProjectWizardState::default(),
             regrid_modal: ReGridModalState::default(),
+            inbetween_modal: InbetweenModalState::default(),
             resize9_modal: Resize9GridModalState::default(),
             slicer_modal: SheetSlicerModalState::default(),
             export_png_modal: ExportScaledPngModalState::default(),
@@ -3354,6 +3398,7 @@ mod tests {
             update_checker: crate::io::updater::UpdateChecker::default(),
             wizard: NewProjectWizardState::default(),
             regrid_modal: ReGridModalState::default(),
+            inbetween_modal: InbetweenModalState::default(),
             resize9_modal: Resize9GridModalState::default(),
             slicer_modal: SheetSlicerModalState::default(),
             export_png_modal: ExportScaledPngModalState::default(),

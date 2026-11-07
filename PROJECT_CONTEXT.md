@@ -96,6 +96,7 @@ OniAnvil/
 │   │   ├── project.rs                  # Core Project: atlas buffer, layer compositing, slicing
 │   │   ├── document.rs                 # Document container with undo history
 │   │   ├── frame.rs                    # Frame metadata, tag directions, layer blend modes
+│   │   ├── inbetween.rs                # Frame interpolation: Pixel Flow, Dither Morph, Cross Dissolve
 │   │   ├── metadata.rs                 # Companion JSON serialization schema
 │   │   ├── palette.rs                  # 25+ retro palettes, live swaps/skins, Bayer dithering
 │   │   └── sketch.rs                   # Background reference sketch state and sampling
@@ -226,6 +227,28 @@ Instead of storing isolated individual frame images in memory and stitching them
   - Center-point (`PixelPrecisionMode::Center`) and area-average (`PixelPrecisionMode::Average`) alternatives.
   - Outline/Edge Protection (`edge_protection`): prevents dithering from breaking solid outlines and high-contrast edges into noisy dots.
   - Configurable alpha threshold cutoff (1..255) to eliminate semi-transparent fringe.
+
+### 4.10. Pixel Art Frame Inbetweening & Animation Tweening Engine (`src/model/inbetween.rs`)
+- **Objective:** Generate smooth intermediate inbetween frames between consecutive keyframes without introducing subpixel blurring, fuzzy interpolation artifacts, or non-palette colors.
+- **Core Algorithms (`InbetweenAlgorithm`):**
+  1. **Pixel Flow (`PixelFlow`):** Discrete particle matching engine with strict color thresholding (`MAX_COLOR_DIST`), 4-neighbor context scoring, and vector median field regularization. Accelerates pixel vector lookups using a spatial 2D cell grid (8×8 px buckets) within a configurable search radius (default 16 px).
+     - **Flow Directions (`FlowDirection`):**
+       - `Bidirectional`: Forward pass from Frame A to B, combined with a reverse fill pass from B to A and centroid radial projection to eliminate empty holes (best for motion, jumps, walk cycles).
+       - `Forward`: Frame A $\rightarrow$ Frame B vector projection with context filtering preventing dark border artifacts.
+       - `Reverse`: Matches target pixels back to source pixels (Frame B $\leftarrow$ Frame A), smoothly expanding unmatched particles outward from the source centroid. **Essential for explosions, particle bursts, and blooming magic effects**.
+  2. **Coherent Motion (`CoherentMotion`):** Connected component cluster matching engine. Detects 8-connected sprite components (head, torso, limbs, weapons) and calculates consensus translation vectors. Moves complete features as solid rigid pieces, **completely eliminating face tearing and smearing on character walk cycles**.
+  3. **Dither Morph (`DitherMorph`):** Authentic 8×8 Bayer threshold matrix dithering without color blending or arbitrary RGB offsets. Transparent backgrounds dissolve cleanly without generating stray black dots or dirty edges.
+  4. **Cross Dissolve (`CrossDissolve`):** Linear color blend $(1 - t) A + t B$ with safe alpha fading and perceptual redmean distance snapping against the active palette, ensuring zero out-of-gamut colors.
+- **Timeline Modes & Multi-Frame Generation (`InbetweenMode`):**
+  - `SinglePair`: Interpolates $N$ inbetweens between the current frame and the next frame (wraps seamlessly to frame 0 if on the final frame).
+  - `AllFrames`: Mass batch interpolation across the complete animation. Automatically expands animation tag boundaries (`tag.from`, `tag.to`), shifts frame indices, adjusts clip metadata, and rebuilds the composite texture atlas.
+- **Visual Timeline Tracking (`FrameMeta.is_generated`):**
+  - Inbetween frames are marked with `is_generated: true`.
+  - Visualized as `#2(g)` on the timeline ruler ticks, `V1:#2(g)` on track clip headers, and an amber border highlight in modal filmstrips to prevent artists from confusing generated frames with authored keyframes.
+- **Zero-Latency Modal Architecture (`InbetweenModalState` in `src/ui/modals.rs`):**
+  - Natural height constraint via `ui.columns(2)` preventing window height explosion.
+  - Embedded live preview player with Play/Pause, step controls, FPS slider, frame counter, and scrollable horizontal filmstrip.
+  - Preview frames are pre-baked into GPU `TextureHandle`s and repainted on timer ticks rather than per-frame allocations, ensuring silky-smooth 60 FPS UI performance.
 
 ---
 
@@ -381,3 +404,17 @@ Whenever preparing or cutting a new release, all contributors and agents **must 
   - Archive outputs now include the application version in their filenames across all platforms (`OniAnvil-1.2.0-windows-x86_64.zip`, `OniAnvil-1.2.0-linux-x86_64.tar.gz`, `OniAnvil-1.2.0-macos-universal.zip`).
   - Added automated WebAssembly (HTML5) compilation via Trunk in CI, packaging `OniAnvil-<version>-html5.zip` with relative public URLs (`./`) for browser hosting.
   - Automated cross-platform itch.io deployment via Butler CLI on every tagged release (`v*`), uploading to `rbm13s/onianvil` across 4 channels: `windows`, `linux`, `osx`, and `html5`.
+
+---
+
+## 10. Major Additions in v1.2.1 & Ongoing Features
+
+- **Production Release v1.2.1 Stabilization:**
+  - Multi-platform packaging fixes for itch.io and GitHub Releases.
+  - Cleaned up release channels across itch.io (windows, linux, osx, html5 browser play).
+- **Frame Inbetweening & Tweening Suite:**
+  - Introduced `src/model/inbetween.rs` with `PixelFlow` (Bidirectional, Forward, Reverse), `DitherMorph`, and `CrossDissolve`.
+  - Implemented both `SinglePair` and `AllFrames` timeline insertion modes with tag boundary preservation.
+  - Timeline identification for generated frames with `(g)` indicator and amber filmstrip badges.
+  - Interactive two-column modal dialog with live preview player and horizontal filmstrip thumbnails.
+  - Full 37-language localization parity.

@@ -22,7 +22,6 @@
   "app.status.skin_deleted": "Скин палитры удалён",
   "app.update.available": "Доступно обновление",
   "app.update.tooltip": "Нажмите, чтобы открыть свежий релиз на GitHub",
-
   "menu.file": "Файл",
   "menu.file.new": "Новый проект...",
   "menu.file.open": "Открыть PNG / Проект...",
@@ -35,7 +34,6 @@
   "menu.file.export_scaled": "Экспорт масштабированного PNG...",
   "menu.file.export_seq": "Экспорт покадровой анимации (PNG)...",
   "menu.file.export_gif": "Экспорт анимированного GIF...",
-
   "menu.edit": "Правка",
   "menu.edit.undo": "Отменить",
   "menu.edit.redo": "Повторить",
@@ -44,7 +42,6 @@
   "menu.edit.flip_v": "Отразить по вертикали",
   "menu.edit.rotate_90": "Повернуть на 90° по ЧС",
   "menu.edit.auto_outline": "Авто-обводка 1px",
-
   "menu.view": "Вид",
   "menu.view.frame_mode": "Режим кадра",
   "menu.view.atlas_mode": "Режим атласа",
@@ -60,19 +57,15 @@
   "menu.view.zoom_out": "Отдалить",
   "menu.view.zoom_100": "Масштаб 100%",
   "menu.view.zoom_fit": "Вписать в окно",
-
   "menu.project": "Проект",
   "menu.project.regrid": "Перестроить сетку атласа...",
   "menu.project.resize_9grid": "Размер кадров по 9 точкам...",
-
   "menu.language": "Язык",
   "menu.language.en": "English",
   "menu.language.ru": "Русский",
-
   "menu.help": "Справка",
   "menu.help.hotkeys": "Горячие клавиши...",
   "menu.help.about": "О программе OniAnvil",
-
   "context.active_tool": "Инструмент:",
   "context.brush_size": "Размер:",
   "context.pixel_perfect": "Pixel-Perfect",
@@ -101,7 +94,6 @@
   "context.peek_sketch": "Поверх: Скетч",
   "context.peek_both": "Оба слоя",
   "context.filled_shape": "Заливка",
-
   "tools.header": "Инструменты",
   "tools.pencil": "Карандаш (B) — Свободное рисование пикселей (ЛКМ: Основной цвет, ПКМ: Фоновый цвет)",
   "tools.pencil.title": "Карандаш",
@@ -167,7 +159,6 @@
   "tools.fg": "Осн",
   "tools.bg": "Фон",
   "tools.swap_colors": "Поменять местами основной и фоновый цвета (X)",
-
   "viewport.mode.frame": "Кадр",
   "viewport.mode.atlas": "Атлас",
   "viewport.zoom.fit": "Вписать",
@@ -178,7 +169,6 @@
   "viewport.info.frame": "Кадр:",
   "viewport.info.atlas": "Атлас:",
   "viewport.info.cursor": "XY:",
-
   "panel.preview.title": "Живое превью анимации",
   "panel.preview.play": "Пуск",
   "panel.preview.pause": "Пауза",
@@ -196,7 +186,6 @@
   "panel.preview.motion_test": "Тест движения (скролл фона)",
   "panel.preview.scroll_x": "Скролл X:",
   "panel.preview.scroll_y": "Скролл Y:",
-
   "panel.palette.title": "Палитра и скины",
   "panel.palette.preset": "Пресет:",
   "panel.palette.apply_preset": "Загрузить",
@@ -230,7 +219,6 @@
   "panel.palette.confirm_del_skin.title": "Удаление скина палитры",
   "panel.palette.confirm_del_skin.prompt": "Вы уверены, что хотите удалить скин",
   "panel.palette.confirm_del_skin.yes": "Да, удалить скин",
-
   "panel.sketch.title": "Референс (Скетч) и Onion Skin",
   "panel.sketch.load": "Загрузить референс...",
   "panel.sketch.clear": "Очистить",
@@ -258,7 +246,6 @@
   "panel.onion.next_frames": "След. кадры:",
   "panel.onion.opacity": "Прозрачность кальки:",
   "panel.onion.tint": "Цветовой тинт (Красн. / Зел.)",
-
   "panel.pivots.title": "Пивот и точки привязки",
   "panel.pivots.show": "Показывать гизмо на холсте",
   "panel.pivots.origin_x": "Пивот X:",
@@ -270,7 +257,6 @@
   "panel.pivots.add_point": "Добавить точку",
   "panel.pivots.default_point_name": "action_point",
   "panel.pivots.remove": "×",
-
   "timeline.title": "Таймлайн анимации",
   "timeline.fps": "FPS:",
   "timeline.frame": "Кадр",
@@ -295,7 +281,6 @@
   "timeline.confirm_delete_layer.prompt": "Вы точно хотите удалить слой",
   "timeline.confirm_delete_layer.yes": "Да, удалить слой",
   "timeline.confirm_delete_layer.no": "Отмена",
-
   "modal.new_project.title": "Мастер нового проекта",
   "modal.new_project.name": "Имя проекта:",
   "modal.new_project.default_name": "sprite",
@@ -312,7 +297,6 @@
   "modal.new_project.atlas_summary": "Итоговый размер атласа:",
   "modal.new_project.create": "Создать проект",
   "modal.new_project.cancel": "Отмена",
-
   "modal.about.title": "О программе OniAnvil",
   "modal.about.description": "Открытая (MIT) студия создания спрайтов и покадровой анимации с поддержкой Onion Skinning и игровых атласов.",
   "modal.about.version": "Версия:",
@@ -321,19 +305,16 @@
   "modal.about.credits_cat": "Демо-спрайт «Кот»: ",
   "modal.about.disclaimer": "Распространяется бесплатно под лицензией MIT по принципу «как есть» (as is). Автор и разработчики не несут ответственности за возможный ущерб или потерю данных.",
   "modal.about.close": "Закрыть",
-
   "modal.regrid.title": "Перестроить сетку атласа (Re-Grid)",
   "modal.regrid.current": "Текущая раскладка:",
   "modal.regrid.columns": "Новое число колонок:",
   "modal.regrid.resulting": "Новый размер атласа:",
   "modal.regrid.apply": "Применить раскладку",
-
   "modal.resize9.title": "Изменение размера кадров по 9 точкам",
   "modal.resize9.anchor": "Точка привязки (3×3):",
   "modal.resize9.new_w": "Новая ширина кадра (px):",
   "modal.resize9.new_h": "Новая высота кадра (px):",
   "modal.resize9.apply": "Изменить размер всех кадров",
-
   "modal.slicer.title": "Импорт и нарезка спрайт-листа",
   "modal.slicer.source_size": "Размер исходного PNG:",
   "modal.slicer.frame_w": "Ширина кадра (px):",
@@ -345,39 +326,32 @@
   "modal.slicer.out_cols": "Колонок в целевом атласе:",
   "modal.slicer.detected": "Найдено кадров:",
   "modal.slicer.import": "Нарезать и импортировать",
-
   "modal.export_png.title": "Экспорт масштабированного PNG",
   "modal.export_png.scale": "Масштаб (Nearest-Neighbor):",
   "modal.export_png.extrude": "Экструзия краёв (Padding):",
   "modal.export_png.output_size": "Итоговый размер:",
   "modal.export_png.export": "Экспортировать PNG...",
-
   "modal.export_gif.title": "Экспорт анимированного GIF",
   "modal.export_gif.scale": "Масштаб (Nearest-Neighbor):",
   "modal.export_gif.range": "Диапазон кадров:",
   "modal.export_gif.fps": "Частота кадров (FPS):",
   "modal.export_gif.export": "Экспортировать GIF...",
-
   "modal.recovery.title": "Доступно автосохранение",
   "modal.recovery.prompt": "Обнаружен несохранённый снимок проекта с прошлого сеанса.",
   "modal.recovery.restore": "Восстановить снимок",
   "modal.recovery.discard": "Отклонить",
-
   "modal.unsaved.title": "Несохранённые изменения",
   "modal.unsaved.new_prompt": "Текущий проект содержит несохранённые изменения. Создать новый проект? Несохранённые данные будут потеряны.",
   "modal.unsaved.close_prompt": "В проекте есть несохранённые изменения. Сохранить перед закрытием?",
   "modal.unsaved.save": "Сохранить проект",
   "modal.unsaved.discard": "Не сохранять",
   "modal.unsaved.cancel": "Отмена",
-
   "modal.slicer.preview": "Предпросмотр сетки нарезки",
   "modal.slicer.select_all": "Выбрать все",
   "modal.slicer.deselect_all": "Снять выбор",
   "modal.slicer.auto_detect": "Автонарезка",
   "modal.slicer.selected_count": "Выбрано кадров:",
-
   "modal.regrid.preview": "Превью сетки:",
-
   "menu.theme": "Тема",
   "theme.dark": "Тёмная студия",
   "theme.light": "Светлая студия",
@@ -414,9 +388,7 @@
   "theme.msx": "МСХ (MSX 1983)",
   "theme.apple2": "Эппл II (Apple II 1977)",
   "theme.pc_dos": "ПК ДОС / Нортон (IBM PC DOS)",
-
   "tooltip.tools_columns": "Переключить отображение инструментов в один или два столбика",
-
   "tooltip.undo": "Отменить последнее действие (Ctrl/Cmd+Z)",
   "tooltip.redo": "Повторить отменённое действие (Ctrl/Cmd+Y / Ctrl/Cmd+Shift+Z)",
   "tooltip.pixel_perfect": "Автоматически убирать L-образные ступеньки в 1px при свободном рисовании",
@@ -495,11 +467,9 @@
   "tooltip.timeline_move_right": "Переместить кадр правее (позже) на таймлайне",
   "tooltip.timeline_frame_menu": "Открыть меню действий с кадром (Импорт/Экспорт кадра в PNG, Дублирование, Сдвиг, Удаление)",
   "tooltip.timeline_add_tag": "Создать новый именованный тег диапазона кадров анимации",
-
   "tabs.new": "Новая вкладка проекта",
   "tabs.close": "Закрыть вкладку",
   "tabs.rename_hint": "Двойной клик — переименовать проект",
-
   "start.title": "OniAnvil",
   "start.subtitle": "Студия пиксельных спрайтов и Onion-скин анимации",
   "start.new_project": "Создать новый проект...",
@@ -516,22 +486,18 @@
   "start.confirm_delete.yes": "Да, удалить",
   "start.not_found": "файл не найден",
   "start.settings_saved_in": "Настройки и цветовая схема сохраняются в",
-
   "panel.palette.confirm_del_slot.title": "Удаление цвета из палитры",
   "panel.palette.confirm_del_slot.prompt": "Вы уверены, что хотите удалить этот цвет из палитры?",
   "panel.palette.confirm_del_slot.yes": "Да, удалить цвет",
-
   "panel.pivot.confirm_del.title": "Удаление точки привязки",
   "panel.pivot.confirm_del.prompt": "Вы уверены, что хотите удалить точку привязки",
   "panel.pivot.confirm_del.yes": "Да, удалить точку",
-
   "timeline.confirm_del_tag.title": "Удаление тега анимации",
   "timeline.confirm_del_tag.prompt": "Вы уверены, что хотите удалить тег анимации",
   "timeline.confirm_del_tag.yes": "Да, удалить тег",
   "tag.direction.forward": "Вперёд",
   "tag.direction.reverse": "Назад",
   "tag.direction.pingpong": "Туда-обратно",
-
   "modal.close_doc.title": "Закрытие проекта",
   "modal.close_doc.prompt": "Сохранить изменения в проекте перед закрытием?",
   "modal.close_doc.save": "Сохранить проект",
@@ -541,7 +507,6 @@
   "modal.confirm_exit.prompt": "Вы уверены, что хотите выйти из OniAnvil?",
   "modal.confirm_exit.yes": "Выйти",
   "modal.confirm_exit.no": "Отмена",
-
   "modal.hotkeys.title": "Горячие клавиши",
   "modal.hotkeys.sec_tools": "Инструменты рисования",
   "modal.hotkeys.sec_canvas": "Холст и навигация",
@@ -559,7 +524,6 @@
   "modal.hotkeys.step_frame": "Предыдущий / Следующий кадр",
   "modal.hotkeys.deselect": "Снять выделение",
   "modal.hotkeys.close": "Закрыть",
-
   "color_picker.title": "Выбор цвета",
   "color_picker.recent": "Недавние цвета",
   "color_picker.hex": "HEX",
@@ -571,13 +535,11 @@
   "color_picker.old": "Было",
   "color_picker.new": "Стало",
   "color_picker.invalid_hex": "Некорректный HEX (используйте #RRGGBB, #RGB или #RRGGBBAA)",
-
   "status.unsaved": "● Не сохранён",
   "status.saved": "Сохранён",
   "status.atlas": "Атлас",
   "status.frame": "Кадр",
   "status.selection": "Выд",
-
   "menu.edit.copy": "Копировать",
   "menu.edit.cut": "Вырезать",
   "menu.edit.paste": "Вставить",
@@ -586,7 +548,6 @@
   "menu.file.export_sprite_json": "Экспорт Sprite Sheet JSON (.json)",
   "menu.file.export_palette_gpl": "Экспорт палитры (.gpl)",
   "menu.file.export_palette_hex": "Экспорт палитры (.hex)",
-
   "modal.hotkeys.brush_size": "Уменьшить / Увеличить размер кисти",
   "modal.hotkeys.copy_paste": "Копировать / Вставить выделение",
   "modal.hotkeys.select_all": "Выделить всё / Инвертировать",
@@ -599,10 +560,8 @@
   "modal.hotkeys.axis_lock": "Прямая линия / 45° / Ограничение 1:1",
   "modal.hotkeys.eraser_replace": "Замена основного цвета на фоновый (Ластик)",
   "modal.hotkeys.zoom_keys": "Приблизить / Отдалить / Сброс зума",
-
   "timeline.current_time": "Время",
   "timeline.loop_tag": "Зациклить активный тег",
-
   "menu.edit.replace_color": "Замена цвета... (Shift+R)",
   "modal.replace_color.title": "Замена цвета",
   "modal.replace_color.prompt": "Заменить все вхождения одного цвета на другой в кадре или проекте.",
@@ -623,7 +582,6 @@
   "modal.replace_color.apply": "Заменить",
   "app.status.color_replaced": "Цвет успешно заменён",
   "modal.hotkeys.replace_color": "Замена цвета",
-
   "menu.edit.color_adjust": "Коррекция цвета (HSV)... (Ctrl/Cmd+U)",
   "modal.color_adjust.title": "Тон / Насыщенность / Контраст",
   "modal.color_adjust.prompt": "Настройка цветового тона, насыщенности, яркости и контраста.",
@@ -635,17 +593,14 @@
   "modal.color_adjust.apply": "Применить",
   "app.status.colors_adjusted": "Цвета скорректированы",
   "modal.hotkeys.color_adjust": "Коррекция цвета (HSV/Контраст)",
-
   "menu.project.auto_crop": "Авто-обрезка холста (Удалить поля)",
   "app.status.canvas_cropped": "Холст обрезан по границам рисунка",
   "app.status.canvas_already_trimmed": "Холст уже плотно обрезан",
-
   "menu.edit.custom_brush": "Создать кисть из выделения (Ctrl/Cmd+B)",
   "app.status.brush_created": "Пользовательская кисть создана",
   "modal.hotkeys.custom_brush": "Создать кисть из выделения",
   "context.custom_brush": "Пользовательская кисть",
   "tooltip.reset_custom_brush": "Сбросить к обычной кисти",
-
   "context.gradient_kind": "Тип:",
   "context.gradient_linear": "Линейный",
   "context.gradient_radial": "Радиальный",
@@ -664,7 +619,6 @@
   "context.gradient_dither_50": "50% Шахматка",
   "modal.hotkeys.fill_or_gradient": "Заливка / Градиент",
   "app.status.gradient_applied": "Градиент применён",
-
   "menu.select": "Выделение",
   "menu.select.deselect": "Снять выделение (Esc / Ctrl/Cmd+D)",
   "menu.select.modify": "Модифицировать выделение...",
@@ -687,10 +641,8 @@
   "app.status.selection_contracted": "Выделение сжато",
   "app.status.selection_bordered": "Выделение преобразовано в контур",
   "app.status.selection_cleared": "Выделение снято",
-
   "context.tolerance": "Допуск:",
   "modal.replace_color.tolerance": "Допуск:",
-
   "menu.edit.outline_fx": "Генератор контура... (Shift+O)",
   "modal.outline_fx.title": "Генератор контура",
   "modal.outline_fx.prompt": "Создание контурной обводки вокруг спрайта или выделения.",
@@ -703,7 +655,6 @@
   "modal.outline_fx.apply": "Применить контур",
   "app.status.outline_generated": "Контур создан",
   "modal.hotkeys.outline_fx": "Генератор контура",
-
   "menu.edit.convolution": "Матричные фильтры...",
   "modal.convolution.title": "Матричные фильтры",
   "modal.convolution.prompt": "Применение пространственной матрицы 3x3 (размытие, резкость, выделение краёв, рельеф).",
@@ -719,7 +670,6 @@
   "modal.convolution.preserve_alpha": "Сохранять альфа-канал",
   "modal.convolution.apply": "Применить фильтр",
   "app.status.filter_applied": "Фильтр применён",
-
   "panel.palette.sort_btn": "Сортировка",
   "tooltip.palette_sort": "Сортировка цветов палитры по тону, яркости или насыщенности",
   "panel.palette.sort_hue": "По цветовому тону (Hue)",
@@ -760,7 +710,6 @@
   "panel.palette.extract_sheet_title": "Текущий атлас листа",
   "app.status.palette_extracted": "Палитра успешно извлечена",
   "menu.edit.extract_palette": "Извлечь палитру из листа...",
-
   "menu.edit.rotate_arbitrary": "Свободный поворот... (Ctrl/Cmd+Shift+R)",
   "modal.rotate.title": "Свободный поворот выделения / кадра",
   "modal.rotate.prompt": "Поворот выделения или кадра на произвольный угол алгоритмом RotSprite или Nearest-Neighbor.",
@@ -774,12 +723,10 @@
   "modal.rotate.apply": "Повернуть",
   "app.status.rotated": "Поворот применён",
   "modal.hotkeys.rotate_arbitrary": "Свободный поворот выделения / кадра",
-
   "tooltip.timeline_frame_linked": "Связанный кадр (делит рисунок со связанными кадрами)",
   "timeline.create_linked_frame": "Создать связанную копию",
   "timeline.unlink_frame": "Разорвать связь",
   "timeline.link_to_frame": "Связать с кадром...",
-
   "menu.file.export_packed_atlas": "Экспорт упакованного атласа...",
   "modal.pack_atlas.title": "Упаковщик спрайт-листов",
   "modal.pack_atlas.prompt": "Упаковать все кадры анимации в компактный атлас текстур (2D bin packing) для игровых движков.",
@@ -791,7 +738,6 @@
   "modal.pack_atlas.efficiency": "Эффективность упаковки:",
   "modal.pack_atlas.export_btn": "Экспорт PNG + JSON...",
   "app.status.atlas_packed": "Упакованный атлас экспортирован",
-
   "modal.preview": "Предпросмотр (Preview)",
   "timeline.layers": "Слои",
   "timeline.add_layer": "Добавить слой",
@@ -866,5 +812,45 @@
   "modal.bake_sketch.lock_alpha_empty_tip": "Активный слой пуст; при блокировке прозрачности пиксели не появятся.",
   "modal.bake_sketch.all_frames": "Применить ко всем кадрам анимации",
   "modal.bake_sketch.selection_only": "Только в выделенной области",
-  "modal.bake_sketch.apply": "Запечь в спрайт"
+  "modal.bake_sketch.apply": "Запечь в спрайт",
+  "inbetween.title": "Вставить промежуточные кадры (Экспериментально)",
+  "inbetween.source_frame": "Исходный кадр",
+  "inbetween.target_frame": "Целевой кадр",
+  "inbetween.count": "Промежуточных кадров",
+  "inbetween.frames_unit": "кадр(ов)",
+  "inbetween.algorithm": "Алгоритм",
+  "inbetween.pixel_flow": "Pixel Flow (Смещение пикселей)",
+  "inbetween.dither_morph": "Dither Morph (Матричный дизеринг)",
+  "inbetween.search_radius": "Радиус поиска",
+  "inbetween.scope": "Область слоёв",
+  "inbetween.all_layers": "Все слои (раздельно)",
+  "inbetween.active_layer": "Только активный слой",
+  "inbetween.loop_to_first": "Зациклить к кадру 1 на последнем кадре",
+  "inbetween.subdivide_duration": "Разделить длительность исходного кадра",
+  "inbetween.preview_title": "Предпросмотр анимации",
+  "inbetween.play": "Воспроизведение",
+  "inbetween.pause": "Пауза",
+  "inbetween.fps": "FPS превью",
+  "inbetween.frame_source": "Исходный",
+  "inbetween.frame_target": "Целевой",
+  "inbetween.new_frame": "Промежуточный",
+  "inbetween.btn_generate": "Сгенерировать кадры",
+  "timeline.inbetween_frame": "Интерполяция...",
+  "tooltip.timeline_inbetween": "Сгенерировать промежуточные кадры между текущим и следующим",
+  "menu.project.inbetween": "Вставить промежуточные кадры (Экспериментально)...",
+  "app.status.inbetweens_generated": "Промежуточные кадры успешно сгенерированы",
+  "inbetween.tab_single": "Выбранный кадр",
+  "inbetween.tab_all": "Вся анимация",
+  "inbetween.all_summary": "{orig} кадров → {total} кадров (+{added} новых)",
+  "inbetween.cross_dissolve": "Cross Dissolve (Плавное смешивание)",
+  "inbetween.flow_direction": "Направление смещения",
+  "inbetween.direction_bidi": "Двунаправленное (Баланс)",
+  "inbetween.direction_fwd": "Прямое (Движение / Сжатие)",
+  "inbetween.direction_rev": "Обратное (Взрывы / Рост)",
+  "inbetween.btn_generate_all": "Интерполировать всю анимацию",
+  "timeline.inbetween_all": "Интерполировать всё...",
+  "tooltip.timeline_inbetween_all": "Сгенерировать промежуточные кадры между всеми кадрами анимации",
+  "menu.project.inbetween_all": "Интерполировать всю анимацию (Экспериментально)...",
+  "app.status.inbetweens_all_generated": "Вся анимация успешно интерполирована",
+  "inbetween.coherent_motion": "Coherent Motion (Связные кластеры)"
 }

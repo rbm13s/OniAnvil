@@ -90,6 +90,9 @@ pub struct FrameMeta {
     /// Per-frame coordinates for action points. Falls back to `PivotConfig::action_points` if not present.
     #[serde(default)]
     pub action_points: Vec<ActionPointCoord>,
+    /// Whether this frame was generated via inbetween frame interpolation.
+    #[serde(default)]
+    pub is_generated: bool,
 }
 
 impl Default for FrameMeta {
@@ -98,6 +101,7 @@ impl Default for FrameMeta {
             hold_multiplier: 1,
             linked_from: None,
             action_points: Vec::new(),
+            is_generated: false,
         }
     }
 }

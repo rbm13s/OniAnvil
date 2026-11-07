@@ -9,6 +9,7 @@ use crate::model::palette::{
 };
 use crate::model::sketch::{BackgroundRemovalTarget, BakePaletteSource, BakeSketchSettings, PixelPrecisionMode};
 use crate::model::project::Project;
+use crate::model::inbetween::{generate_inbetween_sequence, FlowDirection, InbetweenAlgorithm, InbetweenConfig, InbetweenMode, InbetweenScope};
 use crate::theme::*;
 use crate::tools::fill::{OutlineCornerStyle, OutlinePlacement};
 use crate::tools::filters::ConvolutionPreset;
@@ -4863,6 +4864,553 @@ pub fn show_hotkeys_modal(ctx: &Context, open: &mut bool, i18n: &I18n) {
         window_open = false;
     }
     *open = window_open;
+}
+
+
+// ----------------------------------------------------------------------------
+// Inbetween / Frame Interpolation Modal
+// ----------------------------------------------------------------------------
+
+pub struct InbetweenModalState {
+    pub open: bool,
+    pub source_frame: usize,
+    pub config: InbetweenConfig,
+    pub cached_frames: Vec<(RgbaImage, bool, usize)>,
+    pub cached_textures: Vec<egui::TextureHandle>,
+    pub cache_dirty: bool,
+    pub playback_playing: bool,
+    pub playback_fps: f32,
+    pub playback_last_tick: Option<f64>,
+    pub current_preview_index: usize,
+}
+
+impl Default for InbetweenModalState {
+    fn default() -> Self {
+        Self {
+            open: false,
+            source_frame: 0,
+            config: InbetweenConfig::default(),
+            cached_frames: Vec::new(),
+            cached_textures: Vec::new(),
+            cache_dirty: true,
+            playback_playing: true,
+            playback_fps: 6.0,
+            playback_last_tick: None,
+            current_preview_index: 0,
+        }
+    }
+}
+
+impl InbetweenModalState {
+    pub fn open_for(&mut self, source_frame: usize, _project: &Project) {
+        self.open = true;
+        self.source_frame = source_frame;
+        self.config.mode = InbetweenMode::SinglePair;
+        self.cache_dirty = true;
+        self.current_preview_index = 0;
+        self.playback_playing = true;
+        self.playback_last_tick = None;
+    }
+
+    pub fn open_for_all(&mut self, _project: &Project) {
+        self.open = true;
+        self.config.mode = InbetweenMode::AllFrames;
+        self.cache_dirty = true;
+        self.current_preview_index = 0;
+        self.playback_playing = true;
+        self.playback_last_tick = None;
+    }
+
+    pub fn show(
+        &mut self,
+        ctx: &Context,
+        i18n: &I18n,
+        project: &Project,
+    ) -> Option<InbetweenConfig> {
+        if !self.open {
+            return None;
+        }
+
+        let total = project.metadata.frame_count.max(1) as usize;
+        let safe_src = self.source_frame.min(total.saturating_sub(1));
+        let is_last_frame = safe_src + 1 >= total;
+        let target_idx = if safe_src + 1 < total {
+            safe_src + 1
+        } else if self.config.loop_to_first {
+            0
+        } else {
+            safe_src
+        };
+
+        // Regenerate cached frames when parameters changed
+        if self.cache_dirty {
+            let mut seq: Vec<(RgbaImage, bool, usize)> = Vec::new();
+
+            match self.config.mode {
+                InbetweenMode::SinglePair => {
+                    let (src_img, tgt_img) = if self.config.scope == InbetweenScope::ActiveLayer {
+                        let buf = project
+                            .metadata
+                            .layers
+                            .get(project.metadata.active_layer)
+                            .and_then(|l| l.layer_rgba.as_ref())
+                            .unwrap_or(&project.atlas_rgba);
+                        let frames = project.extract_frames_from_atlas(buf);
+                        let s = frames.get(safe_src).cloned().unwrap_or_else(|| {
+                            RgbaImage::new(project.metadata.frame_width, project.metadata.frame_height)
+                        });
+                        let t = frames.get(target_idx).cloned().unwrap_or_else(|| {
+                            RgbaImage::new(project.metadata.frame_width, project.metadata.frame_height)
+                        });
+                        (s, t)
+                    } else {
+                        let comp = project.composited_atlas_rgba();
+                        let frames = project.extract_frames_from_atlas(&comp);
+                        let s = frames.get(safe_src).cloned().unwrap_or_else(|| {
+                            RgbaImage::new(project.metadata.frame_width, project.metadata.frame_height)
+                        });
+                        let t = frames.get(target_idx).cloned().unwrap_or_else(|| {
+                            RgbaImage::new(project.metadata.frame_width, project.metadata.frame_height)
+                        });
+                        (s, t)
+                    };
+
+                    let inbetweens = generate_inbetween_sequence(
+                        &src_img,
+                        &tgt_img,
+                        self.config.frame_count,
+                        self.config.algorithm,
+                        self.config.flow_direction,
+                        self.config.search_radius,
+                        Some(&project.metadata.palette.colors),
+                    );
+
+                    seq.push((src_img, false, safe_src + 1));
+                    for inbetween in inbetweens {
+                        seq.push((inbetween, true, safe_src + 1));
+                    }
+                    seq.push((tgt_img, false, target_idx + 1));
+                }
+                InbetweenMode::AllFrames => {
+                    let frames = if self.config.scope == InbetweenScope::ActiveLayer {
+                        let buf = project
+                            .metadata
+                            .layers
+                            .get(project.metadata.active_layer)
+                            .and_then(|l| l.layer_rgba.as_ref())
+                            .unwrap_or(&project.atlas_rgba);
+                        project.extract_frames_from_atlas(buf)
+                    } else {
+                        let comp = project.composited_atlas_rgba();
+                        project.extract_frames_from_atlas(&comp)
+                    };
+
+                    let loop_anim = self.config.loop_to_first;
+                    let pairs_count = if loop_anim { total } else { total.saturating_sub(1) };
+
+                    for i in 0..pairs_count {
+                        let next_i = (i + 1) % total;
+                        let src = frames.get(i).cloned().unwrap_or_else(|| {
+                            RgbaImage::new(project.metadata.frame_width, project.metadata.frame_height)
+                        });
+                        let tgt = frames.get(next_i).cloned().unwrap_or_else(|| {
+                            RgbaImage::new(project.metadata.frame_width, project.metadata.frame_height)
+                        });
+
+                        seq.push((src.clone(), false, i + 1));
+                        let inbetweens = generate_inbetween_sequence(
+                            &src,
+                            &tgt,
+                            self.config.frame_count,
+                            self.config.algorithm,
+                            self.config.flow_direction,
+                            self.config.search_radius,
+                            Some(&project.metadata.palette.colors),
+                        );
+                        for inbetween in inbetweens {
+                            seq.push((inbetween, true, i + 1));
+                        }
+                    }
+
+                    if !loop_anim {
+                        if let Some(last) = frames.get(total.saturating_sub(1)) {
+                            seq.push((last.clone(), false, total));
+                        }
+                    }
+                }
+            }
+
+            self.cached_textures.clear();
+            for (i, (frame, _, _)) in seq.iter().enumerate() {
+                let tex = ctx.load_texture(
+                    format!("inbetween_preview_frame_{}", i),
+                    egui::ColorImage::from_rgba_unmultiplied(
+                        [frame.width() as usize, frame.height() as usize],
+                        frame.as_raw(),
+                    ),
+                    egui::TextureOptions::NEAREST,
+                );
+                self.cached_textures.push(tex);
+            }
+            self.cached_frames = seq;
+            self.cache_dirty = false;
+        }
+
+        // Animation playback advancement
+        let seq_len = self.cached_textures.len();
+        if self.playback_playing && seq_len > 1 {
+            let now = ctx.input(|i| i.time);
+            let interval = 1.0 / self.playback_fps.clamp(1.0, 30.0) as f64;
+            if let Some(last) = self.playback_last_tick {
+                if now - last >= interval {
+                    let steps = ((now - last) / interval) as usize;
+                    self.current_preview_index = (self.current_preview_index + steps) % seq_len;
+                    self.playback_last_tick = Some(now);
+                }
+            } else {
+                self.playback_last_tick = Some(now);
+            }
+            ctx.request_repaint_after(std::time::Duration::from_secs_f64(interval));
+        } else {
+            self.playback_last_tick = None;
+        }
+
+        let mut triggered = None;
+        let mut window_open = self.open;
+        let mut close_requested = false;
+
+        Window::new(RichText::new(format!("{FA_MAGIC_WAND} {}", i18n.tr("inbetween.title"))).strong())
+            .open(&mut window_open)
+            .collapsible(false)
+            .resizable(false)
+            .default_width(580.0)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(ctx.viewport_rect().center())
+            .constrain(true)
+            .show(ctx, |ui| {
+                ui.set_width(580.0);
+
+                let mut params_changed = false;
+
+                // Mode Selector Tabs (Single Frame vs Entire Animation)
+                ui.horizontal(|ui| {
+                    if ui.selectable_label(
+                        self.config.mode == InbetweenMode::SinglePair,
+                        format!("{FA_MAGIC_WAND} {}", i18n.tr("inbetween.tab_single")),
+                    ).clicked() {
+                        self.config.mode = InbetweenMode::SinglePair;
+                        params_changed = true;
+                        self.current_preview_index = 0;
+                    }
+                    if ui.selectable_label(
+                        self.config.mode == InbetweenMode::AllFrames,
+                        format!("{FA_GLOBE} {}", i18n.tr("inbetween.tab_all")),
+                    ).clicked() {
+                        self.config.mode = InbetweenMode::AllFrames;
+                        params_changed = true;
+                        self.current_preview_index = 0;
+                    }
+                });
+
+                ui.add_space(6.0);
+                ui.separator();
+                ui.add_space(4.0);
+
+                ui.columns(2, |cols| {
+                    // Left Column: Parameters
+                    let ui = &mut cols[0];
+
+                    match self.config.mode {
+                        InbetweenMode::SinglePair => {
+                            ui.group(|ui| {
+                                ui.horizontal(|ui| {
+                                    ui.label(RichText::new(format!("{}:", i18n.tr("inbetween.source_frame"))).strong());
+                                    ui.label(format!("#{}", safe_src + 1));
+                                });
+                                ui.horizontal(|ui| {
+                                    ui.label(RichText::new(format!("{}:", i18n.tr("inbetween.target_frame"))).strong());
+                                    if is_last_frame && self.config.loop_to_first {
+                                        ui.label(format!("#{} ({})", target_idx + 1, i18n.tr("inbetween.loop_to_first")));
+                                    } else {
+                                        ui.label(format!("#{}", target_idx + 1));
+                                    }
+                                });
+                            });
+                        }
+                        InbetweenMode::AllFrames => {
+                            let added = if self.config.loop_to_first {
+                                total * self.config.frame_count
+                            } else {
+                                total.saturating_sub(1) * self.config.frame_count
+                            };
+                            let new_total = total + added;
+                            ui.group(|ui| {
+                                ui.label(
+                                    RichText::new(
+                                        i18n.tr("inbetween.all_summary")
+                                            .replace("{orig}", &total.to_string())
+                                            .replace("{total}", &new_total.to_string())
+                                            .replace("{added}", &added.to_string()),
+                                    )
+                                    .strong(),
+                                );
+                            });
+                        }
+                    }
+
+                    ui.add_space(4.0);
+
+                    // Count slider
+                    ui.horizontal(|ui| {
+                        ui.label(i18n.tr("inbetween.count"));
+                        let mut count = self.config.frame_count;
+                        let max_count = if self.config.mode == InbetweenMode::AllFrames { 4 } else { 8 };
+                        if ui.add(egui::Slider::new(&mut count, 1..=max_count).suffix(format!(" {}", i18n.tr("inbetween.frames_unit")))).changed() {
+                            self.config.frame_count = count;
+                            params_changed = true;
+                        }
+                    });
+
+                    ui.add_space(4.0);
+
+                    // Algorithm selector
+                    ui.label(RichText::new(i18n.tr("inbetween.algorithm")).strong());
+                    ui.horizontal_wrapped(|ui| {
+                        if ui.selectable_label(self.config.algorithm == InbetweenAlgorithm::PixelFlow, i18n.tr("inbetween.pixel_flow")).clicked() {
+                            self.config.algorithm = InbetweenAlgorithm::PixelFlow;
+                            params_changed = true;
+                        }
+                        if ui.selectable_label(self.config.algorithm == InbetweenAlgorithm::CoherentMotion, i18n.tr("inbetween.coherent_motion")).clicked() {
+                            self.config.algorithm = InbetweenAlgorithm::CoherentMotion;
+                            params_changed = true;
+                        }
+                        if ui.selectable_label(self.config.algorithm == InbetweenAlgorithm::DitherMorph, i18n.tr("inbetween.dither_morph")).clicked() {
+                            self.config.algorithm = InbetweenAlgorithm::DitherMorph;
+                            params_changed = true;
+                        }
+                        if ui.selectable_label(self.config.algorithm == InbetweenAlgorithm::CrossDissolve, i18n.tr("inbetween.cross_dissolve")).clicked() {
+                            self.config.algorithm = InbetweenAlgorithm::CrossDissolve;
+                            params_changed = true;
+                        }
+                    });
+
+                    // Flow Direction & Radius (if PixelFlow or CoherentMotion)
+                    if self.config.algorithm == InbetweenAlgorithm::PixelFlow {
+                        ui.add_space(3.0);
+                        ui.label(RichText::new(i18n.tr("inbetween.flow_direction")).small());
+                        ui.horizontal_wrapped(|ui| {
+                            if ui.selectable_label(self.config.flow_direction == FlowDirection::Bidirectional, i18n.tr("inbetween.direction_bidi")).clicked() {
+                                self.config.flow_direction = FlowDirection::Bidirectional;
+                                params_changed = true;
+                            }
+                            if ui.selectable_label(self.config.flow_direction == FlowDirection::Forward, i18n.tr("inbetween.direction_fwd")).clicked() {
+                                self.config.flow_direction = FlowDirection::Forward;
+                                params_changed = true;
+                            }
+                            if ui.selectable_label(self.config.flow_direction == FlowDirection::Reverse, i18n.tr("inbetween.direction_rev")).clicked() {
+                                self.config.flow_direction = FlowDirection::Reverse;
+                                params_changed = true;
+                            }
+                        });
+
+                        ui.horizontal(|ui| {
+                            ui.label(i18n.tr("inbetween.search_radius"));
+                            let mut radius = self.config.search_radius;
+                            if ui.add(egui::Slider::new(&mut radius, 4..=64).suffix(" px")).changed() {
+                                self.config.search_radius = radius;
+                                params_changed = true;
+                            }
+                        });
+                    } else if self.config.algorithm == InbetweenAlgorithm::CoherentMotion {
+                        ui.add_space(3.0);
+                        ui.horizontal(|ui| {
+                            ui.label(i18n.tr("inbetween.search_radius"));
+                            let mut radius = self.config.search_radius;
+                            if ui.add(egui::Slider::new(&mut radius, 2..=32).suffix(" px")).changed() {
+                                self.config.search_radius = radius;
+                                params_changed = true;
+                            }
+                        });
+                    }
+
+                    ui.add_space(4.0);
+
+                    // Layer Scope selector
+                    ui.label(RichText::new(i18n.tr("inbetween.scope")).strong());
+                    ui.horizontal(|ui| {
+                        if ui.selectable_label(self.config.scope == InbetweenScope::AllLayers, i18n.tr("inbetween.all_layers")).clicked() {
+                            self.config.scope = InbetweenScope::AllLayers;
+                            params_changed = true;
+                        }
+                        if ui.selectable_label(self.config.scope == InbetweenScope::ActiveLayer, i18n.tr("inbetween.active_layer")).clicked() {
+                            self.config.scope = InbetweenScope::ActiveLayer;
+                            params_changed = true;
+                        }
+                    });
+
+                    ui.add_space(4.0);
+
+                    // Options checkboxes
+                    if (self.config.mode == InbetweenMode::AllFrames || is_last_frame)
+                        && ui.checkbox(&mut self.config.loop_to_first, i18n.tr("inbetween.loop_to_first")).changed()
+                    {
+                        params_changed = true;
+                    }
+
+                    ui.checkbox(&mut self.config.subdivide_duration, i18n.tr("inbetween.subdivide_duration"));
+
+                    // Right Column: Live Animated Preview
+                    let ui = &mut cols[1];
+                    ui.vertical_centered(|ui| {
+                        ui.label(RichText::new(i18n.tr("inbetween.preview_title")).strong());
+                        ui.add_space(2.0);
+
+                        // Viewport box
+                        let preview_size = vec2(170.0, 170.0);
+                        let (rect, _response) = ui.allocate_exact_size(preview_size, Sense::hover());
+
+                        // Checkers background
+                        crate::ui::color_picker::draw_checkers(ui.painter(), rect, 8.0);
+                        ui.painter().rect_stroke(rect, 0.0, Stroke::new(1.0, Color32::from_gray(80)), StrokeKind::Outside);
+
+                        // Render current frame
+                        let cur_idx = self.current_preview_index.min(self.cached_textures.len().saturating_sub(1));
+                        if let Some(tex) = self.cached_textures.get(cur_idx) {
+                            let fw = tex.size()[0] as f32;
+                            let fh = tex.size()[1] as f32;
+                            let scale = (preview_size.x / fw).min(preview_size.y / fh).clamp(1.0, 16.0);
+                            let draw_w = (fw * scale).round();
+                            let draw_h = (fh * scale).round();
+                            let draw_rect = egui::Rect::from_center_size(rect.center(), vec2(draw_w, draw_h));
+
+                            ui.painter().image(
+                                tex.id(),
+                                draw_rect,
+                                egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                                Color32::WHITE,
+                            );
+                        }
+
+                        // Badge label
+                        let badge_text = if let Some((_, is_gen, orig_idx)) = self.cached_frames.get(cur_idx) {
+                            if *is_gen {
+                                format!("{} #{} (g)", i18n.tr("inbetween.new_frame"), cur_idx + 1)
+                            } else {
+                                format!("{} #{}", i18n.tr("inbetween.frame_source"), orig_idx)
+                            }
+                        } else {
+                            String::new()
+                        };
+                        ui.add_space(2.0);
+                        ui.label(RichText::new(badge_text).small().color(Color32::from_gray(180)));
+
+                        // Transport controls
+                        ui.horizontal(|ui| {
+                            let play_icon = if self.playback_playing { FA_PAUSE } else { FA_PLAY };
+                            let play_tooltip = if self.playback_playing { i18n.tr("inbetween.pause") } else { i18n.tr("inbetween.play") };
+                            if ui.button(play_icon).on_hover_text(play_tooltip).clicked() {
+                                self.playback_playing = !self.playback_playing;
+                            }
+
+                            if ui.small_button(FA_STEP_PREV).clicked() {
+                                self.playback_playing = false;
+                                let len = self.cached_textures.len().max(1);
+                                self.current_preview_index = (self.current_preview_index + len - 1) % len;
+                            }
+                            if ui.small_button(FA_STEP_NEXT).clicked() {
+                                self.playback_playing = false;
+                                let len = self.cached_textures.len().max(1);
+                                self.current_preview_index = (self.current_preview_index + 1) % len;
+                            }
+
+                            ui.add(egui::Slider::new(&mut self.playback_fps, 1.0..=24.0).suffix(" fps"));
+                        });
+
+                        ui.add_space(4.0);
+
+                        // Mini filmstrip thumbnails (scrollable)
+                        egui::ScrollArea::horizontal()
+                            .id_salt("inbetween_filmstrip_scroll")
+                            .max_height(34.0)
+                            .show(ui, |ui| {
+                                ui.horizontal(|ui| {
+                                    for (i, (tex, (_, is_gen, _))) in self.cached_textures.iter().zip(&self.cached_frames).enumerate() {
+                                        let is_active = i == self.current_preview_index;
+                                        let thumb_size = vec2(22.0, 22.0);
+                                        let (th_rect, th_resp) = ui.allocate_exact_size(thumb_size, Sense::click());
+                                        crate::ui::color_picker::draw_checkers(ui.painter(), th_rect, 4.0);
+                                        ui.painter().image(
+                                            tex.id(),
+                                            th_rect,
+                                            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                                            Color32::WHITE,
+                                        );
+                                        let stroke_color = if is_active {
+                                            Color32::from_rgb(0, 180, 255)
+                                        } else if *is_gen {
+                                            Color32::from_rgb(255, 170, 0)
+                                        } else {
+                                            Color32::from_gray(70)
+                                        };
+                                        ui.painter().rect_stroke(th_rect, 0.0, Stroke::new(if is_active { 2.0 } else { 1.0 }, stroke_color), StrokeKind::Outside);
+
+                                        if th_resp.clicked() {
+                                            self.current_preview_index = i;
+                                            self.playback_playing = false;
+                                        }
+                                    }
+                                });
+                            });
+                    });
+                });
+
+                if params_changed {
+                    self.cache_dirty = true;
+                }
+
+                ui.add_space(8.0);
+                ui.separator();
+                ui.add_space(6.0);
+
+                // Action buttons
+                let btn_w = (ui.available_width() - 8.0) * 0.5;
+                let btn_label = if self.config.mode == InbetweenMode::AllFrames {
+                    format!("{FA_CHECK} {}", i18n.tr("inbetween.btn_generate_all"))
+                } else {
+                    format!("{FA_CHECK} {}", i18n.tr("inbetween.btn_generate"))
+                };
+
+                ui.horizontal(|ui| {
+                    if ui
+                        .add_sized(
+                            [btn_w, 30.0],
+                            egui::Button::new(RichText::new(btn_label).strong()),
+                        )
+                        .clicked()
+                    {
+                        triggered = Some(self.config.clone());
+                        close_requested = true;
+                    }
+
+                    if ui
+                        .add_sized(
+                            [btn_w, 30.0],
+                            egui::Button::new(format!("{FA_CLOSE} {}", i18n.tr("modal.new_project.cancel"))),
+                        )
+                        .clicked()
+                    {
+                        close_requested = true;
+                    }
+                });
+            });
+
+        if close_requested {
+            window_open = false;
+        }
+        self.open = window_open;
+
+        triggered
+    }
 }
 
 #[cfg(test)]
