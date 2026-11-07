@@ -542,6 +542,15 @@ impl SelectionMask {
         let ih = max_h.max(1) as i32;
         let mut expanded = self.pixels.clone();
         for &(x, y) in &self.pixels {
+            if n == 1 {
+                let is_interior = self.pixels.contains(&(x - 1, y))
+                    && self.pixels.contains(&(x + 1, y))
+                    && self.pixels.contains(&(x, y - 1))
+                    && self.pixels.contains(&(x, y + 1));
+                if is_interior {
+                    continue;
+                }
+            }
             for dy in -n..=n {
                 for dx in -n..=n {
                     if shape.contains_offset(dx, dy, n) {

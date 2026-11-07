@@ -5109,6 +5109,7 @@ pub struct InbetweenModalState {
     pub cached_frames: Vec<(RgbaImage, bool, usize)>,
     pub cached_textures: Vec<egui::TextureHandle>,
     pub cache_dirty: bool,
+    pub dirty_since: Option<f64>,
     pub playback_playing: bool,
     pub playback_fps: f32,
     pub playback_last_tick: Option<f64>,
@@ -5124,6 +5125,7 @@ impl Default for InbetweenModalState {
             cached_frames: Vec::new(),
             cached_textures: Vec::new(),
             cache_dirty: true,
+            dirty_since: None,
             playback_playing: true,
             playback_fps: 6.0,
             playback_last_tick: None,
@@ -5173,8 +5175,17 @@ impl InbetweenModalState {
             safe_src
         };
 
-        // Regenerate cached frames when parameters changed
-        if self.cache_dirty {
+        // Regenerate cached frames when parameters changed (debounced during active slider drag)
+        let is_pointer_down = ctx.input(|i| i.pointer.any_down());
+        let debounce_elapsed = self.dirty_since.map(|t| ctx.input(|i| i.time) - t >= 0.15).unwrap_or(true);
+        let should_regenerate = self.cache_dirty && (!is_pointer_down || debounce_elapsed);
+
+        if self.cache_dirty && is_pointer_down && !debounce_elapsed {
+            ctx.request_repaint_after(std::time::Duration::from_millis(50));
+        }
+
+        if should_regenerate {
+            self.dirty_since = None;
             let mut seq: Vec<(RgbaImage, bool, usize)> = Vec::new();
 
             match self.config.mode {
@@ -5597,6 +5608,7 @@ impl InbetweenModalState {
 
                 if params_changed {
                     self.cache_dirty = true;
+                    self.dirty_since = Some(ctx.input(|i| i.time));
                 }
 
                 ui.add_space(8.0);

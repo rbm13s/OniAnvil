@@ -95,11 +95,37 @@ pub fn encode_animated_gif_bytes(
 
         for idx in s_idx..=e_idx {
             let src = &frames[idx];
-            let mut scaled = RgbaImage::from_pixel(sfw as u32, sfh as u32, Rgba([0, 0, 0, 0]));
-            for sy in 0..(sfh as u32) {
-                for sx in 0..(sfw as u32) {
-                    let p = *src.get_pixel((sx / scale).min(fw - 1), (sy / scale).min(fh - 1));
-                    scaled.put_pixel(sx, sy, p);
+            let mut scaled = RgbaImage::new(sfw as u32, sfh as u32);
+            if scale == 1 {
+                scaled = src.clone();
+            } else {
+                let src_raw = src.as_raw();
+                let dst_raw: &mut [u8] = &mut scaled;
+                let scale_sz = scale as usize;
+                let fw_sz = fw as usize;
+                let fh_sz = fh as usize;
+                let sfw_sz = sfw as usize;
+                let src_stride = fw_sz * 4;
+                let dst_stride = sfw_sz * 4;
+
+                for y in 0..fh_sz {
+                    let src_row = &src_raw[y * src_stride..(y + 1) * src_stride];
+                    let dst_row_start = (y * scale_sz) * dst_stride;
+                    for x in 0..fw_sz {
+                        let px = &src_row[x * 4..(x + 1) * 4];
+                        for s in 0..scale_sz {
+                            let dst_idx = dst_row_start + (x * scale_sz + s) * 4;
+                            if dst_idx + 4 <= dst_raw.len() {
+                                dst_raw[dst_idx..dst_idx + 4].copy_from_slice(px);
+                            }
+                        }
+                    }
+                    for s in 1..scale_sz {
+                        let next_row_start = (y * scale_sz + s) * dst_stride;
+                        if next_row_start + dst_stride <= dst_raw.len() {
+                            dst_raw.copy_within(dst_row_start..dst_row_start + dst_stride, next_row_start);
+                        }
+                    }
                 }
             }
 

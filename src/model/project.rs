@@ -336,6 +336,7 @@ impl Project {
     }
 
     /// Alpha-blends all visible layers in `0..metadata.layers.len()` order into a single composited atlas.
+    #[allow(clippy::chunks_exact_to_as_chunks, clippy::manual_checked_ops)]
     pub fn composited_atlas_rgba(&self) -> RgbaImage {
         let w = self.atlas_rgba.width().max(1);
         let h = self.atlas_rgba.height().max(1);
@@ -370,34 +371,82 @@ impl Project {
                 continue;
             };
             let opacity = layer.opacity.clamp(0.0, 1.0);
-            let cw = w.min(src_img.width());
-            let ch = h.min(src_img.height());
-            for y in 0..ch {
-                for x in 0..cw {
-                    let sp = src_img.get_pixel(x, y);
-                    let sa = (sp[3] as f32 / 255.0) * opacity;
-                    if sa <= 0.0 {
+            let opacity_u32 = (opacity * 255.0).round() as u32;
+            let is_full_opacity = opacity_u32 >= 255;
+
+            if src_img.width() == w && src_img.height() == h {
+                let src_bytes = src_img.as_raw();
+                let dst_bytes: &mut [u8] = &mut out;
+
+                for (dp, sp) in dst_bytes.chunks_exact_mut(4).zip(src_bytes.chunks_exact(4)) {
+                    let sa = if is_full_opacity {
+                        sp[3] as u32
+                    } else {
+                        ((sp[3] as u32) * opacity_u32 + 127) / 255
+                    };
+                    if sa == 0 {
                         continue;
                     }
-                    let dp = out.get_pixel(x, y);
-                    if dp[3] == 0 && (opacity - 1.0).abs() < 1e-4 {
-                        out.put_pixel(x, y, *sp);
+                    let da = dp[3] as u32;
+                    if da == 0 && is_full_opacity {
+                        dp.copy_from_slice(sp);
                         continue;
                     }
-                    let da = dp[3] as f32 / 255.0;
-                    let out_a = sa + da * (1.0 - sa);
-                    if out_a > 0.0 {
-                        let r = ((sp[0] as f32 * sa + dp[0] as f32 * da * (1.0 - sa)) / out_a)
-                            .round()
-                            .clamp(0.0, 255.0) as u8;
-                        let g = ((sp[1] as f32 * sa + dp[1] as f32 * da * (1.0 - sa)) / out_a)
-                            .round()
-                            .clamp(0.0, 255.0) as u8;
-                        let b = ((sp[2] as f32 * sa + dp[2] as f32 * da * (1.0 - sa)) / out_a)
-                            .round()
-                            .clamp(0.0, 255.0) as u8;
-                        let a = (out_a * 255.0).round().clamp(0.0, 255.0) as u8;
-                        out.put_pixel(x, y, Rgba([r, g, b, a]));
+                    if sa >= 255 {
+                        dp[0] = sp[0];
+                        dp[1] = sp[1];
+                        dp[2] = sp[2];
+                        dp[3] = 255;
+                        continue;
+                    }
+                    let inv_sa = 255 - sa;
+                    let out_a = sa + (da * inv_sa + 127) / 255;
+                    if out_a > 0 {
+                        let num_r = (sp[0] as u32) * sa + ((dp[0] as u32) * da * inv_sa + 127) / 255;
+                        let num_g = (sp[1] as u32) * sa + ((dp[1] as u32) * da * inv_sa + 127) / 255;
+                        let num_b = (sp[2] as u32) * sa + ((dp[2] as u32) * da * inv_sa + 127) / 255;
+                        dp[0] = ((num_r * 255 + out_a / 2) / out_a).min(255) as u8;
+                        dp[1] = ((num_g * 255 + out_a / 2) / out_a).min(255) as u8;
+                        dp[2] = ((num_b * 255 + out_a / 2) / out_a).min(255) as u8;
+                        dp[3] = out_a.min(255) as u8;
+                    }
+                }
+            } else {
+                let cw = w.min(src_img.width());
+                let ch = h.min(src_img.height());
+                for y in 0..ch {
+                    for x in 0..cw {
+                        let sp = src_img.get_pixel(x, y);
+                        let sa = if is_full_opacity {
+                            sp[3] as u32
+                        } else {
+                            ((sp[3] as u32) * opacity_u32 + 127) / 255
+                        };
+                        if sa == 0 {
+                            continue;
+                        }
+                        let dp = out.get_pixel_mut(x, y);
+                        let da = dp[3] as u32;
+                        if da == 0 && is_full_opacity {
+                            *dp = *sp;
+                            continue;
+                        }
+                        if sa >= 255 {
+                            *dp = Rgba([sp[0], sp[1], sp[2], 255]);
+                            continue;
+                        }
+                        let inv_sa = 255 - sa;
+                        let out_a = sa + (da * inv_sa + 127) / 255;
+                        if out_a > 0 {
+                            let num_r = (sp[0] as u32) * sa + ((dp[0] as u32) * da * inv_sa + 127) / 255;
+                            let num_g = (sp[1] as u32) * sa + ((dp[1] as u32) * da * inv_sa + 127) / 255;
+                            let num_b = (sp[2] as u32) * sa + ((dp[2] as u32) * da * inv_sa + 127) / 255;
+                            let r = ((num_r * 255 + out_a / 2) / out_a).min(255) as u8;
+                            let g = ((num_g * 255 + out_a / 2) / out_a).min(255) as u8;
+                            let b = ((num_b * 255 + out_a / 2) / out_a).min(255) as u8;
+                            let a = out_a.min(255) as u8;
+                            *dp = Rgba([r, g, b, a]);
+                        }
                     }
                 }
             }
@@ -1068,6 +1117,16 @@ impl Project {
         self.ensure_layers_initialized();
         self.sync_active_layer();
         let layer_count = self.metadata.layers.len();
+        if layer_count <= 1 {
+            let mut frames = self.extract_frames_from_atlas(&self.atlas_rgba);
+            transform(&mut frames);
+            self.rebuild_atlas_from_frames(&frames);
+            if let Some(layer) = self.metadata.layers.first_mut() {
+                layer.layer_rgba = None;
+            }
+            return;
+        }
+
         let mut all_layer_frames: Vec<Vec<RgbaImage>> = Vec::with_capacity(layer_count);
         for layer in &self.metadata.layers {
             let buf = layer.layer_rgba.as_ref().unwrap_or(&self.atlas_rgba);
@@ -1084,18 +1143,16 @@ impl Project {
             self.rebuild_atlas_from_frames(active_frames);
         }
         for (idx, frames) in all_layer_frames.into_iter().enumerate() {
-            let packed = self.pack_frames_into_atlas(&frames);
-            if let Some(layer) = self.metadata.layers.get_mut(idx) {
-                layer.layer_rgba = Some(packed);
+            if idx == active_idx {
+                if let Some(layer) = self.metadata.layers.get_mut(idx) {
+                    layer.layer_rgba = None;
+                }
+            } else {
+                let packed = self.pack_frames_into_atlas(&frames);
+                if let Some(layer) = self.metadata.layers.get_mut(idx) {
+                    layer.layer_rgba = Some(packed);
+                }
             }
-        }
-        if let Some(active_img) = self
-            .metadata
-            .layers
-            .get(active_idx)
-            .and_then(|l| l.layer_rgba.clone())
-        {
-            self.atlas_rgba = active_img;
         }
     }
 
