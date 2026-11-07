@@ -100,8 +100,20 @@ impl AutosaveService {
         #[cfg(not(target_arch = "wasm32"))]
         {
             let _ = storage;
-            if let Some((png_path, _)) = Self::native_recovery_paths() {
-                return IoManager::save_to_native_path(project, &png_path).is_ok();
+            if let Some((png_path, json_path)) = Self::native_recovery_paths() {
+                let atlas_copy = project.atlas_rgba.clone();
+                let meta_copy = project.metadata.clone();
+                let _ = std::thread::Builder::new()
+                    .name("onianvil_autosave".into())
+                    .spawn(move || {
+                        if let Ok(png_bytes) = IoManager::encode_png_bytes(&atlas_copy) {
+                            let _ = std::fs::write(&png_path, png_bytes);
+                        }
+                        if let Ok(json_str) = serde_json::to_string(&meta_copy) {
+                            let _ = std::fs::write(&json_path, json_str);
+                        }
+                    });
+                return true;
             }
             false
         }
@@ -113,10 +125,13 @@ impl AutosaveService {
                     IoManager::encode_png_bytes(&project.atlas_rgba),
                     serde_json::to_string(&project.metadata),
                 ) {
-                    let b64 = base64::engine::general_purpose::STANDARD.encode(png_bytes);
-                    store.set_string(WEB_KEY_PNG_B64, b64);
-                    store.set_string(WEB_KEY_JSON, json_str);
-                    return true;
+                    // Guard against localStorage quota overflow (safe limit 3.5 MB)
+                    if png_bytes.len() < 3 * 1024 * 1024 && json_str.len() < 1024 * 1024 {
+                        let b64 = base64::engine::general_purpose::STANDARD.encode(png_bytes);
+                        store.set_string(WEB_KEY_PNG_B64, b64);
+                        store.set_string(WEB_KEY_JSON, json_str);
+                        return true;
+                    }
                 }
             }
             false

@@ -25,11 +25,11 @@ use crate::ui::modals::{
     show_confirm_delete_palette_slot_modal, show_confirm_delete_pivot_point_modal,
     show_confirm_delete_recent_modal, show_confirm_delete_skin_modal,
     show_confirm_delete_tag_modal, show_confirm_exit_app_modal, show_hotkeys_modal,
-    show_recovery_modal, ColorAdjustModalState, ConfirmCloseDocAction, ConvolutionAction,
+    show_recovery_modal, ColorAdjustAction, ColorAdjustModalState, ConfirmCloseDocAction, ConvolutionAction,
     ConvolutionModalState, ExportGifModalState, ExportPackedAtlasModalState,
     ExportScaledPngModalState, ModifySelectionMode, ModifySelectionModalState, NewProjectWizardState, WizardProjectType,
     OutlineFxAction, OutlineFxModalState,
-    ReGridModalState, RecoveryAction, RemapPaletteAction, RemapPaletteModalState, ReplaceColorModalState, Resize9GridModalState, RotateAction, RotateModalState, SheetSlicerModalState,
+    ReGridModalState, RecoveryAction, RemapPaletteAction, RemapPaletteModalState, ReplaceColorAction, ReplaceColorModalState, Resize9GridModalState, RotateAction, RotateModalState, SheetSlicerModalState,
     BakeSketchAction, BakeSketchModalState, ExtractPaletteAction, ExtractPaletteModalState, InbetweenModalState,
 };
 use crate::model::sketch::BakePaletteSource;
@@ -85,6 +85,21 @@ pub struct OniAnvilApp {
     pub last_remap_palette_preview_action: Option<RemapPaletteAction>,
     pub last_remap_palette_preview_frame: Option<usize>,
     pub last_remap_palette_preview_enabled: bool,
+    pub last_replace_color_preview_action: Option<ReplaceColorAction>,
+    pub last_replace_color_preview_frame: Option<usize>,
+    pub last_replace_color_preview_enabled: bool,
+    pub last_color_adjust_preview_action: Option<ColorAdjustAction>,
+    pub last_color_adjust_preview_frame: Option<usize>,
+    pub last_color_adjust_preview_enabled: bool,
+    pub last_outline_fx_preview_action: Option<OutlineFxAction>,
+    pub last_outline_fx_preview_frame: Option<usize>,
+    pub last_outline_fx_preview_enabled: bool,
+    pub last_convolution_preview_action: Option<ConvolutionAction>,
+    pub last_convolution_preview_frame: Option<usize>,
+    pub last_convolution_preview_enabled: bool,
+    pub last_rotate_preview_action: Option<RotateAction>,
+    pub last_rotate_preview_frame: Option<usize>,
+    pub last_rotate_preview_enabled: bool,
     pub rotate_modal: RotateModalState,
     pub pack_atlas_modal: ExportPackedAtlasModalState,
     pub pending_after_save: Option<PendingAfterSave>,
@@ -152,6 +167,21 @@ impl OniAnvilApp {
             last_remap_palette_preview_action: None,
             last_remap_palette_preview_frame: None,
             last_remap_palette_preview_enabled: false,
+            last_replace_color_preview_action: None,
+            last_replace_color_preview_frame: None,
+            last_replace_color_preview_enabled: false,
+            last_color_adjust_preview_action: None,
+            last_color_adjust_preview_frame: None,
+            last_color_adjust_preview_enabled: false,
+            last_outline_fx_preview_action: None,
+            last_outline_fx_preview_frame: None,
+            last_outline_fx_preview_enabled: false,
+            last_convolution_preview_action: None,
+            last_convolution_preview_frame: None,
+            last_convolution_preview_enabled: false,
+            last_rotate_preview_action: None,
+            last_rotate_preview_frame: None,
+            last_rotate_preview_enabled: false,
             rotate_modal: RotateModalState::default(),
             pack_atlas_modal: ExportPackedAtlasModalState::default(),
             modal_preview_backup: None,
@@ -499,9 +529,7 @@ impl OniAnvilApp {
     }
 
     pub fn apply_palette_remap(&mut self, action: RemapPaletteAction) {
-        self.last_remap_palette_preview_action = None;
-        self.last_remap_palette_preview_frame = None;
-        self.last_remap_palette_preview_enabled = false;
+        self.reset_modal_preview_cache();
         let batch = action.all_frames;
         if let Some(doc) = self.documents.get_mut(self.active_doc_idx) {
             let snap = doc.current_snapshot();
@@ -680,6 +708,29 @@ impl OniAnvilApp {
         self.delete_selected_pixels();
     }
 
+    pub fn reset_modal_preview_cache(&mut self) {
+        self.last_bake_sketch_preview_settings = None;
+        self.last_bake_sketch_preview_frame = None;
+        self.last_remap_palette_preview_action = None;
+        self.last_remap_palette_preview_frame = None;
+        self.last_remap_palette_preview_enabled = false;
+        self.last_replace_color_preview_action = None;
+        self.last_replace_color_preview_frame = None;
+        self.last_replace_color_preview_enabled = false;
+        self.last_color_adjust_preview_action = None;
+        self.last_color_adjust_preview_frame = None;
+        self.last_color_adjust_preview_enabled = false;
+        self.last_outline_fx_preview_action = None;
+        self.last_outline_fx_preview_frame = None;
+        self.last_outline_fx_preview_enabled = false;
+        self.last_convolution_preview_action = None;
+        self.last_convolution_preview_frame = None;
+        self.last_convolution_preview_enabled = false;
+        self.last_rotate_preview_action = None;
+        self.last_rotate_preview_frame = None;
+        self.last_rotate_preview_enabled = false;
+    }
+
     pub fn paste_clipboard(&mut self, ctx: Option<&Context>) {
         if let Some(clip) = &self.clipboard {
             if clip.pixels.is_empty() {
@@ -691,14 +742,32 @@ impl OniAnvilApp {
                 let fh = doc.project.metadata.frame_height;
                 let (ox, oy) = doc.project.metadata.frame_origin(doc.project.active_frame);
 
+                let min_x = clip.pixels.iter().map(|&((x, _), _)| x).min().unwrap_or(0);
+                let max_x = clip.pixels.iter().map(|&((x, _), _)| x).max().unwrap_or(0);
+                let min_y = clip.pixels.iter().map(|&((_, y), _)| y).min().unwrap_or(0);
+                let max_y = clip.pixels.iter().map(|&((_, y), _)| y).max().unwrap_or(0);
+
+                let outside = min_x >= fw as i32 || max_x < 0 || min_y >= fh as i32 || max_y < 0;
+                let (shift_x, shift_y) = if outside {
+                    let clip_cx = (min_x + max_x) / 2;
+                    let clip_cy = (min_y + max_y) / 2;
+                    let target_cx = fw as i32 / 2;
+                    let target_cy = fh as i32 / 2;
+                    (target_cx - clip_cx, target_cy - clip_cy)
+                } else {
+                    (0, 0)
+                };
+
                 doc.renderer.selection.clear();
                 for &((lx, ly), [r, g, b, a]) in &clip.pixels {
-                    if lx >= 0 && ly >= 0 && (lx as u32) < fw && (ly as u32) < fh {
-                        let ax = ox + lx as u32;
-                        let ay = oy + ly as u32;
+                    let px = lx + shift_x;
+                    let py = ly + shift_y;
+                    if px >= 0 && py >= 0 && (px as u32) < fw && (py as u32) < fh {
+                        let ax = ox + px as u32;
+                        let ay = oy + py as u32;
                         if ax < doc.project.atlas_rgba.width() && ay < doc.project.atlas_rgba.height() {
                             doc.project.atlas_rgba.put_pixel(ax, ay, Rgba([r, g, b, a]));
-                            doc.renderer.selection.pixels.insert((lx, ly));
+                            doc.renderer.selection.pixels.insert((px, py));
                         }
                     }
                 }
@@ -2715,123 +2784,239 @@ impl eframe::App for OniAnvilApp {
                     let fw = doc.project.metadata.frame_width;
                     let fh = doc.project.metadata.frame_height;
 
-                    if !self.bake_sketch_modal.open && !self.remap_palette_modal.open {
-                        doc.project.atlas_rgba = orig_rgba.clone();
-                    }
+                    if self.replace_color_modal.open {
+                        let current_action = ReplaceColorAction {
+                            from_color: self.replace_color_modal.from_color,
+                            to_color: self.replace_color_modal.to_color,
+                            all_frames: self.replace_color_modal.all_frames,
+                            in_selection_only: self.replace_color_modal.in_selection_only
+                                && !doc.renderer.selection.is_empty(),
+                            tolerance: self.replace_color_modal.tolerance,
+                        };
+                        let preview_active = self.replace_color_modal.preview && self.replace_color_modal.picking.is_none();
+                        if !preview_active {
+                            if self.last_replace_color_preview_enabled {
+                                doc.project.atlas_rgba = orig_rgba.clone();
+                                self.last_replace_color_preview_action = None;
+                                self.last_replace_color_preview_frame = None;
+                                self.last_replace_color_preview_enabled = false;
+                                doc.project.canvas_dirty = true;
+                                let _ = doc.renderer.ensure_texture(ctx, &mut doc.project);
+                            }
+                        } else {
+                            let action_changed = self.last_replace_color_preview_action.as_ref() != Some(&current_action);
+                            let frame_changed = self.last_replace_color_preview_frame != Some(doc.project.active_frame);
+                            let preview_toggled = !self.last_replace_color_preview_enabled;
 
-                    if self.replace_color_modal.open
-                        && self.replace_color_modal.preview
-                        && self.replace_color_modal.picking.is_none()
-                    {
-                        let sel_pixels = if self.replace_color_modal.in_selection_only
-                            && !doc.renderer.selection.is_empty()
-                        {
-                            Some(&doc.renderer.selection.pixels)
-                        } else {
-                            None
-                        };
-                        let frames: Vec<usize> = if self.replace_color_modal.all_frames {
-                            (0..doc.project.metadata.frame_count as usize).collect()
-                        } else {
-                            vec![doc.project.active_frame]
-                        };
-                        for f_idx in frames {
-                            let (ox, oy) = doc.project.metadata.frame_origin(f_idx);
-                            let _ = crate::tools::fill::replace_color_in_region(
-                                &mut doc.project.atlas_rgba,
-                                ox,
-                                oy,
-                                fw,
-                                fh,
-                                self.replace_color_modal.from_color,
-                                self.replace_color_modal.to_color,
-                                sel_pixels,
-                                self.replace_color_modal.tolerance,
-                            );
+                            if action_changed || frame_changed || preview_toggled {
+                                doc.project.atlas_rgba = orig_rgba.clone();
+                                let sel_pixels = if current_action.in_selection_only {
+                                    Some(&doc.renderer.selection.pixels)
+                                } else {
+                                    None
+                                };
+                                let frames: Vec<usize> = if current_action.all_frames {
+                                    (0..doc.project.metadata.frame_count as usize).collect()
+                                } else {
+                                    vec![doc.project.active_frame]
+                                };
+                                for f_idx in frames {
+                                    let (ox, oy) = doc.project.metadata.frame_origin(f_idx);
+                                    let _ = crate::tools::fill::replace_color_in_region(
+                                        &mut doc.project.atlas_rgba,
+                                        ox,
+                                        oy,
+                                        fw,
+                                        fh,
+                                        current_action.from_color,
+                                        current_action.to_color,
+                                        sel_pixels,
+                                        current_action.tolerance,
+                                    );
+                                }
+                                self.last_replace_color_preview_action = Some(current_action);
+                                self.last_replace_color_preview_frame = Some(doc.project.active_frame);
+                                self.last_replace_color_preview_enabled = true;
+                                doc.project.canvas_dirty = true;
+                                let _ = doc.renderer.ensure_texture(ctx, &mut doc.project);
+                            }
                         }
-                    } else if self.color_adjust_modal.open && self.color_adjust_modal.preview {
-                        let sel_pixels = if self.color_adjust_modal.in_selection_only
-                            && !doc.renderer.selection.is_empty()
-                        {
-                            Some(&doc.renderer.selection.pixels)
-                        } else {
-                            None
+                    } else if self.color_adjust_modal.open {
+                        let current_action = ColorAdjustAction {
+                            hue_shift: self.color_adjust_modal.hue_shift,
+                            sat_shift: self.color_adjust_modal.sat_shift,
+                            val_shift: self.color_adjust_modal.val_shift,
+                            contrast: self.color_adjust_modal.contrast,
+                            all_frames: self.color_adjust_modal.all_frames,
+                            in_selection_only: self.color_adjust_modal.in_selection_only
+                                && !doc.renderer.selection.is_empty(),
                         };
-                        let frames: Vec<usize> = if self.color_adjust_modal.all_frames {
-                            (0..doc.project.metadata.frame_count as usize).collect()
+                        let preview_active = self.color_adjust_modal.preview;
+                        if !preview_active {
+                            if self.last_color_adjust_preview_enabled {
+                                doc.project.atlas_rgba = orig_rgba.clone();
+                                self.last_color_adjust_preview_action = None;
+                                self.last_color_adjust_preview_frame = None;
+                                self.last_color_adjust_preview_enabled = false;
+                                doc.project.canvas_dirty = true;
+                                let _ = doc.renderer.ensure_texture(ctx, &mut doc.project);
+                            }
                         } else {
-                            vec![doc.project.active_frame]
-                        };
-                        for f_idx in frames {
-                            let (ox, oy) = doc.project.metadata.frame_origin(f_idx);
-                            let _ = crate::tools::fill::adjust_hsv_in_region(
-                                &mut doc.project.atlas_rgba,
-                                ox,
-                                oy,
-                                fw,
-                                fh,
-                                self.color_adjust_modal.hue_shift,
-                                self.color_adjust_modal.sat_shift,
-                                self.color_adjust_modal.val_shift,
-                                self.color_adjust_modal.contrast,
-                                sel_pixels,
-                            );
+                            let action_changed = self.last_color_adjust_preview_action.as_ref() != Some(&current_action);
+                            let frame_changed = self.last_color_adjust_preview_frame != Some(doc.project.active_frame);
+                            let preview_toggled = !self.last_color_adjust_preview_enabled;
+
+                            if action_changed || frame_changed || preview_toggled {
+                                doc.project.atlas_rgba = orig_rgba.clone();
+                                let sel_pixels = if current_action.in_selection_only {
+                                    Some(&doc.renderer.selection.pixels)
+                                } else {
+                                    None
+                                };
+                                let frames: Vec<usize> = if current_action.all_frames {
+                                    (0..doc.project.metadata.frame_count as usize).collect()
+                                } else {
+                                    vec![doc.project.active_frame]
+                                };
+                                for f_idx in frames {
+                                    let (ox, oy) = doc.project.metadata.frame_origin(f_idx);
+                                    let _ = crate::tools::fill::adjust_hsv_in_region(
+                                        &mut doc.project.atlas_rgba,
+                                        ox,
+                                        oy,
+                                        fw,
+                                        fh,
+                                        current_action.hue_shift,
+                                        current_action.sat_shift,
+                                        current_action.val_shift,
+                                        current_action.contrast,
+                                        sel_pixels,
+                                    );
+                                }
+                                self.last_color_adjust_preview_action = Some(current_action);
+                                self.last_color_adjust_preview_frame = Some(doc.project.active_frame);
+                                self.last_color_adjust_preview_enabled = true;
+                                doc.project.canvas_dirty = true;
+                                let _ = doc.renderer.ensure_texture(ctx, &mut doc.project);
+                            }
                         }
-                    } else if self.outline_fx_modal.open && self.outline_fx_modal.preview {
-                        let sel_pixels = if self.outline_fx_modal.in_selection_only
-                            && !doc.renderer.selection.is_empty()
-                        {
-                            Some(&doc.renderer.selection.pixels)
-                        } else {
-                            None
+                    } else if self.outline_fx_modal.open {
+                        let current_action = OutlineFxAction {
+                            color: self.outline_fx_modal.color,
+                            thickness: self.outline_fx_modal.thickness,
+                            corner_style: self.outline_fx_modal.corner_style,
+                            placement: self.outline_fx_modal.placement,
+                            all_frames: self.outline_fx_modal.all_frames,
+                            in_selection_only: self.outline_fx_modal.in_selection_only
+                                && !doc.renderer.selection.is_empty(),
                         };
-                        let frames: Vec<usize> = if self.outline_fx_modal.all_frames {
-                            (0..doc.project.metadata.frame_count as usize).collect()
+                        let preview_active = self.outline_fx_modal.preview;
+                        if !preview_active {
+                            if self.last_outline_fx_preview_enabled {
+                                doc.project.atlas_rgba = orig_rgba.clone();
+                                self.last_outline_fx_preview_action = None;
+                                self.last_outline_fx_preview_frame = None;
+                                self.last_outline_fx_preview_enabled = false;
+                                doc.project.canvas_dirty = true;
+                                let _ = doc.renderer.ensure_texture(ctx, &mut doc.project);
+                            }
                         } else {
-                            vec![doc.project.active_frame]
-                        };
-                        for f_idx in frames {
-                            let (ox, oy) = doc.project.metadata.frame_origin(f_idx);
-                            let _ = crate::tools::fill::generate_outline_in_region(
-                                &mut doc.project.atlas_rgba,
-                                ox,
-                                oy,
-                                fw,
-                                fh,
-                                self.outline_fx_modal.color,
-                                self.outline_fx_modal.thickness.clamp(1, 8),
-                                self.outline_fx_modal.corner_style,
-                                self.outline_fx_modal.placement,
-                                sel_pixels,
-                            );
+                            let action_changed = self.last_outline_fx_preview_action.as_ref() != Some(&current_action);
+                            let frame_changed = self.last_outline_fx_preview_frame != Some(doc.project.active_frame);
+                            let preview_toggled = !self.last_outline_fx_preview_enabled;
+
+                            if action_changed || frame_changed || preview_toggled {
+                                doc.project.atlas_rgba = orig_rgba.clone();
+                                let sel_pixels = if current_action.in_selection_only {
+                                    Some(&doc.renderer.selection.pixels)
+                                } else {
+                                    None
+                                };
+                                let frames: Vec<usize> = if current_action.all_frames {
+                                    (0..doc.project.metadata.frame_count as usize).collect()
+                                } else {
+                                    vec![doc.project.active_frame]
+                                };
+                                for f_idx in frames {
+                                    let (ox, oy) = doc.project.metadata.frame_origin(f_idx);
+                                    let _ = crate::tools::fill::generate_outline_in_region(
+                                        &mut doc.project.atlas_rgba,
+                                        ox,
+                                        oy,
+                                        fw,
+                                        fh,
+                                        current_action.color,
+                                        current_action.thickness.clamp(1, 8),
+                                        current_action.corner_style,
+                                        current_action.placement,
+                                        sel_pixels,
+                                    );
+                                }
+                                self.last_outline_fx_preview_action = Some(current_action);
+                                self.last_outline_fx_preview_frame = Some(doc.project.active_frame);
+                                self.last_outline_fx_preview_enabled = true;
+                                doc.project.canvas_dirty = true;
+                                let _ = doc.renderer.ensure_texture(ctx, &mut doc.project);
+                            }
                         }
-                    } else if self.convolution_modal.open && self.convolution_modal.preview {
-                        let sel_pixels = if self.convolution_modal.in_selection_only
-                            && !doc.renderer.selection.is_empty()
-                        {
-                            Some(&doc.renderer.selection.pixels)
-                        } else {
-                            None
+                    } else if self.convolution_modal.open {
+                        let current_action = ConvolutionAction {
+                            kernel: self.convolution_modal.kernel,
+                            divisor: self.convolution_modal.divisor,
+                            bias: self.convolution_modal.bias,
+                            preserve_alpha: self.convolution_modal.preserve_alpha,
+                            all_frames: self.convolution_modal.all_frames,
+                            in_selection_only: self.convolution_modal.in_selection_only
+                                && !doc.renderer.selection.is_empty(),
                         };
-                        let frames: Vec<usize> = if self.convolution_modal.all_frames {
-                            (0..doc.project.metadata.frame_count as usize).collect()
+                        let preview_active = self.convolution_modal.preview;
+                        if !preview_active {
+                            if self.last_convolution_preview_enabled {
+                                doc.project.atlas_rgba = orig_rgba.clone();
+                                self.last_convolution_preview_action = None;
+                                self.last_convolution_preview_frame = None;
+                                self.last_convolution_preview_enabled = false;
+                                doc.project.canvas_dirty = true;
+                                let _ = doc.renderer.ensure_texture(ctx, &mut doc.project);
+                            }
                         } else {
-                            vec![doc.project.active_frame]
-                        };
-                        for f_idx in frames {
-                            let (ox, oy) = doc.project.metadata.frame_origin(f_idx);
-                            let _ = crate::tools::filters::apply_convolution_matrix(
-                                &mut doc.project.atlas_rgba,
-                                ox,
-                                oy,
-                                fw,
-                                fh,
-                                &self.convolution_modal.kernel,
-                                self.convolution_modal.divisor,
-                                self.convolution_modal.bias,
-                                self.convolution_modal.preserve_alpha,
-                                sel_pixels,
-                            );
+                            let action_changed = self.last_convolution_preview_action.as_ref() != Some(&current_action);
+                            let frame_changed = self.last_convolution_preview_frame != Some(doc.project.active_frame);
+                            let preview_toggled = !self.last_convolution_preview_enabled;
+
+                            if action_changed || frame_changed || preview_toggled {
+                                doc.project.atlas_rgba = orig_rgba.clone();
+                                let sel_pixels = if current_action.in_selection_only {
+                                    Some(&doc.renderer.selection.pixels)
+                                } else {
+                                    None
+                                };
+                                let frames: Vec<usize> = if current_action.all_frames {
+                                    (0..doc.project.metadata.frame_count as usize).collect()
+                                } else {
+                                    vec![doc.project.active_frame]
+                                };
+                                for f_idx in frames {
+                                    let (ox, oy) = doc.project.metadata.frame_origin(f_idx);
+                                    let _ = crate::tools::filters::apply_convolution_matrix(
+                                        &mut doc.project.atlas_rgba,
+                                        ox,
+                                        oy,
+                                        fw,
+                                        fh,
+                                        &current_action.kernel,
+                                        current_action.divisor,
+                                        current_action.bias,
+                                        current_action.preserve_alpha,
+                                        sel_pixels,
+                                    );
+                                }
+                                self.last_convolution_preview_action = Some(current_action);
+                                self.last_convolution_preview_frame = Some(doc.project.active_frame);
+                                self.last_convolution_preview_enabled = true;
+                                doc.project.canvas_dirty = true;
+                                let _ = doc.renderer.ensure_texture(ctx, &mut doc.project);
+                            }
                         }
                     } else if self.remap_palette_modal.open {
                         let current_action = RemapPaletteAction {
@@ -2893,47 +3078,79 @@ impl eframe::App for OniAnvilApp {
                             }
                         }
                     } else if self.rotate_modal.open {
-                        if let Some((_, ref orig_sel)) = self.modal_selection_preview_backup {
-                            doc.renderer.selection = orig_sel.clone();
-                        }
-                        if self.rotate_modal.preview && self.rotate_modal.angle_deg.abs() > 0.001 {
-                            let frames: Vec<usize> = if self.rotate_modal.all_frames {
-                                (0..doc.project.metadata.frame_count as usize).collect()
-                            } else {
-                                vec![doc.project.active_frame]
-                            };
-                            if !doc.renderer.selection.is_empty() && self.rotate_modal.in_selection_only {
-                                let mut last_new = None;
-                                for f_idx in frames {
-                                    let (ox, oy) = doc.project.metadata.frame_origin(f_idx);
-                                    let np = crate::tools::transforms::rotate_selection_arbitrary(
-                                        &mut doc.project.atlas_rgba,
-                                        ox,
-                                        oy,
-                                        fw,
-                                        fh,
-                                        self.rotate_modal.angle_deg,
-                                        self.rotate_modal.algorithm,
-                                        &doc.renderer.selection.pixels,
-                                    );
-                                    last_new = Some(np);
+                        let current_action = RotateAction {
+                            angle_deg: self.rotate_modal.angle_deg,
+                            algorithm: self.rotate_modal.algorithm,
+                            all_frames: self.rotate_modal.all_frames,
+                            in_selection_only: self.rotate_modal.in_selection_only
+                                && !doc.renderer.selection.is_empty(),
+                        };
+                        let preview_active = self.rotate_modal.preview && self.rotate_modal.angle_deg.abs() > 0.001;
+                        if !preview_active {
+                            if self.last_rotate_preview_enabled {
+                                doc.project.atlas_rgba = orig_rgba.clone();
+                                if let Some((_, ref orig_sel)) = self.modal_selection_preview_backup {
+                                    doc.renderer.selection = orig_sel.clone();
                                 }
-                                if let Some(np) = last_new {
-                                    doc.renderer.selection.set_pixels(np);
+                                self.last_rotate_preview_action = None;
+                                self.last_rotate_preview_frame = None;
+                                self.last_rotate_preview_enabled = false;
+                                doc.project.canvas_dirty = true;
+                                let _ = doc.renderer.ensure_texture(ctx, &mut doc.project);
+                            }
+                        } else {
+                            let action_changed = self.last_rotate_preview_action != Some(current_action);
+                            let frame_changed = self.last_rotate_preview_frame != Some(doc.project.active_frame);
+                            let preview_toggled = !self.last_rotate_preview_enabled;
+
+                            if action_changed || frame_changed || preview_toggled {
+                                doc.project.atlas_rgba = orig_rgba.clone();
+                                if let Some((_, ref orig_sel)) = self.modal_selection_preview_backup {
+                                    doc.renderer.selection = orig_sel.clone();
                                 }
-                            } else {
-                                for f_idx in frames {
-                                    let (ox, oy) = doc.project.metadata.frame_origin(f_idx);
-                                    crate::tools::transforms::rotate_region_arbitrary(
-                                        &mut doc.project.atlas_rgba,
-                                        ox,
-                                        oy,
-                                        fw,
-                                        fh,
-                                        self.rotate_modal.angle_deg,
-                                        self.rotate_modal.algorithm,
-                                    );
+                                let frames: Vec<usize> = if current_action.all_frames {
+                                    (0..doc.project.metadata.frame_count as usize).collect()
+                                } else {
+                                    vec![doc.project.active_frame]
+                                };
+                                if !doc.renderer.selection.is_empty() && current_action.in_selection_only {
+                                    let mut last_new = None;
+                                    for f_idx in frames {
+                                        let (ox, oy) = doc.project.metadata.frame_origin(f_idx);
+                                        let np = crate::tools::transforms::rotate_selection_arbitrary(
+                                            &mut doc.project.atlas_rgba,
+                                            ox,
+                                            oy,
+                                            fw,
+                                            fh,
+                                            current_action.angle_deg,
+                                            current_action.algorithm,
+                                            &doc.renderer.selection.pixels,
+                                        );
+                                        last_new = Some(np);
+                                    }
+                                    if let Some(np) = last_new {
+                                        doc.renderer.selection.set_pixels(np);
+                                    }
+                                } else {
+                                    for f_idx in frames {
+                                        let (ox, oy) = doc.project.metadata.frame_origin(f_idx);
+                                        crate::tools::transforms::rotate_region_arbitrary(
+                                            &mut doc.project.atlas_rgba,
+                                            ox,
+                                            oy,
+                                            fw,
+                                            fh,
+                                            current_action.angle_deg,
+                                            current_action.algorithm,
+                                        );
+                                    }
                                 }
+                                self.last_rotate_preview_action = Some(current_action);
+                                self.last_rotate_preview_frame = Some(doc.project.active_frame);
+                                self.last_rotate_preview_enabled = true;
+                                doc.project.canvas_dirty = true;
+                                let _ = doc.renderer.ensure_texture(ctx, &mut doc.project);
                             }
                         }
                     } else if self.bake_sketch_modal.open {
@@ -2965,19 +3182,10 @@ impl eframe::App for OniAnvilApp {
                             }
                         }
                     }
-
-                    if !self.bake_sketch_modal.open && !self.remap_palette_modal.open {
-                        doc.project.canvas_dirty = true;
-                        let _ = doc.renderer.ensure_texture(ctx, &mut doc.project);
-                    }
                 }
             }
         } else if let Some((b_idx, orig_rgba)) = self.modal_preview_backup.take() {
-            self.last_bake_sketch_preview_settings = None;
-            self.last_bake_sketch_preview_frame = None;
-            self.last_remap_palette_preview_action = None;
-            self.last_remap_palette_preview_frame = None;
-            self.last_remap_palette_preview_enabled = false;
+            self.reset_modal_preview_cache();
             if let Some(doc) = self.documents.get_mut(b_idx) {
                 doc.project.atlas_rgba = orig_rgba;
                 doc.project.sync_active_layer();
@@ -3253,6 +3461,21 @@ mod tests {
             last_remap_palette_preview_action: None,
             last_remap_palette_preview_frame: None,
             last_remap_palette_preview_enabled: false,
+            last_replace_color_preview_action: None,
+            last_replace_color_preview_frame: None,
+            last_replace_color_preview_enabled: false,
+            last_color_adjust_preview_action: None,
+            last_color_adjust_preview_frame: None,
+            last_color_adjust_preview_enabled: false,
+            last_outline_fx_preview_action: None,
+            last_outline_fx_preview_frame: None,
+            last_outline_fx_preview_enabled: false,
+            last_convolution_preview_action: None,
+            last_convolution_preview_frame: None,
+            last_convolution_preview_enabled: false,
+            last_rotate_preview_action: None,
+            last_rotate_preview_frame: None,
+            last_rotate_preview_enabled: false,
             rotate_modal: RotateModalState::default(),
             pack_atlas_modal: ExportPackedAtlasModalState::default(),
             modal_preview_backup: None,
@@ -3336,6 +3559,21 @@ mod tests {
             last_remap_palette_preview_action: None,
             last_remap_palette_preview_frame: None,
             last_remap_palette_preview_enabled: false,
+            last_replace_color_preview_action: None,
+            last_replace_color_preview_frame: None,
+            last_replace_color_preview_enabled: false,
+            last_color_adjust_preview_action: None,
+            last_color_adjust_preview_frame: None,
+            last_color_adjust_preview_enabled: false,
+            last_outline_fx_preview_action: None,
+            last_outline_fx_preview_frame: None,
+            last_outline_fx_preview_enabled: false,
+            last_convolution_preview_action: None,
+            last_convolution_preview_frame: None,
+            last_convolution_preview_enabled: false,
+            last_rotate_preview_action: None,
+            last_rotate_preview_frame: None,
+            last_rotate_preview_enabled: false,
             rotate_modal: RotateModalState::default(),
             pack_atlas_modal: ExportPackedAtlasModalState::default(),
             modal_preview_backup: None,
@@ -3426,6 +3664,21 @@ mod tests {
             last_remap_palette_preview_action: None,
             last_remap_palette_preview_frame: None,
             last_remap_palette_preview_enabled: false,
+            last_replace_color_preview_action: None,
+            last_replace_color_preview_frame: None,
+            last_replace_color_preview_enabled: false,
+            last_color_adjust_preview_action: None,
+            last_color_adjust_preview_frame: None,
+            last_color_adjust_preview_enabled: false,
+            last_outline_fx_preview_action: None,
+            last_outline_fx_preview_frame: None,
+            last_outline_fx_preview_enabled: false,
+            last_convolution_preview_action: None,
+            last_convolution_preview_frame: None,
+            last_convolution_preview_enabled: false,
+            last_rotate_preview_action: None,
+            last_rotate_preview_frame: None,
+            last_rotate_preview_enabled: false,
             rotate_modal: RotateModalState::default(),
             pack_atlas_modal: ExportPackedAtlasModalState::default(),
             modal_preview_backup: None,

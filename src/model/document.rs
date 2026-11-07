@@ -37,7 +37,8 @@ impl ProjectDocument {
             let active_idx = metadata
                 .active_layer
                 .min(metadata.layers.len().saturating_sub(1));
-            metadata.layers[active_idx].layer_rgba = Some(self.project.atlas_rgba.clone());
+            // Do not duplicate atlas_rgba inside metadata for active layer, as it is already in HistorySnapshot.atlas_rgba
+            metadata.layers[active_idx].layer_rgba = None;
         }
         HistorySnapshot {
             atlas_rgba: self.project.atlas_rgba.clone(),
@@ -50,6 +51,7 @@ impl ProjectDocument {
         self.project.atlas_rgba = snap.atlas_rgba;
         self.project.metadata = snap.metadata;
         self.project.ensure_layers_initialized();
+        self.project.sync_active_layer();
         self.project.active_frame = snap
             .active_frame
             .min((self.project.metadata.frame_count as usize).saturating_sub(1));

@@ -24,10 +24,12 @@ pub struct HistorySnapshot {
     pub active_frame: usize,
 }
 
+use std::collections::VecDeque;
+
 #[derive(Default)]
 pub struct HistoryStack {
-    undo_stack: Vec<HistorySnapshot>,
-    redo_stack: Vec<HistorySnapshot>,
+    undo_stack: VecDeque<HistorySnapshot>,
+    redo_stack: VecDeque<HistorySnapshot>,
 }
 
 impl HistoryStack {
@@ -39,9 +41,9 @@ impl HistoryStack {
         let max_depth =
             max_depth_for_resolution(snapshot.atlas_rgba.width(), snapshot.atlas_rgba.height());
         while self.undo_stack.len() >= max_depth {
-            self.undo_stack.remove(0);
+            self.undo_stack.pop_front();
         }
-        self.undo_stack.push(snapshot);
+        self.undo_stack.push_back(snapshot);
         self.redo_stack.clear();
     }
 
@@ -54,14 +56,24 @@ impl HistoryStack {
     }
 
     pub fn undo(&mut self, current: HistorySnapshot) -> Option<HistorySnapshot> {
-        let prev = self.undo_stack.pop()?;
-        self.redo_stack.push(current);
+        let prev = self.undo_stack.pop_back()?;
+        let max_depth =
+            max_depth_for_resolution(current.atlas_rgba.width(), current.atlas_rgba.height());
+        while self.redo_stack.len() >= max_depth {
+            self.redo_stack.pop_front();
+        }
+        self.redo_stack.push_back(current);
         Some(prev)
     }
 
     pub fn redo(&mut self, current: HistorySnapshot) -> Option<HistorySnapshot> {
-        let next = self.redo_stack.pop()?;
-        self.undo_stack.push(current);
+        let next = self.redo_stack.pop_back()?;
+        let max_depth =
+            max_depth_for_resolution(current.atlas_rgba.width(), current.atlas_rgba.height());
+        while self.undo_stack.len() >= max_depth {
+            self.undo_stack.pop_front();
+        }
+        self.undo_stack.push_back(current);
         Some(next)
     }
 

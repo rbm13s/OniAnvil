@@ -146,13 +146,23 @@ impl CanvasRenderer {
             if self.layer_textures.len() > layer_count {
                 self.layer_textures.truncate(layer_count);
             }
+            let active_idx = project
+                .metadata
+                .active_layer
+                .min(layer_count.saturating_sub(1));
+
             for (idx, layer) in project.metadata.layers.iter().enumerate() {
-                let l_img = layer.layer_rgba.as_ref().unwrap_or(&project.atlas_rgba);
-                let l_size = [l_img.width() as usize, l_img.height() as usize];
-                let l_color = egui::ColorImage::from_rgba_unmultiplied(l_size, l_img.as_raw());
                 if idx < self.layer_textures.len() {
-                    self.layer_textures[idx].set(l_color, TextureOptions::NEAREST);
+                    if idx == active_idx {
+                        let l_img = layer.layer_rgba.as_ref().unwrap_or(&project.atlas_rgba);
+                        let l_size = [l_img.width() as usize, l_img.height() as usize];
+                        let l_color = egui::ColorImage::from_rgba_unmultiplied(l_size, l_img.as_raw());
+                        self.layer_textures[idx].set(l_color, TextureOptions::NEAREST);
+                    }
                 } else {
+                    let l_img = layer.layer_rgba.as_ref().unwrap_or(&project.atlas_rgba);
+                    let l_size = [l_img.width() as usize, l_img.height() as usize];
+                    let l_color = egui::ColorImage::from_rgba_unmultiplied(l_size, l_img.as_raw());
                     let handle = ctx.load_texture(
                         format!("onianvil_layer_texture_{}", idx),
                         l_color,
@@ -1151,9 +1161,22 @@ impl CanvasRenderer {
                                                     stroke.raw_points.push(pt);
                                                 }
                                             }
+                                            let (ox, oy) =
+                                                project.metadata.frame_origin(stroke.frame_index);
+                                            let fw = project.metadata.frame_width;
+                                            let fh = project.metadata.frame_height;
+
+                                            // Revert previously touched pixels from base_atlas instead of cloning the entire multi-megapixel atlas
+                                            for pt in &stroke.raw_points {
+                                                let ax = ox + pt.0.clamp(0, fw as i32 - 1) as u32;
+                                                let ay = oy + pt.1.clamp(0, fh as i32 - 1) as u32;
+                                                if ax < project.atlas_rgba.width() && ay < project.atlas_rgba.height() {
+                                                    project.atlas_rgba.put_pixel(ax, ay, *stroke.base_atlas.get_pixel(ax, ay));
+                                                }
+                                            }
+
                                             let filtered =
                                                 filter_pixel_perfect(&stroke.raw_points);
-                                            project.atlas_rgba = stroke.base_atlas.clone();
                                             for pt in filtered {
                                                 Self::apply_point_stamp(
                                                     &mut project.atlas_rgba,

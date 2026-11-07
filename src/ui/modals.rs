@@ -909,9 +909,9 @@ impl SheetSlicerModalState {
             let centers: Vec<f64> = spans.iter().map(|&(s, e)| (s + e) as f64 / 2.0).collect();
             let mut deltas: Vec<f64> = centers.windows(2).map(|w| (w[1] - w[0]).abs()).collect();
             deltas.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-            let median_delta = deltas[deltas.len() / 2].round() as u32;
+            let median_delta = (deltas[deltas.len() / 2].round() as u32).max(1);
 
-            if median_delta >= max_span_len {
+            if median_delta >= max_span_len && median_delta > 0 {
                 if dim.is_multiple_of(median_delta) {
                     let fits = spans.iter().all(|&(s, e)| {
                         let k = s / median_delta;
@@ -937,7 +937,7 @@ impl SheetSlicerModalState {
                 }
 
                 for candidate_cell in [median_delta, median_delta.next_power_of_two()] {
-                    if candidate_cell >= max_span_len && candidate_cell <= dim && dim.is_multiple_of(candidate_cell) {
+                    if candidate_cell > 0 && candidate_cell >= max_span_len && candidate_cell <= dim && dim.is_multiple_of(candidate_cell) {
                         return (candidate_cell, 0, 0);
                     }
                 }
