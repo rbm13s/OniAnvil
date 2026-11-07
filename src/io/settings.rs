@@ -22,6 +22,54 @@ pub fn default_recent_colors() -> Vec<[u8; 4]> {
     ]
 }
 
+fn default_new_project_is_atlas() -> bool {
+    true
+}
+fn default_new_project_frame_dim() -> u32 {
+    48
+}
+fn default_new_project_frame_count() -> u32 {
+    4
+}
+fn default_new_project_columns() -> u32 {
+    4
+}
+fn default_new_project_limit_index() -> usize {
+    2
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NewProjectDefaults {
+    #[serde(default = "default_new_project_is_atlas")]
+    pub is_animation_atlas: bool,
+    #[serde(default = "default_new_project_frame_dim")]
+    pub frame_width: u32,
+    #[serde(default = "default_new_project_frame_dim")]
+    pub frame_height: u32,
+    #[serde(default = "default_new_project_frame_count")]
+    pub frame_count: u32,
+    #[serde(default = "default_new_project_columns")]
+    pub columns: u32,
+    #[serde(default)]
+    pub selected_palette_preset: usize,
+    #[serde(default = "default_new_project_limit_index")]
+    pub color_limit_index: usize,
+}
+
+impl Default for NewProjectDefaults {
+    fn default() -> Self {
+        Self {
+            is_animation_atlas: default_new_project_is_atlas(),
+            frame_width: default_new_project_frame_dim(),
+            frame_height: default_new_project_frame_dim(),
+            frame_count: default_new_project_frame_count(),
+            columns: default_new_project_columns(),
+            selected_palette_preset: 0,
+            color_limit_index: default_new_project_limit_index(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AppSettings {
     #[serde(default)]
@@ -34,6 +82,8 @@ pub struct AppSettings {
     pub recent_projects: Vec<PathBuf>,
     #[serde(default = "default_recent_colors")]
     pub recent_colors: Vec<[u8; 4]>,
+    #[serde(default)]
+    pub new_project: NewProjectDefaults,
 }
 
 impl Default for AppSettings {
@@ -44,6 +94,7 @@ impl Default for AppSettings {
             tools_two_columns: true,
             recent_projects: Vec::new(),
             recent_colors: default_recent_colors(),
+            new_project: NewProjectDefaults::default(),
         }
     }
 }
@@ -278,6 +329,15 @@ mod tests {
             tools_two_columns: false,
             recent_projects: vec![PathBuf::from("hero.png")],
             recent_colors: vec![[10, 20, 30, 255]],
+            new_project: NewProjectDefaults {
+                is_animation_atlas: false,
+                frame_width: 256,
+                frame_height: 256,
+                frame_count: 1,
+                columns: 1,
+                selected_palette_preset: 3,
+                color_limit_index: 1,
+            },
         };
         let json = serde_json::to_string(&original).unwrap();
         let loaded: AppSettings = serde_json::from_str(&json).unwrap();
@@ -286,5 +346,6 @@ mod tests {
         assert!(!loaded.tools_two_columns);
         assert_eq!(loaded.recent_projects.len(), 1);
         assert_eq!(loaded.recent_colors, vec![[10, 20, 30, 255]]);
+        assert_eq!(loaded.new_project, original.new_project);
     }
 }

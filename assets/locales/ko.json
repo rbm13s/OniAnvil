@@ -852,5 +852,11 @@
   "viewport.mode.frame": "프레임",
   "viewport.zoom.100": "100%",
   "viewport.zoom.fit": "맞추기",
-  "inbetween.coherent_motion": "Coherent Motion (강체 클러스터 이동)"
+  "inbetween.coherent_motion": "Coherent Motion (강체 클러스터 이동)",
+  "menu.view.bg_magenta": "마젠타 (#FF00FF)",
+  "menu.view.bg_green": "크로마키 그린 (#00FF00)",
+  "menu.view.bg_blue": "크로마키 블루 (#0000FF)",
+  "modal.new_project.import_palette": "팔레트 가져오기...",
+  "modal.new_project.reset": "기본값",
+  "tooltip.new_project.reset": "설정을 기본값으로 재설정"
 }

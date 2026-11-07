@@ -4,7 +4,8 @@ use crate::io::settings::AppSettings;
 use crate::io::updater::GITHUB_REPO_URL;
 use crate::model::metadata::ProjectMetadata;
 use crate::model::palette::{
-    extract_color_occurrences, extract_palette_from_occurrences, ColorOccurrence,
+    extract_color_occurrences, extract_palette_from_occurrences, parse_palette_png,
+    parse_palette_text, ColorOccurrence,
     PaletteDitherMode, PaletteExtractAlgorithm, PREDEFINED_PALETTES,
 };
 use crate::model::sketch::{BackgroundRemovalTarget, BakePaletteSource, BakeSketchSettings, PixelPrecisionMode};
@@ -35,26 +36,20 @@ pub struct NewProjectWizardState {
     pub columns: u32,
     pub color_limit_index: usize,
     pub selected_palette_preset: usize,
+    pub imported_palette: Option<(String, Vec<[u8; 4]>)>,
+    pub use_imported_palette: bool,
+    #[cfg(target_arch = "wasm32")]
+    pub pending_imported_palette: std::sync::Arc<std::sync::Mutex<Option<(String, Vec<[u8; 4]>)>>>,
 }
 
 impl Default for NewProjectWizardState {
     fn default() -> Self {
-        Self {
-            open: false,
-            project_name: String::from("sprite"),
-            project_type: WizardProjectType::AnimationAtlas,
-            frame_width: 32,
-            frame_height: 32,
-            frame_count: 4,
-            columns: 4,
-            color_limit_index: 2,
-            selected_palette_preset: 0,
-        }
+        Self::from_settings(&crate::io::settings::NewProjectDefaults::default())
     }
 }
 
 impl NewProjectWizardState {
-    pub const FRAME_PRESETS: [(u32, u32, &'static str); 7] = [
+    pub const FRAME_PRESETS: [(u32, u32, &'static str); 9] = [
         (8, 8, "8×8"),
         (16, 16, "16×16"),
         (24, 24, "24×24"),
@@ -62,6 +57,8 @@ impl NewProjectWizardState {
         (48, 48, "48×48"),
         (64, 64, "64×64"),
         (128, 128, "128×128"),
+        (256, 256, "256×256"),
+        (480, 270, "480×270"),
     ];
 
     pub const COLOR_LIMIT_OPTIONS: [Option<u32>; 7] = [
@@ -73,6 +70,157 @@ impl NewProjectWizardState {
         Some(256),
         None,
     ];
+
+    pub fn from_settings(defaults: &crate::io::settings::NewProjectDefaults) -> Self {
+        Self {
+            open: false,
+            project_name: String::from("sprite"),
+            project_type: if defaults.is_animation_atlas {
+                WizardProjectType::AnimationAtlas
+            } else {
+                WizardProjectType::StaticSprite
+            },
+            frame_width: defaults.frame_width.clamp(1, 2048),
+            frame_height: defaults.frame_height.clamp(1, 2048),
+            frame_count: defaults.frame_count.clamp(1, 512),
+            columns: defaults.columns.clamp(1, defaults.frame_count.max(1)),
+            color_limit_index: defaults
+                .color_limit_index
+                .min(Self::COLOR_LIMIT_OPTIONS.len().saturating_sub(1)),
+            selected_palette_preset: defaults
+                .selected_palette_preset
+                .min(PREDEFINED_PALETTES.len().saturating_sub(1)),
+            imported_palette: None,
+            use_imported_palette: false,
+            #[cfg(target_arch = "wasm32")]
+            pending_imported_palette: std::sync::Arc::new(std::sync::Mutex::new(None)),
+        }
+    }
+
+    pub fn reset_to_defaults(&mut self) {
+        let def = crate::io::settings::NewProjectDefaults::default();
+        self.project_name = String::from("sprite");
+        self.project_type = if def.is_animation_atlas {
+            WizardProjectType::AnimationAtlas
+        } else {
+            WizardProjectType::StaticSprite
+        };
+        self.frame_width = def.frame_width;
+        self.frame_height = def.frame_height;
+        self.frame_count = def.frame_count;
+        self.columns = def.columns;
+        self.selected_palette_preset = def.selected_palette_preset;
+        self.color_limit_index = def.color_limit_index;
+        self.imported_palette = None;
+        self.use_imported_palette = false;
+    }
+
+    pub fn trigger_import_palette(&mut self) {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Some(path) = rfd::FileDialog::new()
+                .add_filter(
+                    "Palette / Image (.png, .hex, .pal, .gpl, .txt)",
+                    &["png", "hex", "pal", "txt", "gpl", "jpg", "jpeg", "webp"],
+                )
+                .pick_file()
+            {
+                let is_img = path
+                    .extension()
+                    .and_then(|s| s.to_str())
+                    .map(|s| {
+                        s.eq_ignore_ascii_case("png")
+                            || s.eq_ignore_ascii_case("jpg")
+                            || s.eq_ignore_ascii_case("jpeg")
+                            || s.eq_ignore_ascii_case("webp")
+                    })
+                    .unwrap_or(false);
+
+                if let Ok(bytes) = std::fs::read(&path) {
+                    let file_stem = path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("Imported")
+                        .to_string();
+
+                    let colors = if is_img || bytes.starts_with(b"\x89PNG") {
+                        parse_palette_png(&bytes).unwrap_or_else(|_| {
+                            if let Ok(dyn_img) = image::load_from_memory(&bytes) {
+                                let occ = extract_color_occurrences(&dyn_img.to_rgba8(), true);
+                                extract_palette_from_occurrences(
+                                    &occ,
+                                    256,
+                                    PaletteExtractAlgorithm::MostFrequent,
+                                )
+                            } else {
+                                Vec::new()
+                            }
+                        })
+                    } else if let Ok(text) = String::from_utf8(bytes) {
+                        parse_palette_text(&text)
+                    } else {
+                        Vec::new()
+                    };
+
+                    if !colors.is_empty() {
+                        let display_name = format!("{} ({})", file_stem, colors.len());
+                        self.imported_palette = Some((display_name, colors));
+                        self.use_imported_palette = true;
+                    }
+                }
+            }
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            let pending = self.pending_imported_palette.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                if let Some(file) = rfd::AsyncFileDialog::new()
+                    .add_filter(
+                        "Palette / Image (.png, .hex, .pal, .gpl, .txt)",
+                        &["png", "hex", "pal", "txt", "gpl", "jpg", "jpeg", "webp"],
+                    )
+                    .pick_file()
+                    .await
+                {
+                    let name = file.file_name();
+                    let bytes = file.read().await;
+                    let name_lower = name.to_lowercase();
+                    let is_img = name_lower.ends_with(".png")
+                        || name_lower.ends_with(".jpg")
+                        || name_lower.ends_with(".jpeg")
+                        || name_lower.ends_with(".webp")
+                        || bytes.starts_with(b"\x89PNG");
+
+                    let colors = if is_img {
+                        parse_palette_png(&bytes).unwrap_or_else(|_| {
+                            if let Ok(dyn_img) = image::load_from_memory(&bytes) {
+                                let occ = extract_color_occurrences(&dyn_img.to_rgba8(), true);
+                                extract_palette_from_occurrences(
+                                    &occ,
+                                    256,
+                                    PaletteExtractAlgorithm::MostFrequent,
+                                )
+                            } else {
+                                Vec::new()
+                            }
+                        })
+                    } else if let Ok(text) = String::from_utf8(bytes) {
+                        parse_palette_text(&text)
+                    } else {
+                        Vec::new()
+                    };
+
+                    if !colors.is_empty() {
+                        let display_name = format!("{} ({})", name, colors.len());
+                        if let Ok(mut lock) = pending.lock() {
+                            *lock = Some((display_name, colors));
+                        }
+                    }
+                }
+            });
+        }
+    }
 
     pub fn build_metadata(&self) -> ProjectMetadata {
         let (frames, cols) = match self.project_type {
@@ -105,13 +253,37 @@ impl NewProjectWizardState {
         let preset_idx = self
             .selected_palette_preset
             .min(PREDEFINED_PALETTES.len().saturating_sub(1));
-        meta.palette = PREDEFINED_PALETTES[preset_idx].to_palette_data();
+        if self.use_imported_palette {
+            if let Some((ref name, ref colors)) = self.imported_palette {
+                meta.palette = crate::model::palette::PaletteData {
+                    colors: colors.clone(),
+                    swaps: vec![crate::model::palette::PaletteSwap {
+                        name: name.clone(),
+                        colors: colors.clone(),
+                    }],
+                    active_swap_index: 0,
+                    global_color_replace: true,
+                };
+            } else {
+                meta.palette = PREDEFINED_PALETTES[preset_idx].to_palette_data();
+            }
+        } else {
+            meta.palette = PREDEFINED_PALETTES[preset_idx].to_palette_data();
+        }
         meta
     }
 
     pub fn show(&mut self, ctx: &Context, i18n: &I18n) -> Option<ProjectMetadata> {
         if !self.open {
             return None;
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        if let Ok(mut lock) = self.pending_imported_palette.lock() {
+            if let Some((name, colors)) = lock.take() {
+                self.imported_palette = Some((name, colors));
+                self.use_imported_palette = true;
+            }
         }
 
         let mut created_meta = None;
@@ -196,16 +368,54 @@ impl NewProjectWizardState {
                         let preset_idx = self
                             .selected_palette_preset
                             .min(PREDEFINED_PALETTES.len().saturating_sub(1));
+                        let display_text = if self.use_imported_palette {
+                            if let Some((ref name, _)) = self.imported_palette {
+                                name.as_str()
+                            } else {
+                                PREDEFINED_PALETTES[preset_idx].name
+                            }
+                        } else {
+                            PREDEFINED_PALETTES[preset_idx].name
+                        };
                         egui::ComboBox::from_id_salt("wizard_palette_preset_combo")
-                            .width(180.0)
-                            .selected_text(PREDEFINED_PALETTES[preset_idx].name)
+                            .width(200.0)
+                            .height(380.0)
+                            .selected_text(display_text)
                             .show_ui(ui, |ui| {
+                                if ui
+                                    .add(
+                                        egui::Button::new(format!(
+                                            "{FA_IMPORT} {}",
+                                            i18n.tr("modal.new_project.import_palette")
+                                        ))
+                                        .fill(ui.visuals().faint_bg_color),
+                                    )
+                                    .clicked()
+                                {
+                                    self.trigger_import_palette();
+                                    ui.close();
+                                }
+                                ui.separator();
+
+                                if let Some((ref name, _)) = self.imported_palette {
+                                    if ui
+                                        .selectable_label(
+                                            self.use_imported_palette,
+                                            format!("{FA_CHECK} {name}"),
+                                        )
+                                        .clicked()
+                                    {
+                                        self.use_imported_palette = true;
+                                    }
+                                }
+
                                 for (idx, p) in PREDEFINED_PALETTES.iter().enumerate() {
-                                    ui.selectable_value(
-                                        &mut self.selected_palette_preset,
-                                        idx,
-                                        p.name,
-                                    );
+                                    let is_sel = !self.use_imported_palette
+                                        && self.selected_palette_preset == idx;
+                                    if ui.selectable_label(is_sel, p.name).clicked() {
+                                        self.selected_palette_preset = idx;
+                                        self.use_imported_palette = false;
+                                    }
                                 }
                             });
                         ui.end_row();
@@ -228,11 +438,22 @@ impl NewProjectWizardState {
                         ui.end_row();
                     });
 
-                // Preview strip of the selected predefined palette
-                let preset_colors = PREDEFINED_PALETTES[self
-                    .selected_palette_preset
-                    .min(PREDEFINED_PALETTES.len().saturating_sub(1))]
-                .to_rgba_vec();
+                // Preview strip of the selected predefined or imported palette
+                let preset_colors: Vec<[u8; 4]> = if self.use_imported_palette {
+                    if let Some((_, ref colors)) = self.imported_palette {
+                        colors.clone()
+                    } else {
+                        PREDEFINED_PALETTES[self
+                            .selected_palette_preset
+                            .min(PREDEFINED_PALETTES.len().saturating_sub(1))]
+                        .to_rgba_vec()
+                    }
+                } else {
+                    PREDEFINED_PALETTES[self
+                        .selected_palette_preset
+                        .min(PREDEFINED_PALETTES.len().saturating_sub(1))]
+                    .to_rgba_vec()
+                };
                 ui.add_space(4.0);
                 ui.horizontal_wrapped(|ui| {
                     ui.spacing_mut().item_spacing = Vec2::splat(2.0);
@@ -281,6 +502,16 @@ impl NewProjectWizardState {
                     if ui.button(format!("{FA_CLOSE} {}", i18n.tr("modal.new_project.cancel"))).clicked() {
                         close_requested = true;
                     }
+
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui
+                            .button(format!("{FA_RESET} {}", i18n.tr("modal.new_project.reset")))
+                            .on_hover_text(i18n.tr("tooltip.new_project.reset"))
+                            .clicked()
+                        {
+                            self.reset_to_defaults();
+                        }
+                    });
                 });
             });
 
@@ -5678,5 +5909,31 @@ mod tests {
             });
             assert!(extract_palette.open);
         }
+    }
+
+    #[test]
+    fn test_new_project_wizard_presets_and_defaults() {
+        assert!(NewProjectWizardState::FRAME_PRESETS.iter().any(|&(w, h, label)| w == 256 && h == 256 && label == "256×256"));
+        assert!(NewProjectWizardState::FRAME_PRESETS.iter().any(|&(w, h, label)| w == 480 && h == 270 && label == "480×270"));
+
+        let mut wizard = NewProjectWizardState::from_settings(&crate::io::settings::NewProjectDefaults {
+            is_animation_atlas: false,
+            frame_width: 256,
+            frame_height: 256,
+            frame_count: 8,
+            columns: 8,
+            selected_palette_preset: 2,
+            color_limit_index: 3,
+        });
+
+        assert_eq!(wizard.project_type, WizardProjectType::StaticSprite);
+        assert_eq!(wizard.frame_width, 256);
+        assert_eq!(wizard.frame_height, 256);
+
+        wizard.reset_to_defaults();
+        assert_eq!(wizard.project_type, WizardProjectType::AnimationAtlas);
+        assert_eq!(wizard.frame_width, 48);
+        assert_eq!(wizard.frame_height, 48);
+        assert_eq!(wizard.frame_count, 4);
     }
 }

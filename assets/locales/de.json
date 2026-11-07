@@ -852,5 +852,11 @@
   "viewport.mode.frame": "Bild",
   "viewport.zoom.100": "100%",
   "viewport.zoom.fit": "Einpassen",
-  "inbetween.coherent_motion": "Coherent Motion (Starre Cluster)"
+  "inbetween.coherent_motion": "Coherent Motion (Starre Cluster)",
+  "menu.view.bg_magenta": "Magenta (#FF00FF)",
+  "menu.view.bg_green": "Chroma-Grün (#00FF00)",
+  "menu.view.bg_blue": "Chroma-Blau (#0000FF)",
+  "modal.new_project.import_palette": "Palette importieren...",
+  "modal.new_project.reset": "Standardwerte",
+  "tooltip.new_project.reset": "Einstellungen auf Standardwerte zurücksetzen"
 }

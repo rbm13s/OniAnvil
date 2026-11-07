@@ -852,5 +852,11 @@
   "viewport.mode.frame": "影格",
   "viewport.zoom.100": "100%",
   "viewport.zoom.fit": "配合視窗",
-  "inbetween.coherent_motion": "Coherent Motion (剛體塊整體位移)"
+  "inbetween.coherent_motion": "Coherent Motion (剛體塊整體位移)",
+  "menu.view.bg_magenta": "洋紅 (#FF00FF)",
+  "menu.view.bg_green": "綠幕 (#00FF00)",
+  "menu.view.bg_blue": "藍幕 (#0000FF)",
+  "modal.new_project.import_palette": "匯入調色盤...",
+  "modal.new_project.reset": "恢復預設",
+  "tooltip.new_project.reset": "重設設定為預設值"
 }

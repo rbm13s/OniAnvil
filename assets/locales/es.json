@@ -852,5 +852,11 @@
   "viewport.mode.frame": "Fotograma",
   "viewport.zoom.100": "100%",
   "viewport.zoom.fit": "Ajustar",
-  "inbetween.coherent_motion": "Coherent Motion (Grupos rígidos)"
+  "inbetween.coherent_motion": "Coherent Motion (Grupos rígidos)",
+  "menu.view.bg_magenta": "Magenta (#FF00FF)",
+  "menu.view.bg_green": "Verde croma (#00FF00)",
+  "menu.view.bg_blue": "Azul croma (#0000FF)",
+  "modal.new_project.import_palette": "Importar paleta...",
+  "modal.new_project.reset": "Predeterminados",
+  "tooltip.new_project.reset": "Restablecer configuración predeterminada"
 }

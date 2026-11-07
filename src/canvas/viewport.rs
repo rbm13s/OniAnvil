@@ -17,6 +17,9 @@ pub enum BackgroundMode {
     DarkCheckerboard,
     LightCheckerboard,
     SolidColor,
+    SolidMagenta,
+    SolidGreen,
+    SolidBlue,
 }
 
 

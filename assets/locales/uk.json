@@ -852,5 +852,11 @@
   "viewport.mode.frame": "Кадр",
   "viewport.zoom.100": "100%",
   "viewport.zoom.fit": "Авто",
-  "inbetween.coherent_motion": "Coherent Motion (Зв'язні кластери)"
+  "inbetween.coherent_motion": "Coherent Motion (Зв'язні кластери)",
+  "menu.view.bg_magenta": "Маджента (#FF00FF)",
+  "menu.view.bg_green": "Хромакей зелений (#00FF00)",
+  "menu.view.bg_blue": "Хромакей синій (#0000FF)",
+  "modal.new_project.import_palette": "Імпорт палітри...",
+  "modal.new_project.reset": "За замовчуванням",
+  "tooltip.new_project.reset": "Скинути налаштування до значень за замовчуванням"
 }

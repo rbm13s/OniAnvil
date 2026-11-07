@@ -852,5 +852,11 @@
   "viewport.mode.frame": "帧",
   "viewport.zoom.100": "100%",
   "viewport.zoom.fit": "自适应",
-  "inbetween.coherent_motion": "Coherent Motion (刚体块整体位移)"
+  "inbetween.coherent_motion": "Coherent Motion (刚体块整体位移)",
+  "menu.view.bg_magenta": "品红 (#FF00FF)",
+  "menu.view.bg_green": "绿幕 (#00FF00)",
+  "menu.view.bg_blue": "蓝幕 (#0000FF)",
+  "modal.new_project.import_palette": "导入调色板...",
+  "modal.new_project.reset": "恢复默认",
+  "tooltip.new_project.reset": "重置设置为默认值"
 }

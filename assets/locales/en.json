@@ -852,5 +852,11 @@
   "tooltip.timeline_inbetween_all": "Generate inbetween frames between all frames of the animation",
   "menu.project.inbetween_all": "Inbetween Entire Animation (Experimental)...",
   "app.status.inbetweens_all_generated": "All animation frames interpolated successfully",
-  "inbetween.coherent_motion": "Coherent Motion (Rigid Clusters)"
+  "inbetween.coherent_motion": "Coherent Motion (Rigid Clusters)",
+  "menu.view.bg_magenta": "Magenta (#FF00FF)",
+  "menu.view.bg_green": "Chroma Green (#00FF00)",
+  "menu.view.bg_blue": "Chroma Blue (#0000FF)",
+  "modal.new_project.import_palette": "Import Palette...",
+  "modal.new_project.reset": "Defaults",
+  "tooltip.new_project.reset": "Reset settings to default values"
 }

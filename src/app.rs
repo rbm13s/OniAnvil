@@ -27,7 +27,7 @@ use crate::ui::modals::{
     show_confirm_delete_tag_modal, show_confirm_exit_app_modal, show_hotkeys_modal,
     show_recovery_modal, ColorAdjustModalState, ConfirmCloseDocAction, ConvolutionAction,
     ConvolutionModalState, ExportGifModalState, ExportPackedAtlasModalState,
-    ExportScaledPngModalState, ModifySelectionMode, ModifySelectionModalState, NewProjectWizardState,
+    ExportScaledPngModalState, ModifySelectionMode, ModifySelectionModalState, NewProjectWizardState, WizardProjectType,
     OutlineFxAction, OutlineFxModalState,
     ReGridModalState, RecoveryAction, RemapPaletteAction, RemapPaletteModalState, ReplaceColorModalState, Resize9GridModalState, RotateAction, RotateModalState, SheetSlicerModalState,
     BakeSketchAction, BakeSketchModalState, ExtractPaletteAction, ExtractPaletteModalState, InbetweenModalState,
@@ -132,7 +132,7 @@ impl OniAnvilApp {
             io: IoManager::new(),
             autosave,
             update_checker,
-            wizard: NewProjectWizardState::default(),
+            wizard: NewProjectWizardState::from_settings(&settings.new_project),
             regrid_modal: ReGridModalState::default(),
             inbetween_modal: InbetweenModalState::default(),
             resize9_modal: Resize9GridModalState::default(),
@@ -2262,6 +2262,16 @@ impl eframe::App for OniAnvilApp {
 
         // Modals
         if let Some(new_meta) = self.wizard.show(ctx, &self.i18n) {
+            self.settings.new_project.is_animation_atlas =
+                self.wizard.project_type == WizardProjectType::AnimationAtlas;
+            self.settings.new_project.frame_width = self.wizard.frame_width;
+            self.settings.new_project.frame_height = self.wizard.frame_height;
+            self.settings.new_project.frame_count = self.wizard.frame_count;
+            self.settings.new_project.columns = self.wizard.columns;
+            self.settings.new_project.selected_palette_preset = self.wizard.selected_palette_preset;
+            self.settings.new_project.color_limit_index = self.wizard.color_limit_index;
+            let _ = self.settings.save();
+
             self.open_project_doc(Project::new(new_meta));
             self.status_key = "app.status.project_created";
         }

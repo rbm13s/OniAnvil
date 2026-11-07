@@ -852,5 +852,11 @@
   "viewport.mode.frame": "Klatka",
   "viewport.zoom.100": "100%",
   "viewport.zoom.fit": "Dopasuj",
-  "inbetween.coherent_motion": "Coherent Motion (Sztywne klastry)"
+  "inbetween.coherent_motion": "Coherent Motion (Sztywne klastry)",
+  "menu.view.bg_magenta": "Magenta (#FF00FF)",
+  "menu.view.bg_green": "Chroma zielony (#00FF00)",
+  "menu.view.bg_blue": "Chroma niebieski (#0000FF)",
+  "modal.new_project.import_palette": "Importuj paletę...",
+  "modal.new_project.reset": "Domyślne",
+  "tooltip.new_project.reset": "Przywróć ustawienia domyślne"
 }

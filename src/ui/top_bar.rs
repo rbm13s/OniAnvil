@@ -563,6 +563,21 @@ pub fn show_top_bars(
                         BackgroundMode::SolidColor,
                         i18n.tr("menu.view.bg_solid"),
                     );
+                    ui.radio_value(
+                        &mut viewport.background_mode,
+                        BackgroundMode::SolidMagenta,
+                        i18n.tr("menu.view.bg_magenta"),
+                    );
+                    ui.radio_value(
+                        &mut viewport.background_mode,
+                        BackgroundMode::SolidGreen,
+                        i18n.tr("menu.view.bg_green"),
+                    );
+                    ui.radio_value(
+                        &mut viewport.background_mode,
+                        BackgroundMode::SolidBlue,
+                        i18n.tr("menu.view.bg_blue"),
+                    );
                     ui.separator();
                     if ui.button(format!("{FA_ZOOM_IN} {}", i18n.tr("menu.view.zoom_in"))).clicked() {
                         viewport.zoom_in();

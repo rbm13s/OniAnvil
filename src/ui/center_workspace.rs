@@ -105,6 +105,9 @@ pub fn show_center_workspace(
                                 BackgroundMode::DarkCheckerboard => i18n.tr("menu.view.bg_dark"),
                                 BackgroundMode::LightCheckerboard => i18n.tr("menu.view.bg_light"),
                                 BackgroundMode::SolidColor => i18n.tr("menu.view.bg_solid"),
+                                BackgroundMode::SolidMagenta => i18n.tr("menu.view.bg_magenta"),
+                                BackgroundMode::SolidGreen => i18n.tr("menu.view.bg_green"),
+                                BackgroundMode::SolidBlue => i18n.tr("menu.view.bg_blue"),
                             })
                             .show_ui(ui, |ui| {
                                 ui.selectable_value(
@@ -121,6 +124,21 @@ pub fn show_center_workspace(
                                     &mut viewport.background_mode,
                                     BackgroundMode::SolidColor,
                                     i18n.tr("menu.view.bg_solid"),
+                                );
+                                ui.selectable_value(
+                                    &mut viewport.background_mode,
+                                    BackgroundMode::SolidMagenta,
+                                    i18n.tr("menu.view.bg_magenta"),
+                                );
+                                ui.selectable_value(
+                                    &mut viewport.background_mode,
+                                    BackgroundMode::SolidGreen,
+                                    i18n.tr("menu.view.bg_green"),
+                                );
+                                ui.selectable_value(
+                                    &mut viewport.background_mode,
+                                    BackgroundMode::SolidBlue,
+                                    i18n.tr("menu.view.bg_blue"),
                                 );
                             })
                             .response

@@ -22,6 +22,15 @@ pub fn draw_canvas_background(
             let [r, g, b, a] = viewport.custom_bg_color;
             painter.rect_filled(clipped, 0.0, Color32::from_rgba_unmultiplied(r, g, b, a));
         }
+        BackgroundMode::SolidMagenta => {
+            painter.rect_filled(clipped, 0.0, Color32::from_rgb(255, 0, 255));
+        }
+        BackgroundMode::SolidGreen => {
+            painter.rect_filled(clipped, 0.0, Color32::from_rgb(0, 255, 0));
+        }
+        BackgroundMode::SolidBlue => {
+            painter.rect_filled(clipped, 0.0, Color32::from_rgb(0, 0, 255));
+        }
         BackgroundMode::DarkCheckerboard | BackgroundMode::LightCheckerboard => {
             let (c1, c2) = match viewport.background_mode {
                 BackgroundMode::DarkCheckerboard => (

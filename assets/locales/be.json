@@ -852,5 +852,11 @@
   "viewport.mode.frame": "Кадр",
   "viewport.zoom.100": "100%",
   "viewport.zoom.fit": "Упісаць",
-  "inbetween.coherent_motion": "Coherent Motion (Звязныя кластары)"
+  "inbetween.coherent_motion": "Coherent Motion (Звязныя кластары)",
+  "menu.view.bg_magenta": "Маджэнта (#FF00FF)",
+  "menu.view.bg_green": "Храмакей зялёны (#00FF00)",
+  "menu.view.bg_blue": "Храмакей сіні (#0000FF)",
+  "modal.new_project.import_palette": "Імпарт палітры...",
+  "modal.new_project.reset": "Па змаўчанні",
+  "tooltip.new_project.reset": "Скінуць налады на значэнні па змаўчанні"
 }

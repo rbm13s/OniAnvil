@@ -852,5 +852,11 @@
   "viewport.mode.frame": "Sličica",
   "viewport.zoom.100": "100%",
   "viewport.zoom.fit": "Prilagodi",
-  "inbetween.coherent_motion": "Coherent Motion (Sztywne klastry)"
+  "inbetween.coherent_motion": "Coherent Motion (Sztywne klastry)",
+  "menu.view.bg_magenta": "Magenta (#FF00FF)",
+  "menu.view.bg_green": "Chroma Green (#00FF00)",
+  "menu.view.bg_blue": "Chroma Blue (#0000FF)",
+  "modal.new_project.import_palette": "Import Palette...",
+  "modal.new_project.reset": "Defaults",
+  "tooltip.new_project.reset": "Reset settings to default values"
 }

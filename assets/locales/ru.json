@@ -852,5 +852,11 @@
   "tooltip.timeline_inbetween_all": "Сгенерировать промежуточные кадры между всеми кадрами анимации",
   "menu.project.inbetween_all": "Интерполировать всю анимацию (Экспериментально)...",
   "app.status.inbetweens_all_generated": "Вся анимация успешно интерполирована",
-  "inbetween.coherent_motion": "Coherent Motion (Связные кластеры)"
+  "inbetween.coherent_motion": "Coherent Motion (Связные кластеры)",
+  "menu.view.bg_magenta": "Маджента (#FF00FF)",
+  "menu.view.bg_green": "Хромакей зеленый (#00FF00)",
+  "menu.view.bg_blue": "Хромакей синий (#0000FF)",
+  "modal.new_project.import_palette": "Импорт палитры...",
+  "modal.new_project.reset": "По умолчанию",
+  "tooltip.new_project.reset": "Сбросить настройки на значения по умолчанию"
 }

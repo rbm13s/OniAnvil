@@ -852,5 +852,11 @@
   "viewport.mode.frame": "フレーム",
   "viewport.zoom.100": "100%",
   "viewport.zoom.fit": "フィット",
-  "inbetween.coherent_motion": "Coherent Motion (剛体クラスタ移動)"
+  "inbetween.coherent_motion": "Coherent Motion (剛体クラスタ移動)",
+  "menu.view.bg_magenta": "マゼンタ (#FF00FF)",
+  "menu.view.bg_green": "クロマキー グリーン (#00FF00)",
+  "menu.view.bg_blue": "クロマキー ブルー (#0000FF)",
+  "modal.new_project.import_palette": "パレットをインポート...",
+  "modal.new_project.reset": "初期値に戻す",
+  "tooltip.new_project.reset": "設定をデフォルトに戻す"
 }
