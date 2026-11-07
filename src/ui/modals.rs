@@ -5110,6 +5110,11 @@ pub struct InbetweenModalState {
     pub cached_textures: Vec<egui::TextureHandle>,
     pub cache_dirty: bool,
     pub dirty_since: Option<f64>,
+    pub gen_in_progress: bool,
+    pub gen_pair_index: usize,
+    pub gen_total_pairs: usize,
+    pub gen_source_frames: Vec<RgbaImage>,
+    pub gen_pending_seq: Vec<(RgbaImage, bool, usize)>,
     pub playback_playing: bool,
     pub playback_fps: f32,
     pub playback_last_tick: Option<f64>,
@@ -5126,6 +5131,11 @@ impl Default for InbetweenModalState {
             cached_textures: Vec::new(),
             cache_dirty: true,
             dirty_since: None,
+            gen_in_progress: false,
+            gen_pair_index: 0,
+            gen_total_pairs: 0,
+            gen_source_frames: Vec::new(),
+            gen_pending_seq: Vec::new(),
             playback_playing: true,
             playback_fps: 6.0,
             playback_last_tick: None,
@@ -5140,6 +5150,7 @@ impl InbetweenModalState {
         self.source_frame = source_frame;
         self.config.mode = InbetweenMode::SinglePair;
         self.cache_dirty = true;
+        self.gen_in_progress = false;
         self.current_preview_index = 0;
         self.playback_playing = true;
         self.playback_last_tick = None;
@@ -5149,6 +5160,7 @@ impl InbetweenModalState {
         self.open = true;
         self.config.mode = InbetweenMode::AllFrames;
         self.cache_dirty = true;
+        self.gen_in_progress = false;
         self.current_preview_index = 0;
         self.playback_playing = true;
         self.playback_last_tick = None;
@@ -5175,9 +5187,12 @@ impl InbetweenModalState {
             safe_src
         };
 
-        // Regenerate cached frames when parameters changed (debounced during active slider drag)
+        // Regenerate cached frames incrementally when parameters changed (debounced during active slider drag)
         let is_pointer_down = ctx.input(|i| i.pointer.any_down());
-        let debounce_elapsed = self.dirty_since.map(|t| ctx.input(|i| i.time) - t >= 0.15).unwrap_or(true);
+        let debounce_elapsed = self
+            .dirty_since
+            .map(|t| ctx.input(|i| i.time) - t >= 0.15)
+            .unwrap_or(true);
         let should_regenerate = self.cache_dirty && (!is_pointer_down || debounce_elapsed);
 
         if self.cache_dirty && is_pointer_down && !debounce_elapsed {
@@ -5186,116 +5201,157 @@ impl InbetweenModalState {
 
         if should_regenerate {
             self.dirty_since = None;
-            let mut seq: Vec<(RgbaImage, bool, usize)> = Vec::new();
 
-            match self.config.mode {
-                InbetweenMode::SinglePair => {
-                    let (src_img, tgt_img) = if self.config.scope == InbetweenScope::ActiveLayer {
-                        let buf = project
-                            .metadata
-                            .layers
-                            .get(project.metadata.active_layer)
-                            .and_then(|l| l.layer_rgba.as_ref())
-                            .unwrap_or(&project.atlas_rgba);
-                        let frames = project.extract_frames_from_atlas(buf);
-                        let s = frames.get(safe_src).cloned().unwrap_or_else(|| {
-                            RgbaImage::new(project.metadata.frame_width, project.metadata.frame_height)
-                        });
-                        let t = frames.get(target_idx).cloned().unwrap_or_else(|| {
-                            RgbaImage::new(project.metadata.frame_width, project.metadata.frame_height)
-                        });
-                        (s, t)
-                    } else {
-                        let comp = project.composited_atlas_rgba();
-                        let frames = project.extract_frames_from_atlas(&comp);
-                        let s = frames.get(safe_src).cloned().unwrap_or_else(|| {
-                            RgbaImage::new(project.metadata.frame_width, project.metadata.frame_height)
-                        });
-                        let t = frames.get(target_idx).cloned().unwrap_or_else(|| {
-                            RgbaImage::new(project.metadata.frame_width, project.metadata.frame_height)
-                        });
-                        (s, t)
-                    };
+            if !self.gen_in_progress {
+                // Step 0: Prepare source frames and immediately render 1 UI frame with the progress
+                // indicator visible before computing the first pair.
+                let frames = if self.config.scope == InbetweenScope::ActiveLayer {
+                    let buf = project
+                        .metadata
+                        .layers
+                        .get(project.metadata.active_layer)
+                        .and_then(|l| l.layer_rgba.as_ref())
+                        .unwrap_or(&project.atlas_rgba);
+                    project.extract_frames_from_atlas(buf)
+                } else {
+                    let comp = project.composited_atlas_rgba();
+                    project.extract_frames_from_atlas(&comp)
+                };
 
-                    let inbetweens = generate_inbetween_sequence(
-                        &src_img,
-                        &tgt_img,
-                        self.config.frame_count,
-                        self.config.algorithm,
-                        self.config.flow_direction,
-                        self.config.search_radius,
-                        Some(&project.metadata.palette.colors),
-                    );
-
-                    seq.push((src_img, false, safe_src + 1));
-                    for inbetween in inbetweens {
-                        seq.push((inbetween, true, safe_src + 1));
+                self.gen_source_frames = frames;
+                self.gen_pending_seq.clear();
+                self.gen_pair_index = 0;
+                self.gen_total_pairs = match self.config.mode {
+                    InbetweenMode::SinglePair => 1,
+                    InbetweenMode::AllFrames => {
+                        if self.config.loop_to_first {
+                            total
+                        } else {
+                            total.saturating_sub(1).max(1)
+                        }
                     }
-                    seq.push((tgt_img, false, target_idx + 1));
-                }
-                InbetweenMode::AllFrames => {
-                    let frames = if self.config.scope == InbetweenScope::ActiveLayer {
-                        let buf = project
-                            .metadata
-                            .layers
-                            .get(project.metadata.active_layer)
-                            .and_then(|l| l.layer_rgba.as_ref())
-                            .unwrap_or(&project.atlas_rgba);
-                        project.extract_frames_from_atlas(buf)
-                    } else {
-                        let comp = project.composited_atlas_rgba();
-                        project.extract_frames_from_atlas(&comp)
-                    };
+                };
+                self.gen_in_progress = true;
+                ctx.request_repaint();
+            } else {
+                // Process 1 frame pair per UI tick so the window stays responsive and progress updates live
+                match self.config.mode {
+                    InbetweenMode::SinglePair => {
+                        let src_img = self
+                            .gen_source_frames
+                            .get(safe_src)
+                            .cloned()
+                            .unwrap_or_else(|| {
+                                RgbaImage::new(
+                                    project.metadata.frame_width,
+                                    project.metadata.frame_height,
+                                )
+                            });
+                        let tgt_img = self
+                            .gen_source_frames
+                            .get(target_idx)
+                            .cloned()
+                            .unwrap_or_else(|| {
+                                RgbaImage::new(
+                                    project.metadata.frame_width,
+                                    project.metadata.frame_height,
+                                )
+                            });
 
-                    let loop_anim = self.config.loop_to_first;
-                    let pairs_count = if loop_anim { total } else { total.saturating_sub(1) };
-
-                    for i in 0..pairs_count {
-                        let next_i = (i + 1) % total;
-                        let src = frames.get(i).cloned().unwrap_or_else(|| {
-                            RgbaImage::new(project.metadata.frame_width, project.metadata.frame_height)
-                        });
-                        let tgt = frames.get(next_i).cloned().unwrap_or_else(|| {
-                            RgbaImage::new(project.metadata.frame_width, project.metadata.frame_height)
-                        });
-
-                        seq.push((src.clone(), false, i + 1));
                         let inbetweens = generate_inbetween_sequence(
-                            &src,
-                            &tgt,
+                            &src_img,
+                            &tgt_img,
                             self.config.frame_count,
                             self.config.algorithm,
                             self.config.flow_direction,
                             self.config.search_radius,
                             Some(&project.metadata.palette.colors),
                         );
-                        for inbetween in inbetweens {
-                            seq.push((inbetween, true, i + 1));
-                        }
-                    }
 
-                    if !loop_anim {
-                        if let Some(last) = frames.get(total.saturating_sub(1)) {
-                            seq.push((last.clone(), false, total));
+                        self.gen_pending_seq.push((src_img, false, safe_src + 1));
+                        for inbetween in inbetweens {
+                            self.gen_pending_seq.push((inbetween, true, safe_src + 1));
+                        }
+                        self.gen_pending_seq.push((tgt_img, false, target_idx + 1));
+                        self.gen_pair_index = 1;
+                    }
+                    InbetweenMode::AllFrames => {
+                        let loop_anim = self.config.loop_to_first;
+                        let pairs_count = if loop_anim {
+                            total
+                        } else {
+                            total.saturating_sub(1)
+                        };
+                        let i = self.gen_pair_index;
+                        if i < pairs_count {
+                            let next_i = (i + 1) % total;
+                            let src = self
+                                .gen_source_frames
+                                .get(i)
+                                .cloned()
+                                .unwrap_or_else(|| {
+                                    RgbaImage::new(
+                                        project.metadata.frame_width,
+                                        project.metadata.frame_height,
+                                    )
+                                });
+                            let tgt = self
+                                .gen_source_frames
+                                .get(next_i)
+                                .cloned()
+                                .unwrap_or_else(|| {
+                                    RgbaImage::new(
+                                        project.metadata.frame_width,
+                                        project.metadata.frame_height,
+                                    )
+                                });
+
+                            self.gen_pending_seq.push((src.clone(), false, i + 1));
+                            let inbetweens = generate_inbetween_sequence(
+                                &src,
+                                &tgt,
+                                self.config.frame_count,
+                                self.config.algorithm,
+                                self.config.flow_direction,
+                                self.config.search_radius,
+                                Some(&project.metadata.palette.colors),
+                            );
+                            for inbetween in inbetweens {
+                                self.gen_pending_seq.push((inbetween, true, i + 1));
+                            }
+                        }
+                        self.gen_pair_index += 1;
+
+                        if self.gen_pair_index >= self.gen_total_pairs && !loop_anim {
+                            if let Some(last) = self.gen_source_frames.get(total.saturating_sub(1))
+                            {
+                                self.gen_pending_seq.push((last.clone(), false, total));
+                            }
                         }
                     }
                 }
-            }
 
-            self.cached_textures.clear();
-            for (i, (frame, _, _)) in seq.iter().enumerate() {
-                let tex = ctx.load_texture(
-                    format!("inbetween_preview_frame_{}", i),
-                    egui::ColorImage::from_rgba_unmultiplied(
-                        [frame.width() as usize, frame.height() as usize],
-                        frame.as_raw(),
-                    ),
-                    egui::TextureOptions::NEAREST,
-                );
-                self.cached_textures.push(tex);
+                if self.gen_pair_index >= self.gen_total_pairs {
+                    let seq = std::mem::take(&mut self.gen_pending_seq);
+                    self.gen_source_frames.clear();
+                    self.cached_textures.clear();
+                    for (i, (frame, _, _)) in seq.iter().enumerate() {
+                        let tex = ctx.load_texture(
+                            format!("inbetween_preview_frame_{}", i),
+                            egui::ColorImage::from_rgba_unmultiplied(
+                                [frame.width() as usize, frame.height() as usize],
+                                frame.as_raw(),
+                            ),
+                            egui::TextureOptions::NEAREST,
+                        );
+                        self.cached_textures.push(tex);
+                    }
+                    self.cached_frames = seq;
+                    self.gen_in_progress = false;
+                    self.cache_dirty = false;
+                }
+                ctx.request_repaint();
             }
-            self.cached_frames = seq;
-            self.cache_dirty = false;
         }
 
         // Animation playback advancement
@@ -5533,18 +5589,103 @@ impl InbetweenModalState {
                             );
                         }
 
-                        // Badge label
-                        let badge_text = if let Some((_, is_gen, orig_idx)) = self.cached_frames.get(cur_idx) {
-                            if *is_gen {
-                                format!("{} #{} (g)", i18n.tr("inbetween.new_frame"), cur_idx + 1)
+                        // Progress overlay on preview box while regenerating
+                        if self.cache_dirty || self.gen_in_progress {
+                            ui.painter().rect_filled(
+                                rect,
+                                0.0,
+                                Color32::from_rgba_unmultiplied(15, 15, 20, 175),
+                            );
+                            let total_p = self.gen_total_pairs.max(1);
+                            let done_p = self.gen_pair_index.min(total_p);
+                            let frac = if self.gen_in_progress {
+                                (done_p as f32) / (total_p as f32)
                             } else {
-                                format!("{} #{}", i18n.tr("inbetween.frame_source"), orig_idx)
-                            }
-                        } else {
-                            String::new()
-                        };
+                                0.0
+                            };
+                            let bar_w = rect.width() - 28.0;
+                            let bar_rect = egui::Rect::from_center_size(
+                                rect.center() + vec2(0.0, 12.0),
+                                vec2(bar_w, 8.0),
+                            );
+                            ui.painter().rect_filled(
+                                bar_rect,
+                                4.0,
+                                Color32::from_rgb(40, 42, 50),
+                            );
+                            let fill_w = (bar_w * frac.clamp(0.08, 1.0)).round();
+                            let fill_rect = egui::Rect::from_min_size(
+                                bar_rect.min,
+                                vec2(fill_w, bar_rect.height()),
+                            );
+                            ui.painter().rect_filled(
+                                fill_rect,
+                                4.0,
+                                Color32::from_rgb(0, 180, 255),
+                            );
+                            let status_label = if self.gen_in_progress && total_p > 1 {
+                                format!(
+                                    "{} ({}/{})",
+                                    i18n.tr("inbetween.new_frame"),
+                                    done_p,
+                                    total_p
+                                )
+                            } else {
+                                format!("{}...", i18n.tr("inbetween.new_frame"))
+                            };
+                            ui.painter().text(
+                                rect.center() - vec2(0.0, 8.0),
+                                egui::Align2::CENTER_CENTER,
+                                status_label,
+                                egui::FontId::proportional(13.0),
+                                Color32::WHITE,
+                            );
+                        }
+
+                        // Badge label / spinner row
                         ui.add_space(2.0);
-                        ui.label(RichText::new(badge_text).small().color(Color32::from_gray(180)));
+                        if self.cache_dirty || self.gen_in_progress {
+                            let total_p = self.gen_total_pairs.max(1);
+                            let done_p = self.gen_pair_index.min(total_p);
+                            ui.horizontal(|ui| {
+                                ui.add(egui::Spinner::new().size(12.0));
+                                ui.label(
+                                    RichText::new(format!(
+                                        "{} ({}/{})",
+                                        i18n.tr("inbetween.new_frame"),
+                                        done_p,
+                                        total_p
+                                    ))
+                                    .small()
+                                    .color(Color32::from_rgb(0, 200, 255)),
+                                );
+                            });
+                        } else {
+                            let badge_text =
+                                if let Some((_, is_gen, orig_idx)) = self.cached_frames.get(cur_idx)
+                                {
+                                    if *is_gen {
+                                        format!(
+                                            "{} #{} (g)",
+                                            i18n.tr("inbetween.new_frame"),
+                                            cur_idx + 1
+                                        )
+                                    } else {
+                                        format!(
+                                            "{} #{}",
+                                            i18n.tr("inbetween.frame_source"),
+                                            orig_idx
+                                        )
+                                    }
+                                } else {
+                                    String::new()
+                                };
+                            ui.label(
+                                RichText::new(badge_text)
+                                    .small()
+                                    .color(Color32::from_gray(180)),
+                            );
+                        }
 
                         // Transport controls
                         ui.horizontal(|ui| {
@@ -5608,7 +5749,14 @@ impl InbetweenModalState {
 
                 if params_changed {
                     self.cache_dirty = true;
-                    self.dirty_since = Some(ctx.input(|i| i.time));
+                    self.gen_in_progress = false;
+                    self.gen_pair_index = 0;
+                    if is_pointer_down {
+                        self.dirty_since = Some(ctx.input(|i| i.time));
+                    } else {
+                        self.dirty_since = None;
+                    }
+                    ctx.request_repaint();
                 }
 
                 ui.add_space(8.0);

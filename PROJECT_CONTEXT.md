@@ -501,3 +501,29 @@ Architectural improvements and resolutions for critical data loss risks, autosav
 - [x] **Cargo.toml & GitHub Actions CI (`Cargo.toml`, `.github/workflows/build.yml`)**
   - Pinned `rust-version = "1.88"`, moved `gen_locales` to `[[example]]`, and configured `[profile.release]` with `lto = "thin"`, `codegen-units = 1`, and `strip = true`.
   - Added a fast `ci-check` job (`cargo test --all-targets`, `cargo clippy --all-targets -- -D warnings`) to GitHub Actions CI running on every `push` to `main` and pull request.
+
+---
+
+## 13. Inbetween PixelFlow Enhancements & Live Preview Responsiveness
+
+Comprehensive overhaul of the `PixelFlow` inbetweening algorithm in `src/model/inbetween.rs` and live preview pipeline in `src/ui/modals.rs`:
+
+### 13.1. Optical Flow & Pixel Morphing Hardening (`src/model/inbetween.rs`)
+- **Aperture Problem & Hole Elimination:**
+  - Flat interior pixels (`is_flat_interior_pixel`) are protected against 0-displacement false matches and instead inherit smooth displacement vectors from surrounding boundary/feature edges via BFS wavefront propagation and harmonic Laplacian relaxation.
+  - Added watertight bilinear rasterization (`splat_flow_mesh`) across expanding, rotating, and shearing `2×2` quads, preventing tearing and interior gaps.
+  - Added multi-zone velocity gradient smoothing across color boundaries within the same connected component (e.g. yellow core vs orange flame vs dark smoke in explosions), eliminating interior tears on fireball expansion (`test_pixel_flow_explosion_fireball_multi_zone_no_holes`).
+  - Implemented multi-pixel inverse (backward) flow reconstruction in `fill_flow_gaps` to close sub-pixel coordinate stepping gaps and internal cavities up to 4 px wide.
+- **Stray Pixel & Outlier Suppression:**
+  - Multi-pass local median vector field regularization (`regularize_flow_field`) now applies uniformly across all three flow directions (`Bidirectional`, `Forward`, and `Reverse`), including canvas boundaries.
+  - Replaced arbitrary centroid projections with component-coherent prior offsets in `extract_components_and_priors`.
+  - Added `remove_stray_pixels` to clean up isolated 1-pixel artifacts that detach from solid source/target regions while preserving authentic sparks and particles.
+- **Performance Optimization:**
+  - Implemented branch-and-bound pruning in `find_grid_match` and early-exit thresholds in `neighbor_context_diff`, cutting redundant distance evaluations by ~90%.
+  - Added two-stage coarse-to-fine displacement estimation (step 2 px + refinement) in `extract_components_and_priors` with precomputed flat-interior boolean masks (`compute_flat_interior_mask`).
+
+### 13.2. Asynchronous Live Preview & UI Progress Indicator (`src/ui/modals.rs`)
+- **Non-blocking Live Preview Computation:**
+  - Live preview regeneration is executed incrementally (1 frame pair per UI tick via `gen_in_progress`, `gen_pair_index`, `gen_total_pairs`), keeping the modal and timeline completely interactive without freezing the main thread.
+- **Visual Progress & Status Feedback:**
+  - Added an interactive progress overlay on the preview viewport with a smooth progress bar, frame step counters `(k/N)`, and spinning indicator (`egui::Spinner`), providing immediate visual feedback when switching algorithms, directions, or parameters.
