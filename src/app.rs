@@ -1201,7 +1201,8 @@ impl OniAnvilApp {
         }
         if let Some(force_as) = trigger_save {
             if let Some(doc) = self.documents.get(self.active_doc_idx) {
-                self.io.trigger_save(&doc.project, force_as, ctx.clone());
+                let should_force_dialog = force_as || doc.project.file_path.is_none();
+                self.io.trigger_save(&doc.project, should_force_dialog, ctx.clone());
             }
         }
         if trigger_undo {
@@ -1335,9 +1336,16 @@ impl OniAnvilApp {
                     self.status_key = "app.status.project_loaded";
                 }
                 IoEvent::ProjectSaved(maybe_path) => {
-                    if let Some(doc) = self.documents.get_mut(self.active_doc_idx) {
+                    let target_doc_idx = if let Some(PendingAfterSave::CloseDoc(idx)) = self.pending_after_save {
+                        idx
+                    } else {
+                        self.active_doc_idx
+                    };
+                    if let Some(doc) = self.documents.get_mut(target_doc_idx) {
                         if let Some(p) = maybe_path.clone() {
                             doc.project.file_path = Some(p.clone());
+                            doc.project.metadata.project_name =
+                                IoManager::project_name_from_path(&p);
                             self.settings.add_recent(p);
                         }
                         doc.project.has_unsaved_changes = false;
@@ -1819,7 +1827,8 @@ impl eframe::App for OniAnvilApp {
         }
         if top_actions.trigger_save_project {
             if let Some(doc) = self.documents.get(self.active_doc_idx) {
-                self.io.trigger_save(&doc.project, false, ctx.clone());
+                let should_force_dialog = doc.project.file_path.is_none();
+                self.io.trigger_save(&doc.project, should_force_dialog, ctx.clone());
             }
         }
         if top_actions.trigger_save_project_as {
@@ -3259,7 +3268,9 @@ impl eframe::App for OniAnvilApp {
         {
             match recovery_action {
                 RecoveryAction::Restore => {
-                    if let Some(recovered) = self.autosave.recovery_candidate.take() {
+                    if let Some(mut recovered) = self.autosave.recovery_candidate.take() {
+                        recovered.file_path = None;
+                        recovered.has_unsaved_changes = true;
                         self.open_project_doc(recovered);
                         self.status_key = "app.status.autosave_restored";
                     }
@@ -3413,7 +3424,8 @@ impl eframe::App for OniAnvilApp {
                 match action {
                     ConfirmCloseDocAction::SaveAndClose => {
                         if let Some(doc) = self.documents.get(idx) {
-                            self.io.trigger_save(&doc.project, false, ctx.clone());
+                            let should_force_dialog = doc.project.file_path.is_none();
+                            self.io.trigger_save(&doc.project, should_force_dialog, ctx.clone());
                             self.pending_after_save = Some(PendingAfterSave::CloseDoc(idx));
                         }
                     }

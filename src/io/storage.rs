@@ -201,6 +201,20 @@ impl IoManager {
         Ok(img.to_rgba8())
     }
 
+    /// Derives a clean project name from a file path (stripping `.png` and `.onianvil`).
+    pub fn project_name_from_path(path: &Path) -> String {
+        let stem = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("sprite");
+        let clean = stem.strip_suffix(".onianvil").unwrap_or(stem);
+        if clean.trim().is_empty() {
+            "sprite".to_string()
+        } else {
+            clean.to_string()
+        }
+    }
+
     pub fn build_project_from_bytes(
         png_bytes: &[u8],
         json_bytes: Option<&[u8]>,
@@ -212,9 +226,7 @@ impl IoManager {
 
         let default_name = file_path
             .as_ref()
-            .and_then(|p| p.file_stem())
-            .and_then(|s| s.to_str())
-            .map(|s| s.strip_suffix(".onianvil").unwrap_or(s).to_string())
+            .map(|p| Self::project_name_from_path(p))
             .unwrap_or_else(|| "sprite".to_string());
 
         let mut metadata = if let Some(raw_json) = json_bytes {
@@ -421,7 +433,8 @@ impl IoManager {
     pub fn trigger_save(&self, project: &Project, force_dialog: bool, ctx: egui::Context) {
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let target_path = if !force_dialog {
+            let should_show_dialog = force_dialog || project.file_path.is_none();
+            let target_path = if !should_show_dialog {
                 project.file_path.clone()
             } else {
                 None
@@ -429,10 +442,13 @@ impl IoManager {
 
             let resolved_path = target_path.or_else(|| {
                 let default_file = format!("{}.png", project.metadata.project_name);
-                rfd::FileDialog::new()
+                let mut dialog = rfd::FileDialog::new()
                     .set_file_name(&default_file)
-                    .add_filter("PNG Sprite Sheet", &["png"])
-                    .save_file()
+                    .add_filter("PNG Sprite Sheet", &["png"]);
+                if let Some(parent) = project.file_path.as_ref().and_then(|p| p.parent()) {
+                    dialog = dialog.set_directory(parent);
+                }
+                dialog.save_file()
             });
 
             if let Some(png_path) = resolved_path {
@@ -625,6 +641,7 @@ impl IoManager {
         let png_bytes = Self::encode_png_bytes(&composited)?;
 
         let mut meta_to_save = project.metadata.clone();
+        meta_to_save.project_name = Self::project_name_from_path(png_path);
         if meta_to_save.layers.len() > 1 {
             let active_idx = project
                 .metadata
@@ -1588,5 +1605,46 @@ mod tests {
 
         let res = IoManager::build_project_from_bytes(&png_bytes, Some(&json_bytes), None);
         assert!(res.is_err(), "Corrupted layer base64 must return Err instead of silently duplicating composite");
+    }
+
+    #[test]
+    fn test_project_name_from_path() {
+        assert_eq!(IoManager::project_name_from_path(Path::new("hero.png")), "hero");
+        assert_eq!(IoManager::project_name_from_path(Path::new("hero.onianvil.json")), "hero");
+        assert_eq!(IoManager::project_name_from_path(Path::new("/some/dir/wizard_v2.png")), "wizard_v2");
+        assert_eq!(IoManager::project_name_from_path(Path::new("")), "sprite");
+    }
+
+    #[test]
+    fn test_save_to_native_path_updates_project_name() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "onianvil_rename_test_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&temp_dir).unwrap();
+        let png_path = temp_dir.join("saved_character.png");
+
+        // Initial project has name "sprite"
+        let meta = ProjectMetadata::new_config("sprite".to_string(), 16, 16, 1, 1, None);
+        let proj = Project::new(meta);
+
+        // Save under "saved_character.png"
+        let res = IoManager::save_to_native_path(&proj, &png_path);
+        assert!(res.is_ok());
+
+        // Verify that the companion json has "project_name": "saved_character"
+        let json_path = IoManager::companion_json_path(&png_path);
+        let json_content = std::fs::read_to_string(&json_path).expect("read companion json");
+        let parsed_meta: ProjectMetadata = serde_json::from_str(&json_content).expect("parse json");
+        assert_eq!(parsed_meta.project_name, "saved_character");
+
+        // Loading from disk must also yield "saved_character"
+        let loaded = IoManager::load_from_native_path(&png_path).expect("load project");
+        assert_eq!(loaded.metadata.project_name, "saved_character");
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
     }
 }
