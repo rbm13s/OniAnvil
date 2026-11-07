@@ -387,7 +387,7 @@ Whenever preparing or cutting a new release, all contributors and agents **must 
 
 - **Dedicated Palette Extraction Dialog:**
   - Replaced immediate 64-color extraction with an interactive dialog for both *Extract from Sheet* and *Import from (png)*.
-  - Added support for extracting up to 1024 colors with customizable limit slider and quick-select buttons (`16`, `32`, `64`, `128`, `256`, `512`, `1024`).
+  - Added support for extracting up to 1024 colors with customizable limit slider and quick-select buttons (`16`, `32`, `64`, `128`, `256`, `1024`).
   - Added four color extraction algorithms: *Most Frequent* (default), *Median Cut* (color box quantization), *Perceptual Diversity* (max-distance emphasis for rare accents), and *First Appearance* (scanline order).
   - Live interactive swatch preview with hover tooltips showing slot, hex, pixel count, and image coverage percentage.
   - Zero UI latency: single-pass occurrence histogram aggregation on modal open ensures sub-millisecond slider and algorithm adjustments.
@@ -418,3 +418,38 @@ Whenever preparing or cutting a new release, all contributors and agents **must 
   - Timeline identification for generated frames with `(g)` indicator and amber filmstrip badges.
   - Interactive two-column modal dialog with live preview player and horizontal filmstrip thumbnails.
   - Full 37-language localization parity.
+- **Post-v1.2.1 UI Polish & Core Performance Passes (`60d7b1f`, `408f737`):**
+  - Added `256×256` and `480×270` frame size presets, direct PNG palette import in the New Project Wizard (`+ Import...`), persistent New Project settings with a Reset button, and 3 chromakey solid background presets (`#FF00FF`, `#00FF00`, `#0000FF`).
+  - Cached live preview rasterization across 5 FX modal dialogs (`Outline`, `DropShadow`, `ColorRamp`, `ShiftHsl`, `ProceduralTexture`) and added a 120 ms slider debounce to the `Inbetween` modal.
+  - Fixed Sheet Slicer division-by-zero panic, offloaded native recovery autosave PNG encoding to a background thread, added WASM `localStorage` quota check, converted `HistoryStack` to `VecDeque` (`max_depth: 50`), and optimized `composited_atlas_rgba`, `transform_all_layers_frames`, `SelectionMask::expand`, and GIF frame scaling.
+
+---
+
+## 11. Deep Technical Audit Resolutions (All 8 Issues Resolved)
+
+Все 8 проблем, выявленных в ходе углубленного технического аудита (узкие места CPU/RAM/GPU, многослойная синхронизация, Pixel-Perfect с симметрией и геометрия поворота), полностью устранены:
+
+### 11.1. Узкие места производительности (CPU / RAM / GPU)
+
+- [x] **1. Устранено безусловное клонирование `atlas_rgba` на каждый кадр UI (60 FPS) в `show_bottom_dock`**
+  - В `Project::ensure_layers_initialized` (`src/model/project.rs`) буфер активного слоя `layer.layer_rgba` инициализируется клоном `atlas_rgba` только если `needs_init == true` (`None` или несовпадение размеров), а при обычной отрисовке UI в простое аллокации полностью отсутствуют.
+- [x] **2. Добавлено кэширование предпросмотра в `ModifySelectionModal`**
+  - В `OniAnvilApp` (`src/app.rs`) добавлено поле `last_modify_selection_preview: Option<(ModifySelectionMode, SelectionModifyShape, i32, bool)>`, благодаря чему морфологические операции (`expand` / `contract` / `border`) и перестройка границ выделения вызываются только при реальном изменении параметров диалога.
+- [x] **3. Унифицирована дедупликация памяти `HistorySnapshot` во всех модулях**
+  - Добавлен метод `Project::current_snapshot(&self)` (`src/model/project.rs`), который обнуляет `layer_rgba` активного слоя в снимке истории (чтобы не дублировать `atlas_rgba`), и все 21 ручной конструктор `HistorySnapshot { ... }` в `src/canvas/renderer.rs` и `src/ui/bottom_dock.rs` переведены на `project.current_snapshot()`.
+- [x] **4. Оптимизировано пиковое потребление памяти и убран `HashMap` в `RotSprite`**
+  - В `rotate_image_rotsprite` (`src/tools/transforms.rs`) удален промежуточный 64-кратный буфер `rotated_up` (обратное преобразование координат сэмплирует напрямую из `upscaled` внутри цикла `8×8`), а `HashMap<[u8; 4], u32>` заменен на стековый массив `[([0u8; 4], 0u8); 64]`.
+
+### 11.2. Многослойность, рендеринг и синхронизация состояния
+
+- [x] **5. Исправлена синхронизация GPU-текстур неактивных слоев (`layer_textures`)**
+  - В `Project` добавлен флаг `layers_dirty: bool`, выставляемый при любых многослойных мутациях (`add_layer`, `duplicate_layer`, `delete_layer`, `swap_layers`, `merge_layer_down`, `rebuild_atlas_from_frames`, `restore_snapshot`). В `CanvasRenderer::ensure_texture` (`src/canvas/renderer.rs`) добавлена проверка `project.layers_dirty` и совпадения размеров GPU-текстуры каждого слоя.
+- [x] **6. Исправлен инкрементальный откат `Pixel-Perfect` при включенной симметрии (`Symmetry`), `Batch Mode` и `Custom Brush`**
+  - В `CanvasRenderer::render` (`src/canvas/renderer.rs`) фильтр `Pixel-Perfect` отключается при активной кастомной кисти (`custom_brush.is_some()`), а инкрементальный откат L-уголков восстанавливает из `stroke.base_atlas` все точки `expand_stamp_points` (включая зеркальные оси симметрии) по всем затронутым кадрам (`frames_to_revert` при `batch_mode`).
+- [x] **7. Добавлена поддержка всех слоев и запись в `Undo` при `Global Color Replace` и смене скинов (`Palette Swaps`)**
+  - В `Project` (`src/model/project.rs`) реализованы методы `replace_color_all_layers` и `apply_palette_swap_all_layers`, обновляющие как `atlas_rgba`, так и все неактивные слои (`layer.layer_rgba`) с установкой `layers_dirty = true`. В `src/ui/right_dock.rs` и `src/app.rs` перед глобальной заменой цвета или переключением скина сохраняется снимок в `HistoryStack`.
+
+### 11.3. Алгоритмические и геометрические исправления
+
+- [x] **8. Устранен разрыв в 1 пиксель при повороте выделений/регионов с разной четностью сторон на 90°**
+  - В `rotate_region_90_cw` и `rotate_selection_90_cw` (`src/tools/transforms.rs`) плавающая точка и `f32::round()` заменены на точную целочисленную индексную арифметику (`offset_x = (w - h) / 2`, `offset_y = (h - w) / 2`), что гарантирует взаимно-однозначное отображение пикселей без пропуска нулевой координаты (покрыто модульным тестом `test_rotate_selection_90_cw_mixed_parity_no_gap`).

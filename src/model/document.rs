@@ -32,19 +32,7 @@ impl ProjectDocument {
     }
 
     pub fn current_snapshot(&self) -> HistorySnapshot {
-        let mut metadata = self.project.metadata.clone();
-        if !metadata.layers.is_empty() {
-            let active_idx = metadata
-                .active_layer
-                .min(metadata.layers.len().saturating_sub(1));
-            // Do not duplicate atlas_rgba inside metadata for active layer, as it is already in HistorySnapshot.atlas_rgba
-            metadata.layers[active_idx].layer_rgba = None;
-        }
-        HistorySnapshot {
-            atlas_rgba: self.project.atlas_rgba.clone(),
-            metadata,
-            active_frame: self.project.active_frame,
-        }
+        self.project.current_snapshot()
     }
 
     pub fn restore_snapshot(&mut self, snap: HistorySnapshot) {
@@ -56,6 +44,7 @@ impl ProjectDocument {
             .active_frame
             .min((self.project.metadata.frame_count as usize).saturating_sub(1));
         self.project.canvas_dirty = true;
+        self.project.layers_dirty = true;
     }
 
     pub fn perform_undo(&mut self) {

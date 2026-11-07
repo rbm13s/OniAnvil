@@ -1,9 +1,9 @@
 use crate::canvas::renderer::CanvasRenderer;
+use crate::history::command::HistorySnapshot;
 use crate::i18n::I18n;
 use crate::io::settings::AppSettings;
 use crate::model::palette::{
-    apply_palette_swap_to_atlas, generate_color_ramp, replace_color_in_atlas, PaletteSortCriterion,
-    PaletteSwap, PREDEFINED_PALETTES,
+    generate_color_ramp, PaletteSortCriterion, PaletteSwap, PREDEFINED_PALETTES,
 };
 use crate::model::project::Project;
 use crate::model::sketch::{QuickPeekMode, SketchLayerMode};
@@ -30,6 +30,7 @@ pub struct RightDockActions {
     pub request_delete_pivot_point: Option<(usize, String)>,
     pub trigger_copy_prev_action_points: bool,
     pub trigger_apply_action_points_all_frames: Option<Option<usize>>,
+    pub snapshot_to_record: Option<HistorySnapshot>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -64,6 +65,7 @@ pub struct PreviewState {
     pub ramp_hue_shift: f32,
     /// `None` = clicking with Pivot tool sets Origin, `Some(idx)` = sets `action_points[idx]`.
     pub active_pivot_target: Option<usize>,
+    pub color_edit_in_progress: Option<usize>,
 }
 
 impl Default for PreviewState {
@@ -88,6 +90,7 @@ impl Default for PreviewState {
             ramp_steps: 3,
             ramp_hue_shift: 12.0,
             active_pivot_target: None,
+            color_edit_in_progress: None,
         }
     }
 }
@@ -888,6 +891,11 @@ pub fn show_right_dock(
                                 )
                                 .changed()
                                 {
+                                    if preview.color_edit_in_progress != Some(slot_idx) {
+                                        actions.snapshot_to_record =
+                                            Some(project.current_snapshot());
+                                        preview.color_edit_in_progress = Some(slot_idx);
+                                    }
                                     project.metadata.palette.colors[slot_idx] = edit_col;
                                     tools.fg_color = edit_col;
                                     let active_s = project.metadata.palette.active_swap_index;
@@ -898,15 +906,12 @@ pub fn show_right_dock(
                                             swap.colors[slot_idx] = edit_col;
                                         }
                                     }
-                                    if project.metadata.palette.global_color_replace
-                                        && replace_color_in_atlas(
-                                            &mut project.atlas_rgba,
-                                            old_col,
-                                            edit_col,
-                                        )
-                                    {
-                                        project.canvas_dirty = true;
+                                    if project.metadata.palette.global_color_replace {
+                                        project.replace_color_all_layers(old_col, edit_col);
                                     }
+                                    project.has_unsaved_changes = true;
+                                } else if !ui.input(|i| i.pointer.any_down()) {
+                                    preview.color_edit_in_progress = None;
                                 }
                                 if project.metadata.palette.colors.len() > 1
                                     && ui
@@ -1071,16 +1076,16 @@ pub fn show_right_dock(
                                     if let Some(target_swap) =
                                         project.metadata.palette.swaps.get(next_idx)
                                     {
+                                        actions.snapshot_to_record =
+                                            Some(project.current_snapshot());
                                         let new_colors = target_swap.colors.clone();
-                                        if apply_palette_swap_to_atlas(
-                                            &mut project.atlas_rgba,
+                                        project.apply_palette_swap_all_layers(
                                             &old_colors,
                                             &new_colors,
-                                        ) {
-                                            project.canvas_dirty = true;
-                                        }
+                                        );
                                         project.metadata.palette.colors = new_colors;
                                         project.metadata.palette.active_swap_index = next_idx;
+                                        project.has_unsaved_changes = true;
                                     }
                                 }
 

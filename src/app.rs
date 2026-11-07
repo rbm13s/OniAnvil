@@ -100,6 +100,7 @@ pub struct OniAnvilApp {
     pub last_rotate_preview_action: Option<RotateAction>,
     pub last_rotate_preview_frame: Option<usize>,
     pub last_rotate_preview_enabled: bool,
+    pub last_modify_selection_preview: Option<(ModifySelectionMode, SelectionModifyShape, i32, bool)>,
     pub rotate_modal: RotateModalState,
     pub pack_atlas_modal: ExportPackedAtlasModalState,
     pub pending_after_save: Option<PendingAfterSave>,
@@ -182,6 +183,7 @@ impl OniAnvilApp {
             last_rotate_preview_action: None,
             last_rotate_preview_frame: None,
             last_rotate_preview_enabled: false,
+            last_modify_selection_preview: None,
             rotate_modal: RotateModalState::default(),
             pack_atlas_modal: ExportPackedAtlasModalState::default(),
             modal_preview_backup: None,
@@ -1844,6 +1846,7 @@ impl eframe::App for OniAnvilApp {
             self.border_selection(1, SelectionModifyShape::Circle);
         }
         if top_actions.open_modify_selection_modal {
+            self.last_modify_selection_preview = None;
             self.modify_selection_modal.open = true;
         }
         if top_actions.trigger_export_sprite_json {
@@ -2080,6 +2083,9 @@ impl eframe::App for OniAnvilApp {
                         &doc.renderer,
                         Some(&mut self.settings),
                     );
+                    if let Some(snap) = right_actions.snapshot_to_record {
+                        doc.history.push(snap);
+                    }
                     if right_actions.trigger_load_sketch {
                         self.io.trigger_load_sketch_dialog(ctx.clone());
                     }
@@ -2474,6 +2480,7 @@ impl eframe::App for OniAnvilApp {
                     None => true,
                 };
                 if needs_sel_backup {
+                    self.last_modify_selection_preview = None;
                     self.modal_selection_preview_backup =
                         Some((self.active_doc_idx, doc.renderer.selection.clone()));
                 }
@@ -2631,6 +2638,7 @@ impl eframe::App for OniAnvilApp {
         }
 
         if let Some((mode, shape, amount)) = self.modify_selection_modal.show(ctx, &self.i18n) {
+            self.last_modify_selection_preview = None;
             if let Some((b_idx, orig_sel)) = self.modal_selection_preview_backup.take() {
                 if let Some(doc) = self.documents.get_mut(b_idx) {
                     doc.renderer.selection = orig_sel;
@@ -2643,28 +2651,35 @@ impl eframe::App for OniAnvilApp {
             }
         } else if self.modify_selection_modal.open {
             if let Some((b_idx, ref orig_sel)) = self.modal_selection_preview_backup {
-                if let Some(doc) = self.documents.get_mut(b_idx) {
-                    doc.renderer.selection = orig_sel.clone();
-                    if self.modify_selection_modal.preview && !doc.renderer.selection.is_empty() {
-                        let fw = doc.project.metadata.frame_width;
-                        let fh = doc.project.metadata.frame_height;
-                        let amount = self.modify_selection_modal.amount.clamp(1, 32);
-                        let shape = self.modify_selection_modal.shape;
-                        match self.modify_selection_modal.mode {
-                            ModifySelectionMode::Expand => {
-                                doc.renderer.selection.expand(amount, shape, fw, fh);
-                            }
-                            ModifySelectionMode::Contract => {
-                                doc.renderer.selection.contract(amount, shape);
-                            }
-                            ModifySelectionMode::Border => {
-                                doc.renderer.selection.border(amount, shape);
+                let amount = self.modify_selection_modal.amount.clamp(1, 32);
+                let shape = self.modify_selection_modal.shape;
+                let mode = self.modify_selection_modal.mode;
+                let preview = self.modify_selection_modal.preview;
+                let cur_params = (mode, shape, amount, preview);
+                if self.last_modify_selection_preview != Some(cur_params) {
+                    self.last_modify_selection_preview = Some(cur_params);
+                    if let Some(doc) = self.documents.get_mut(b_idx) {
+                        doc.renderer.selection = orig_sel.clone();
+                        if preview && !doc.renderer.selection.is_empty() {
+                            let fw = doc.project.metadata.frame_width;
+                            let fh = doc.project.metadata.frame_height;
+                            match mode {
+                                ModifySelectionMode::Expand => {
+                                    doc.renderer.selection.expand(amount, shape, fw, fh);
+                                }
+                                ModifySelectionMode::Contract => {
+                                    doc.renderer.selection.contract(amount, shape);
+                                }
+                                ModifySelectionMode::Border => {
+                                    doc.renderer.selection.border(amount, shape);
+                                }
                             }
                         }
                     }
                 }
             }
         } else if !self.rotate_modal.open {
+            self.last_modify_selection_preview = None;
             if let Some((b_idx, orig_sel)) = self.modal_selection_preview_backup.take() {
                 if let Some(doc) = self.documents.get_mut(b_idx) {
                     doc.renderer.selection = orig_sel;
@@ -3269,13 +3284,8 @@ impl eframe::App for OniAnvilApp {
                         doc.project.metadata.palette.swaps.get(next_active)
                     {
                         let new_colors = target_swap.colors.clone();
-                        if crate::model::palette::apply_palette_swap_to_atlas(
-                            &mut doc.project.atlas_rgba,
-                            &old_colors,
-                            &new_colors,
-                        ) {
-                            doc.project.canvas_dirty = true;
-                        }
+                        doc.project
+                            .apply_palette_swap_all_layers(&old_colors, &new_colors);
                         doc.project.metadata.palette.colors = new_colors;
                     }
                     doc.history.push(snap);
@@ -3476,6 +3486,7 @@ mod tests {
             last_rotate_preview_action: None,
             last_rotate_preview_frame: None,
             last_rotate_preview_enabled: false,
+            last_modify_selection_preview: None,
             rotate_modal: RotateModalState::default(),
             pack_atlas_modal: ExportPackedAtlasModalState::default(),
             modal_preview_backup: None,
@@ -3574,6 +3585,7 @@ mod tests {
             last_rotate_preview_action: None,
             last_rotate_preview_frame: None,
             last_rotate_preview_enabled: false,
+            last_modify_selection_preview: None,
             rotate_modal: RotateModalState::default(),
             pack_atlas_modal: ExportPackedAtlasModalState::default(),
             modal_preview_backup: None,
@@ -3679,6 +3691,7 @@ mod tests {
             last_rotate_preview_action: None,
             last_rotate_preview_frame: None,
             last_rotate_preview_enabled: false,
+            last_modify_selection_preview: None,
             rotate_modal: RotateModalState::default(),
             pack_atlas_modal: ExportPackedAtlasModalState::default(),
             modal_preview_backup: None,

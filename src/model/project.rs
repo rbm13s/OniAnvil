@@ -27,6 +27,7 @@ pub struct Project {
     pub active_frame: usize,
     pub file_path: Option<PathBuf>,
     pub canvas_dirty: bool,
+    pub layers_dirty: bool,
     pub sketch_dirty: bool,
     pub has_unsaved_changes: bool,
     pub sketch_sample_cache: Option<SketchSampleCache>,
@@ -50,6 +51,7 @@ impl Project {
             active_frame: 0,
             file_path: None,
             canvas_dirty: true,
+            layers_dirty: true,
             sketch_dirty: true,
             has_unsaved_changes: false,
             sketch_sample_cache: None,
@@ -70,12 +72,63 @@ impl Project {
             active_frame: 0,
             file_path,
             canvas_dirty: true,
+            layers_dirty: true,
             sketch_dirty: true,
             has_unsaved_changes: false,
             sketch_sample_cache: None,
         };
         proj.ensure_layers_initialized();
         proj
+    }
+
+    /// Creates a deduplicated `HistorySnapshot` without cloning the active layer's `layer_rgba` twice.
+    pub fn current_snapshot(&self) -> crate::history::command::HistorySnapshot {
+        let active_idx = self
+            .metadata
+            .active_layer
+            .min(self.metadata.layers.len().saturating_sub(1));
+        let layers = self
+            .metadata
+            .layers
+            .iter()
+            .enumerate()
+            .map(|(idx, l)| LayerMeta {
+                name: l.name.clone(),
+                visible: l.visible,
+                locked: l.locked,
+                opacity: l.opacity,
+                embedded_base64: None,
+                layer_rgba: if idx == active_idx {
+                    None
+                } else {
+                    l.layer_rgba.clone()
+                },
+            })
+            .collect();
+        let metadata = ProjectMetadata {
+            format_version: self.metadata.format_version.clone(),
+            project_name: self.metadata.project_name.clone(),
+            frame_width: self.metadata.frame_width,
+            frame_height: self.metadata.frame_height,
+            columns: self.metadata.columns,
+            rows: self.metadata.rows,
+            frame_count: self.metadata.frame_count,
+            target_color_limit: self.metadata.target_color_limit,
+            fps: self.metadata.fps,
+            frames: self.metadata.frames.clone(),
+            layers,
+            active_layer: self.metadata.active_layer,
+            tags: self.metadata.tags.clone(),
+            palette: self.metadata.palette.clone(),
+            pivot: self.metadata.pivot.clone(),
+            sketch: self.metadata.sketch.clone(),
+            onion_skin: self.metadata.onion_skin.clone(),
+        };
+        crate::history::command::HistorySnapshot {
+            atlas_rgba: self.atlas_rgba.clone(),
+            metadata,
+            active_frame: self.active_frame,
+        }
     }
 
     /// Ensures at least one layer exists in `metadata.layers` and every layer's `layer_rgba`
@@ -94,14 +147,14 @@ impl Project {
         let active_idx = self.metadata.active_layer;
 
         for (idx, layer) in self.metadata.layers.iter_mut().enumerate() {
-            if idx == active_idx {
-                layer.layer_rgba = Some(self.atlas_rgba.clone());
-            } else {
-                let needs_init = match &layer.layer_rgba {
-                    Some(img) => img.width() != w || img.height() != h,
-                    None => true,
-                };
-                if needs_init {
+            let needs_init = match &layer.layer_rgba {
+                Some(img) => img.width() != w || img.height() != h,
+                None => true,
+            };
+            if needs_init {
+                if idx == active_idx {
+                    layer.layer_rgba = Some(self.atlas_rgba.clone());
+                } else {
                     let mut resized = RgbaImage::from_pixel(w, h, Rgba([0, 0, 0, 0]));
                     if let Some(old) = &layer.layer_rgba {
                         let cw = w.min(old.width());
@@ -188,6 +241,7 @@ impl Project {
         self.metadata.active_layer = new_idx;
         self.atlas_rgba = blank;
         self.canvas_dirty = true;
+        self.layers_dirty = true;
         self.has_unsaved_changes = true;
         new_idx
     }
@@ -206,6 +260,7 @@ impl Project {
             self.atlas_rgba = img;
         }
         self.canvas_dirty = true;
+        self.layers_dirty = true;
         self.has_unsaved_changes = true;
         insert_idx
     }
@@ -230,6 +285,7 @@ impl Project {
             self.atlas_rgba = img;
         }
         self.canvas_dirty = true;
+        self.layers_dirty = true;
         self.has_unsaved_changes = true;
         true
     }
@@ -257,6 +313,7 @@ impl Project {
             self.atlas_rgba = img;
         }
         self.canvas_dirty = true;
+        self.layers_dirty = true;
         self.has_unsaved_changes = true;
         true
     }
@@ -331,8 +388,74 @@ impl Project {
         self.metadata.active_layer = new_active.min(self.metadata.layers.len() - 1);
         self.atlas_rgba = merged;
         self.canvas_dirty = true;
+        self.layers_dirty = true;
         self.has_unsaved_changes = true;
         true
+    }
+
+    /// Replaces `from_color` with `to_color` across the active atlas and all initialized layers.
+    pub fn replace_color_all_layers(&mut self, from_color: [u8; 4], to_color: [u8; 4]) -> bool {
+        self.ensure_layers_initialized();
+        let active_idx = self
+            .metadata
+            .active_layer
+            .min(self.metadata.layers.len().saturating_sub(1));
+        let mut changed =
+            crate::model::palette::replace_color_in_atlas(&mut self.atlas_rgba, from_color, to_color);
+        for (idx, layer) in self.metadata.layers.iter_mut().enumerate() {
+            if idx != active_idx {
+                if let Some(ref mut l_img) = layer.layer_rgba {
+                    if crate::model::palette::replace_color_in_atlas(l_img, from_color, to_color) {
+                        changed = true;
+                    }
+                }
+            }
+        }
+        if changed {
+            self.sync_active_layer();
+            self.canvas_dirty = true;
+            self.layers_dirty = true;
+            self.has_unsaved_changes = true;
+        }
+        changed
+    }
+
+    /// Applies a palette skin swap from `old_colors` to `new_colors` across the active atlas and all layers.
+    pub fn apply_palette_swap_all_layers(
+        &mut self,
+        old_colors: &[[u8; 4]],
+        new_colors: &[[u8; 4]],
+    ) -> bool {
+        self.ensure_layers_initialized();
+        let active_idx = self
+            .metadata
+            .active_layer
+            .min(self.metadata.layers.len().saturating_sub(1));
+        let mut changed = crate::model::palette::apply_palette_swap_to_atlas(
+            &mut self.atlas_rgba,
+            old_colors,
+            new_colors,
+        );
+        for (idx, layer) in self.metadata.layers.iter_mut().enumerate() {
+            if idx != active_idx {
+                if let Some(ref mut l_img) = layer.layer_rgba {
+                    if crate::model::palette::apply_palette_swap_to_atlas(
+                        l_img,
+                        old_colors,
+                        new_colors,
+                    ) {
+                        changed = true;
+                    }
+                }
+            }
+        }
+        if changed {
+            self.sync_active_layer();
+            self.canvas_dirty = true;
+            self.layers_dirty = true;
+            self.has_unsaved_changes = true;
+        }
+        changed
     }
 
     /// Alpha-blends all visible layers in `0..metadata.layers.len()` order into a single composited atlas.
@@ -1107,6 +1230,7 @@ impl Project {
             tag.end_frame = tag.end_frame.min(max_idx).max(tag.start_frame);
         }
         self.canvas_dirty = true;
+        self.layers_dirty = true;
     }
 
     /// Helper that transforms the frame list of every layer simultaneously.
@@ -2771,4 +2895,31 @@ mod tests {
         assert!(proj.metadata.frames[3].is_generated);
     }
 
+    #[test]
+    fn test_multi_layer_color_replace_and_snapshot_dedup() {
+        let meta = ProjectMetadata::new_config("layers_color".to_string(), 4, 4, 1, 1, None);
+        let mut proj = Project::new(meta);
+        proj.atlas_rgba.put_pixel(0, 0, Rgba([255, 0, 0, 255]));
+        proj.add_layer("Layer 2".to_string());
+        // Layer 1 is now active (index 1), Layer 0 is inactive
+        proj.atlas_rgba.put_pixel(1, 1, Rgba([255, 0, 0, 255]));
+        proj.layers_dirty = false;
+
+        let snap = proj.current_snapshot();
+        assert!(
+            snap.metadata.layers[proj.metadata.active_layer].layer_rgba.is_none(),
+            "Active layer in snapshot must not duplicate atlas_rgba"
+        );
+        assert!(
+            snap.metadata.layers[0].layer_rgba.is_some(),
+            "Inactive layer in snapshot must preserve its layer_rgba"
+        );
+
+        let changed = proj.replace_color_all_layers([255, 0, 0, 255], [0, 255, 0, 255]);
+        assert!(changed);
+        assert!(proj.layers_dirty);
+        assert_eq!(proj.atlas_rgba.get_pixel(1, 1).0, [0, 255, 0, 255]);
+        let l0 = proj.metadata.layers[0].layer_rgba.as_ref().unwrap();
+        assert_eq!(l0.get_pixel(0, 0).0, [0, 255, 0, 255]);
+    }
 }

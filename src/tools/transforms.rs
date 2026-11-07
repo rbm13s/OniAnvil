@@ -1,6 +1,6 @@
 use image::{Rgba, RgbaImage};
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 pub fn flip_region_horizontal(
     atlas_rgba: &mut RgbaImage,
@@ -75,15 +75,15 @@ pub fn rotate_region_90_cw(
         }
     }
 
-    let cx = (w as f32 - 1.0) * 0.5;
-    let cy = (h as f32 - 1.0) * 0.5;
+    let iw = w as i32;
+    let ih = h as i32;
+    let offset_x = (iw - ih) / 2;
+    let offset_y = (ih - iw) / 2;
     for y in 0..h {
         for x in 0..w {
-            let dx = x as f32 - cx;
-            let dy = y as f32 - cy;
-            let nx = (cx - dy).round() as i32;
-            let ny = (cy + dx).round() as i32;
-            if nx >= 0 && ny >= 0 && (nx as u32) < w && (ny as u32) < h {
+            let nx = offset_x + (ih - 1 - y as i32);
+            let ny = offset_y + x as i32;
+            if nx >= 0 && ny >= 0 && nx < iw && ny < ih {
                 let ax = origin_x + nx as u32;
                 let ay = origin_y + ny as u32;
                 if ax < atlas_rgba.width() && ay < atlas_rgba.height() {
@@ -341,8 +341,10 @@ pub fn rotate_selection_90_cw(
     let min_y = selected_pixels.iter().map(|p| p.1).min().unwrap_or(0);
     let max_y = selected_pixels.iter().map(|p| p.1).max().unwrap_or(0);
 
-    let cx = (min_x + max_x) as f32 * 0.5;
-    let cy = (min_y + max_y) as f32 * 0.5;
+    let sel_w = max_x - min_x + 1;
+    let sel_h = max_y - min_y + 1;
+    let dst_min_x = min_x + (sel_w - sel_h) / 2;
+    let dst_min_y = min_y + (sel_h - sel_w) / 2;
 
     let mut extracted = Vec::with_capacity(selected_pixels.len());
     for &(lx, ly) in selected_pixels {
@@ -366,10 +368,10 @@ pub fn rotate_selection_90_cw(
 
     let mut new_pixels = std::collections::HashSet::with_capacity(extracted.len());
     for ((lx, ly), p) in extracted {
-        let dx = lx as f32 - cx;
-        let dy = ly as f32 - cy;
-        let nx = (cx - dy).round() as i32;
-        let ny = (cy + dx).round() as i32;
+        let rx = lx - min_x;
+        let ry = ly - min_y;
+        let nx = dst_min_x + (sel_h - 1 - ry);
+        let ny = dst_min_y + rx;
         if nx >= 0 && nx < iw && ny >= 0 && ny < ih {
             let ax = origin_x + nx as u32;
             let ay = origin_y + ny as u32;
@@ -466,7 +468,7 @@ pub fn rotate_image_nearest(src: &RgbaImage, angle_deg: f32) -> RgbaImage {
 }
 
 /// Rotates an image using the authentic RotSprite algorithm:
-/// 8x Scale2x upscale -> Nearest-neighbor rotation -> 8x Downscale with dominant color voting.
+/// 8x Scale2x upscale -> Direct inverse rotation & 8x8 dominant color voting (zero intermediate buffer/HashMap).
 pub fn rotate_image_rotsprite(src: &RgbaImage, angle_deg: f32) -> RgbaImage {
     let w = src.width();
     let h = src.height();
@@ -474,58 +476,69 @@ pub fn rotate_image_rotsprite(src: &RgbaImage, angle_deg: f32) -> RgbaImage {
         return src.clone();
     }
     let upscaled = scale8x(src);
-    let uw = upscaled.width();
-    let uh = upscaled.height();
+    let uw = upscaled.width() as i32;
+    let uh = upscaled.height() as i32;
 
-    let mut rotated_up = RgbaImage::from_pixel(uw, uh, Rgba([0, 0, 0, 0]));
     let rad = -angle_deg.to_radians();
     let cos_a = rad.cos();
     let sin_a = rad.sin();
     let ucx = (uw as f32 - 1.0) * 0.5;
     let ucy = (uh as f32 - 1.0) * 0.5;
 
-    for y in 0..uh {
-        for x in 0..uw {
-            let dx = x as f32 - ucx;
-            let dy = y as f32 - ucy;
-            let sx = (ucx + dx * cos_a - dy * sin_a).round() as i32;
-            let sy = (ucy + dx * sin_a + dy * cos_a).round() as i32;
-            if sx >= 0 && sx < uw as i32 && sy >= 0 && sy < uh as i32 {
-                rotated_up.put_pixel(x, y, *upscaled.get_pixel(sx as u32, sy as u32));
-            }
-        }
-    }
-
     let mut dst = RgbaImage::from_pixel(w, h, Rgba([0, 0, 0, 0]));
-    let mut color_counts: HashMap<[u8; 4], u32> = HashMap::with_capacity(16);
+    let mut counts = [([0u8; 4], 0u8); 64];
 
     for y in 0..h {
+        let start_y = y * 8;
         for x in 0..w {
-            color_counts.clear();
-            let mut transparent_count = 0u32;
             let start_x = x * 8;
-            let start_y = y * 8;
+            let mut unique_len = 0usize;
+            let mut transparent_count = 0u32;
 
             for by in 0..8 {
+                let dy = (start_y + by) as f32 - ucy;
+                let dy_sin = dy * sin_a;
+                let dy_cos = dy * cos_a;
                 for bx in 0..8 {
-                    let p = *rotated_up.get_pixel(start_x + bx, start_y + by);
-                    if p[3] == 0 {
-                        transparent_count += 1;
+                    let dx = (start_x + bx) as f32 - ucx;
+                    let sx = (ucx + dx * cos_a - dy_sin).round() as i32;
+                    let sy = (ucy + dx * sin_a + dy_cos).round() as i32;
+                    if sx >= 0 && sx < uw && sy >= 0 && sy < uh {
+                        let p = upscaled.get_pixel(sx as u32, sy as u32).0;
+                        if p[3] == 0 {
+                            transparent_count += 1;
+                        } else {
+                            let mut found = false;
+                            for entry in &mut counts[..unique_len] {
+                                if entry.0 == p {
+                                    entry.1 += 1;
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if !found {
+                                counts[unique_len] = (p, 1);
+                                unique_len += 1;
+                            }
+                        }
                     } else {
-                        *color_counts.entry([p[0], p[1], p[2], p[3]]).or_insert(0) += 1;
+                        transparent_count += 1;
                     }
                 }
             }
 
-            if transparent_count >= 32 || color_counts.is_empty() {
+            if transparent_count >= 32 || unique_len == 0 {
                 dst.put_pixel(x, y, Rgba([0, 0, 0, 0]));
             } else {
-                let dominant = color_counts
-                    .iter()
-                    .max_by_key(|&(_, count)| *count)
-                    .map(|(&c, _)| c)
-                    .unwrap_or([0, 0, 0, 0]);
-                dst.put_pixel(x, y, Rgba(dominant));
+                let mut best_col = counts[0].0;
+                let mut best_cnt = counts[0].1;
+                for &(col, cnt) in &counts[1..unique_len] {
+                    if cnt > best_cnt {
+                        best_cnt = cnt;
+                        best_col = col;
+                    }
+                }
+                dst.put_pixel(x, y, Rgba(best_col));
             }
         }
     }
@@ -688,6 +701,30 @@ mod tests {
         assert!(flipped.contains(&(2, 1)));
         assert_eq!(*img.get_pixel(1, 1), Rgba([0, 255, 0, 255]));
         assert_eq!(*img.get_pixel(2, 1), Rgba([255, 0, 0, 255]));
+    }
+
+    #[test]
+    fn test_rotate_selection_90_cw_mixed_parity_no_gap() {
+        let mut img = RgbaImage::from_pixel(16, 16, Rgba([0, 0, 0, 0]));
+        let mut sel = HashSet::new();
+        // 4x3 solid block (even width = 4, odd height = 3) at [2..=5, 2..=4]
+        for y in 2..=4 {
+            for x in 2..=5 {
+                img.put_pixel(x as u32, y as u32, Rgba([255, 128, 0, 255]));
+                sel.insert((x, y));
+            }
+        }
+        assert_eq!(sel.len(), 12);
+
+        let rotated_sel = rotate_selection_90_cw(&mut img, 0, 0, 16, 16, &sel);
+        // Must preserve all 12 pixels contiguously with no 1px gap!
+        assert_eq!(rotated_sel.len(), 12);
+        let min_x = rotated_sel.iter().map(|p| p.0).min().unwrap();
+        let max_x = rotated_sel.iter().map(|p| p.0).max().unwrap();
+        let min_y = rotated_sel.iter().map(|p| p.1).min().unwrap();
+        let max_y = rotated_sel.iter().map(|p| p.1).max().unwrap();
+        assert_eq!(max_x - min_x + 1, 3);
+        assert_eq!(max_y - min_y + 1, 4);
     }
 
     #[test]

@@ -3,7 +3,7 @@ use crate::canvas::overlays::{
     draw_preview_pixels_and_cursor, draw_selection_overlay, draw_symmetry_axes,
 };
 use crate::canvas::viewport::{CanvasViewMode, ViewportState};
-use crate::history::command::{HistorySnapshot, HistoryStack};
+use crate::history::command::HistoryStack;
 use crate::model::project::Project;
 use crate::model::sketch::{nearest_palette_color, QuickPeekMode, SketchLayerMode};
 use crate::tools::fill::flood_fill_region;
@@ -125,6 +125,7 @@ impl CanvasRenderer {
     pub fn ensure_texture(&mut self, ctx: &Context, project: &mut Project) -> &TextureHandle {
         if self.atlas_texture.is_none()
             || project.canvas_dirty
+            || project.layers_dirty
             || self.layer_textures.len() != project.metadata.layers.len()
         {
             project.ensure_layers_initialized();
@@ -152,16 +153,21 @@ impl CanvasRenderer {
                 .min(layer_count.saturating_sub(1));
 
             for (idx, layer) in project.metadata.layers.iter().enumerate() {
+                let l_img = if idx == active_idx {
+                    &project.atlas_rgba
+                } else {
+                    layer.layer_rgba.as_ref().unwrap_or(&project.atlas_rgba)
+                };
+                let l_size = [l_img.width() as usize, l_img.height() as usize];
                 if idx < self.layer_textures.len() {
-                    if idx == active_idx {
-                        let l_img = layer.layer_rgba.as_ref().unwrap_or(&project.atlas_rgba);
-                        let l_size = [l_img.width() as usize, l_img.height() as usize];
+                    if idx == active_idx
+                        || project.layers_dirty
+                        || self.layer_textures[idx].size() != l_size
+                    {
                         let l_color = egui::ColorImage::from_rgba_unmultiplied(l_size, l_img.as_raw());
                         self.layer_textures[idx].set(l_color, TextureOptions::NEAREST);
                     }
                 } else {
-                    let l_img = layer.layer_rgba.as_ref().unwrap_or(&project.atlas_rgba);
-                    let l_size = [l_img.width() as usize, l_img.height() as usize];
                     let l_color = egui::ColorImage::from_rgba_unmultiplied(l_size, l_img.as_raw());
                     let handle = ctx.load_texture(
                         format!("onianvil_layer_texture_{}", idx),
@@ -173,6 +179,7 @@ impl CanvasRenderer {
             }
 
             project.canvas_dirty = false;
+            project.layers_dirty = false;
         }
 
         let want_bilinear = project.metadata.sketch.bilinear_filter;
@@ -767,14 +774,11 @@ impl CanvasRenderer {
                                 frame_index,
                                 button,
                             }) => {
-                                project.sync_active_layer();
-                                history.push(HistorySnapshot {
-                                    atlas_rgba: project.atlas_rgba.clone(),
-                                    metadata: project.metadata.clone(),
-                                    active_frame: project.active_frame,
-                                });
+                                history.push(project.current_snapshot());
                                 let raw_pts = rasterize_quadratic_bezier(p0, (lx, ly), p2);
-                                let base_pts = if tools.pixel_perfect {
+                                let base_pts = if tools.pixel_perfect
+                                    && ToolKind::Curve.effective_brush_size(tools.brush_size) == 1
+                                {
                                     filter_pixel_perfect(&raw_pts)
                                 } else {
                                     raw_pts
@@ -880,12 +884,7 @@ impl CanvasRenderer {
                             }
                             ToolKind::FloodFill => {
                                 if !layer_locked {
-                                    project.sync_active_layer();
-                                    let snap = HistorySnapshot {
-                                        atlas_rgba: project.atlas_rgba.clone(),
-                                        metadata: project.metadata.clone(),
-                                        active_frame: project.active_frame,
-                                    };
+                                    let snap = project.current_snapshot();
                                     let fill_col = if btn == PointerButton::Secondary {
                                         tools.bg_color
                                     } else {
@@ -938,11 +937,7 @@ impl CanvasRenderer {
                                 );
                             }
                             ToolKind::PivotPoint => {
-                                history.push(HistorySnapshot {
-                                    atlas_rgba: project.atlas_rgba.clone(),
-                                    metadata: project.metadata.clone(),
-                                    active_frame: project.active_frame,
-                                });
+                                history.push(project.current_snapshot());
                                 project.metadata.pivot.show_gizmos = true;
                                 if let Some(ap_idx) = self.active_pivot_target {
                                     if ap_idx < project.metadata.pivot.action_points.len() {
@@ -1000,12 +995,7 @@ impl CanvasRenderer {
                                         && self.selection.contains(lx, ly);
 
                                     if moving_sel {
-                                        project.sync_active_layer();
-                                        history.push(HistorySnapshot {
-                                            atlas_rgba: project.atlas_rgba.clone(),
-                                            metadata: project.metadata.clone(),
-                                            active_frame: project.active_frame,
-                                        });
+                                        history.push(project.current_snapshot());
                                     } else if matches!(
                                         effective_tool,
                                         ToolKind::Pencil
@@ -1013,12 +1003,7 @@ impl CanvasRenderer {
                                             | ToolKind::DitherBrush
                                             | ToolKind::Shading
                                     ) {
-                                        project.sync_active_layer();
-                                        history.push(HistorySnapshot {
-                                            atlas_rgba: project.atlas_rgba.clone(),
-                                            metadata: project.metadata.clone(),
-                                            active_frame: project.active_frame,
-                                        });
+                                        history.push(project.current_snapshot());
                                         Self::apply_point_stamp(
                                             &mut project.atlas_rgba,
                                             &project.metadata,
@@ -1150,6 +1135,8 @@ impl CanvasRenderer {
                                             stroke.tool.effective_brush_size(tools.brush_size);
                                         let use_pixel_perfect = tools.is_pixel_perfect_for(stroke.tool)
                                             && eff_brush_size == 1
+                                            && !(stroke.tool == ToolKind::Pencil
+                                                && tools.custom_brush.is_some())
                                             && matches!(
                                                 stroke.tool,
                                                 ToolKind::Pencil | ToolKind::Eraser
@@ -1161,17 +1148,49 @@ impl CanvasRenderer {
                                                     stroke.raw_points.push(pt);
                                                 }
                                             }
-                                            let (ox, oy) =
-                                                project.metadata.frame_origin(stroke.frame_index);
                                             let fw = project.metadata.frame_width;
                                             let fh = project.metadata.frame_height;
+                                            let frames_to_revert: Vec<usize> = if tools.batch_mode {
+                                                (0..project.metadata.frame_count as usize).collect()
+                                            } else {
+                                                vec![stroke.frame_index]
+                                            };
 
-                                            // Revert previously touched pixels from base_atlas instead of cloning the entire multi-megapixel atlas
-                                            for pt in &stroke.raw_points {
-                                                let ax = ox + pt.0.clamp(0, fw as i32 - 1) as u32;
-                                                let ay = oy + pt.1.clamp(0, fh as i32 - 1) as u32;
-                                                if ax < project.atlas_rgba.width() && ay < project.atlas_rgba.height() {
-                                                    project.atlas_rgba.put_pixel(ax, ay, *stroke.base_atlas.get_pixel(ax, ay));
+                                            // Revert previously touched pixels (including symmetry and batch frames) from base_atlas
+                                            for &pt in &stroke.raw_points {
+                                                let stamped = expand_stamp_points(
+                                                    pt,
+                                                    1,
+                                                    tools.symmetry,
+                                                    viewport.symmetry_norm_x,
+                                                    viewport.symmetry_norm_y,
+                                                    fw,
+                                                    fh,
+                                                );
+                                                for &f_idx in &frames_to_revert {
+                                                    let (ox, oy) =
+                                                        project.metadata.frame_origin(f_idx);
+                                                    for &(sx, sy) in &stamped {
+                                                        if sx >= 0
+                                                            && sy >= 0
+                                                            && (sx as u32) < fw
+                                                            && (sy as u32) < fh
+                                                        {
+                                                            let ax = ox + sx as u32;
+                                                            let ay = oy + sy as u32;
+                                                            if ax < project.atlas_rgba.width()
+                                                                && ay < project.atlas_rgba.height()
+                                                            {
+                                                                project.atlas_rgba.put_pixel(
+                                                                    ax,
+                                                                    ay,
+                                                                    *stroke
+                                                                        .base_atlas
+                                                                        .get_pixel(ax, ay),
+                                                                );
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
 
@@ -1392,12 +1411,7 @@ impl CanvasRenderer {
                     finished.tool,
                     ToolKind::Line | ToolKind::Rectangle | ToolKind::Ellipse
                 ) {
-                    project.sync_active_layer();
-                    history.push(HistorySnapshot {
-                        atlas_rgba: project.atlas_rgba.clone(),
-                        metadata: project.metadata.clone(),
-                        active_frame: project.active_frame,
-                    });
+                    history.push(project.current_snapshot());
                     let base_pts = match finished.tool {
                         ToolKind::Line => {
                             rasterize_line(finished.start_local, finished.last_local, shift_down)
@@ -1432,12 +1446,7 @@ impl CanvasRenderer {
                     project.canvas_dirty = true;
                     project.has_unsaved_changes = true;
                 } else if finished.tool == ToolKind::Gradient {
-                    project.sync_active_layer();
-                    history.push(HistorySnapshot {
-                        atlas_rgba: project.atlas_rgba.clone(),
-                        metadata: project.metadata.clone(),
-                        active_frame: project.active_frame,
-                    });
+                    history.push(project.current_snapshot());
                     let (c1, c2) = if finished.button == PointerButton::Secondary {
                         (tools.bg_color, tools.fg_color)
                     } else {

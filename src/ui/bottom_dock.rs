@@ -1,5 +1,5 @@
 use crate::canvas::renderer::CanvasRenderer;
-use crate::history::command::{HistorySnapshot, HistoryStack};
+use crate::history::command::HistoryStack;
 use crate::i18n::I18n;
 use crate::model::frame::{FrameTag, TagDirection};
 use crate::model::project::Project;
@@ -130,12 +130,7 @@ pub fn show_bottom_dock(
                     .on_hover_text(i18n.tr("tooltip.timeline_add"))
                     .clicked()
                 {
-                    project.sync_active_layer();
-                    history.push(HistorySnapshot {
-                        atlas_rgba: project.atlas_rgba.clone(),
-                        metadata: project.metadata.clone(),
-                        active_frame: project.active_frame,
-                    });
+                    history.push(project.current_snapshot());
                     let cur = project.active_frame;
                     project.insert_blank_frame_after(cur);
                 }
@@ -145,12 +140,7 @@ pub fn show_bottom_dock(
                     .on_hover_text(i18n.tr("tooltip.timeline_dup"))
                     .clicked()
                 {
-                    project.sync_active_layer();
-                    history.push(HistorySnapshot {
-                        atlas_rgba: project.atlas_rgba.clone(),
-                        metadata: project.metadata.clone(),
-                        active_frame: project.active_frame,
-                    });
+                    history.push(project.current_snapshot());
                     let cur = project.active_frame;
                     project.duplicate_frame_at(cur);
                 }
@@ -196,12 +186,7 @@ pub fn show_bottom_dock(
                     .on_hover_text(i18n.tr("tooltip.timeline_move_left"))
                     .clicked()
                 {
-                    project.sync_active_layer();
-                    let snap = HistorySnapshot {
-                        atlas_rgba: project.atlas_rgba.clone(),
-                        metadata: project.metadata.clone(),
-                        active_frame: project.active_frame,
-                    };
+                    let snap = project.current_snapshot();
                     let cur = project.active_frame;
                     if project.swap_frames(cur, cur - 1) {
                         history.push(snap);
@@ -218,12 +203,7 @@ pub fn show_bottom_dock(
                     .on_hover_text(i18n.tr("tooltip.timeline_move_right"))
                     .clicked()
                 {
-                    project.sync_active_layer();
-                    let snap = HistorySnapshot {
-                        atlas_rgba: project.atlas_rgba.clone(),
-                        metadata: project.metadata.clone(),
-                        active_frame: project.active_frame,
-                    };
+                    let snap = project.current_snapshot();
                     let cur = project.active_frame;
                     if project.swap_frames(cur, cur + 1) {
                         history.push(snap);
@@ -1141,99 +1121,49 @@ pub fn show_bottom_dock(
                 project.set_active_layer(target_layer);
             }
             if deferred_add_layer {
-                project.sync_active_layer();
-                history.push(HistorySnapshot {
-                    atlas_rgba: project.atlas_rgba.clone(),
-                    metadata: project.metadata.clone(),
-                    active_frame: project.active_frame,
-                });
+                history.push(project.current_snapshot());
                 let new_num = project.metadata.layers.len() + 1;
                 project.add_layer(format!("{} {}", i18n.tr("timeline.layer_default"), new_num));
             }
             if let Some(l_idx) = deferred_dup_layer {
-                project.sync_active_layer();
-                history.push(HistorySnapshot {
-                    atlas_rgba: project.atlas_rgba.clone(),
-                    metadata: project.metadata.clone(),
-                    active_frame: project.active_frame,
-                });
+                history.push(project.current_snapshot());
                 project.duplicate_layer(l_idx);
             }
             if let Some(l_idx) = deferred_merge_layer {
-                project.sync_active_layer();
-                let snap = HistorySnapshot {
-                    atlas_rgba: project.atlas_rgba.clone(),
-                    metadata: project.metadata.clone(),
-                    active_frame: project.active_frame,
-                };
+                let snap = project.current_snapshot();
                 if project.merge_layer_down(l_idx) {
                     history.push(snap);
                 }
             }
             if let Some((la, lb)) = deferred_swap_layers {
-                project.sync_active_layer();
-                let snap = HistorySnapshot {
-                    atlas_rgba: project.atlas_rgba.clone(),
-                    metadata: project.metadata.clone(),
-                    active_frame: project.active_frame,
-                };
+                let snap = project.current_snapshot();
                 if project.swap_layers(la, lb) {
                     history.push(snap);
                 }
             }
 
             if let Some(idx) = deferred_dup {
-                project.sync_active_layer();
-                history.push(HistorySnapshot {
-                    atlas_rgba: project.atlas_rgba.clone(),
-                    metadata: project.metadata.clone(),
-                    active_frame: project.active_frame,
-                });
+                history.push(project.current_snapshot());
                 project.duplicate_frame_at(idx);
             }
             if let Some(idx) = deferred_insert {
-                project.sync_active_layer();
-                history.push(HistorySnapshot {
-                    atlas_rgba: project.atlas_rgba.clone(),
-                    metadata: project.metadata.clone(),
-                    active_frame: project.active_frame,
-                });
+                history.push(project.current_snapshot());
                 project.insert_blank_frame_after(idx);
             }
             if let Some(idx) = deferred_create_linked {
-                project.sync_active_layer();
-                history.push(HistorySnapshot {
-                    atlas_rgba: project.atlas_rgba.clone(),
-                    metadata: project.metadata.clone(),
-                    active_frame: project.active_frame,
-                });
+                history.push(project.current_snapshot());
                 project.create_linked_frame_after(idx);
             }
             if let Some(idx) = deferred_unlink {
-                project.sync_active_layer();
-                history.push(HistorySnapshot {
-                    atlas_rgba: project.atlas_rgba.clone(),
-                    metadata: project.metadata.clone(),
-                    active_frame: project.active_frame,
-                });
+                history.push(project.current_snapshot());
                 project.unlink_frame(idx);
             }
             if let Some((src, tgt)) = deferred_link_to {
-                project.sync_active_layer();
-                history.push(HistorySnapshot {
-                    atlas_rgba: project.atlas_rgba.clone(),
-                    metadata: project.metadata.clone(),
-                    active_frame: project.active_frame,
-                });
+                history.push(project.current_snapshot());
                 project.link_frame_to(src, tgt);
             }
             if let Some((a, b)) = deferred_swap {
-                project.sync_active_layer();
-                let snap = HistorySnapshot {
-                    atlas_rgba: project.atlas_rgba.clone(),
-                    metadata: project.metadata.clone(),
-                    active_frame: project.active_frame,
-                };
+                let snap = project.current_snapshot();
                 if project.swap_frames(a, b) {
                     history.push(snap);
                 }
