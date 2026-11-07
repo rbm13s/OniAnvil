@@ -29,8 +29,8 @@ Most existing pixel art tools (such as Aseprite) store projects in opaque, propr
 
 | Layer | Component | Version / Target | Details |
 | :--- | :--- | :--- | :--- |
-| **Language** | Rust | 2021 Edition (1.80+) | Safe memory management, zero-cost abstractions, multi-threading. |
-| **GUI Framework** | `egui` / `eframe` | `0.31` | Immediate mode GUI library with custom vector widgets and low latency. |
+| **Language** | Rust | 2021 Edition (1.88+) | Safe memory management, zero-cost abstractions, multi-threading. |
+| **GUI Framework** | `egui` / `eframe` | `0.37` | Immediate mode GUI library with custom vector widgets and low latency. |
 | **Desktop Graphics** | `wgpu` | Via `eframe` desktop feature | DirectX 12, Vulkan, and Metal hardware-accelerated pipeline. |
 | **Web Graphics** | `glow` (WebGL2) | Via `eframe` wasm32 feature | Hardware-accelerated OpenGL ES 3.0 / WebGL2 canvas in modern browsers. |
 | **Image Processing** | `image` | `0.25` | Lossless PNG encoding/decoding, GIF animation, WebP, JPEG, ICO. |
@@ -142,7 +142,7 @@ Instead of storing isolated individual frame images in memory and stitching them
 
 ### 4.2. Multi-Layer Compositing Engine
 - Each frame in the atlas supports multiple discrete layers (`src/model/frame.rs`):
-  - Layer properties: `name`, `visible`, `opacity` ($0.0..=1.0$), `locked`, `blend_mode` (Normal, Multiply, Screen, Overlay, Darken, Lighten, Color Dodge, Color Burn).
+  - Layer properties: `name`, `visible`, `opacity` ($0.0..=1.0$), `locked`.
   - When editing a specific layer, strokes only mutate pixels belonging to that layer.
   - The composite view is generated on CPU via multi-layer pixel blend equations and uploaded to the GPU texture cache.
 
@@ -150,21 +150,24 @@ Instead of storing isolated individual frame images in memory and stitching them
 - Projects are saved as `filename.png` and `filename.onianvil.json`.
 - **Atomic File Writing (`src/io/storage.rs`):**
   - To prevent file corruption during OS crashes, unexpected power loss, or write interruptions, OniAnvil writes both the `.png` and `.json` to `.tmp` files first (`filename.png.tmp`, `filename.json.tmp`).
-  - Once both writes succeed, the files are atomically renamed to their final targets via `std::fs::rename`. If any write fails, all temporary files are cleaned up and the original project remains untouched.
+  - Pre-existing files are safely backed up to `.bak` before finalizing replacements, guaranteeing zero data loss or partial saves if any write or rename step fails.
 - **Background Autosave & Crash Recovery (`src/io/autosave.rs`):**
   - Runs in the background on a 45-second timer.
   - Skips disk writes if no changes occurred (`unsaved_changes == false`).
-  - Uses raw byte comparisons (`chunks_exact(4)`) to minimize overhead.
+  - Scans across all open tabs, preserving background unsaved documents.
+  - Generates complete multi-layer `embedded_base64` payloads so crash recovery restores full multi-layer projects.
   - Native recovery files are stored in OS app-data directories (`directories::ProjectDirs`). WebAssembly builds serialize to browser `LocalStorage`.
 
 ### 4.4. Adaptive History Stack (OOM Prevention)
 - History snapshots (`HistorySnapshot` in `src/history/command.rs`) store atlas state and metadata diffs for undo/redo.
-- Storing 100 full copies of huge atlases ($2048 \times 2048$ RGBA) would consume several gigabytes and trigger Out-Of-Memory (OOM) crashes.
-- OniAnvil employs **resolution-adaptive depth scaling**:
-  - $\le 256 \times 256$ pixels $\rightarrow$ **100 undo steps**
+- Storing full copies of large multi-layer atlases would consume several gigabytes and trigger Out-Of-Memory (OOM) crashes.
+- OniAnvil employs **resolution- and layer-count adaptive depth scaling**:
+  - `pixels = frame_width * frame_height * layer_count`
+  - $\le 256 \times 256$ pixels $\rightarrow$ **100 undo steps** (`MAX_HISTORY_DEPTH`)
   - $\le 512 \times 512$ pixels $\rightarrow$ **60 undo steps**
   - $\le 1024 \times 1024$ pixels $\rightarrow$ **30 undo steps**
   - $> 1024 \times 1024$ pixels $\rightarrow$ **15 undo steps**
+- Active layer buffers are deduplicated (`layer_rgba = None` in `HistorySnapshot`), eliminating double-memory storage.
 
 ### 4.5. Hardware Canvas & Viewport Rendering
 - Infinite sub-pixel panning with mouse wheel drag or middle mouse button.
@@ -179,13 +182,15 @@ Instead of storing isolated individual frame images in memory and stitching them
 ### 4.6. Precision Pixel Tools & Algorithms
 1. **Pixel-Perfect Pencil (`src/tools/stroke.rs`):**
    - Automatically eliminates undesirable $2 \times 2$ "staircase L-corners" on 1-pixel line strokes while preserving intended pixel clusters.
+   - Fully integrated with symmetry axes and batch timeline mode, reverting all mirrored stamps cleanly.
 2. **Robust Polygon Lasso (`src/tools/selection.rs`):**
    - Implements 8-connected boundary rasterization with 4-connected exterior flood-fill.
    - Eliminates interior hole dropouts even on complex self-intersecting lasso loops.
 3. **Queue-Based BFS Flood Fill (`src/tools/fill.rs`):**
-   - High-performance queue-based breadth-first search with configurable color tolerance ($0..=255$). Supports contiguous vs. global color replacement.
+   - High-performance queue-based breadth-first search with configurable color tolerance ($0..=255$). Supports contiguous vs. global color replacement across all project layers.
 4. **RotSprite Arbitrary Rotation (`src/tools/transforms.rs`):**
    - Implements the classic RotSprite algorithm (Scale8x + directional sampling + intermediate error reduction), allowing arbitrary angle rotation of pixel art without blurring.
+   - Memory-optimized: directly samples upscaled buffers without redundant 33 MB intermediate allocations, using stack-based frequency tables.
 5. **3x3 Matrix Convolutions (`src/tools/filters.rs`):**
    - Blur, Sharpen, Edge Detect, and Emboss filters with transparency/alpha preservation.
 6. **Extruded Atlas & Direct Game Engine Exports (`src/io/export.rs`):**
@@ -199,7 +204,7 @@ Instead of storing isolated individual frame images in memory and stitching them
   - **DawnBringer:** DB8 (8 colors), DB16 (16 colors), DB32 (32 colors) by Richard Fhager.
   - **Windows 95 (256):** Complete classic 256-color system palette.
   - **Retro Consoles & Systems:** PICO-8, NES (55), SNES (32), Game Boy (4), GBC (31), Sega Genesis (34), Atari 2600 (104), Commodore 64 (16), ZX Spectrum (15), CGA (16), EGA (64), Amstrad CPC (27), MSX (15), Apple II (15).
-- **Instant Palette Swapping (Skins):** Allows defining multiple skin variants (e.g. Default, Golden Armor, Shadow, Frozen). Swapping skins performs an instant single-pass remap across the entire atlas buffer.
+- **Instant Palette Swapping (Skins):** Allows defining multiple skin variants (e.g. Default, Golden Armor, Shadow, Frozen). Swapping skins performs an instant single-pass remap across all project layers with undo history recording.
 - **Quantization & Dithering:** Converts arbitrary art into active palettes using Bayer 2x2, 4x4, 8x8, or Blue Noise dithering with strength control.
 - **Two-Point Color Ramp Generator:** Generates smooth perceptual gradients between two selected colors.
 - **Import/Export:** Full support for `.gpl` (GIMP Palette), `.pal` (JASC PAL), `.hex`, and PNG palette image swatches.
@@ -427,29 +432,72 @@ Whenever preparing or cutting a new release, all contributors and agents **must 
 
 ## 11. Deep Technical Audit Resolutions (All 8 Issues Resolved)
 
-Все 8 проблем, выявленных в ходе углубленного технического аудита (узкие места CPU/RAM/GPU, многослойная синхронизация, Pixel-Perfect с симметрией и геометрия поворота), полностью устранены:
+All 8 technical issues identified during deep codebase audits (CPU/RAM/GPU bottlenecks, multi-layer synchronization, Pixel-Perfect symmetry artifacts, and 90° rotation geometry) have been resolved:
 
-### 11.1. Узкие места производительности (CPU / RAM / GPU)
+### 11.1. Performance & Memory Optimizations (CPU / RAM / GPU)
 
-- [x] **1. Устранено безусловное клонирование `atlas_rgba` на каждый кадр UI (60 FPS) в `show_bottom_dock`**
-  - В `Project::ensure_layers_initialized` (`src/model/project.rs`) буфер активного слоя `layer.layer_rgba` инициализируется клоном `atlas_rgba` только если `needs_init == true` (`None` или несовпадение размеров), а при обычной отрисовке UI в простое аллокации полностью отсутствуют.
-- [x] **2. Добавлено кэширование предпросмотра в `ModifySelectionModal`**
-  - В `OniAnvilApp` (`src/app.rs`) добавлено поле `last_modify_selection_preview: Option<(ModifySelectionMode, SelectionModifyShape, i32, bool)>`, благодаря чему морфологические операции (`expand` / `contract` / `border`) и перестройка границ выделения вызываются только при реальном изменении параметров диалога.
-- [x] **3. Унифицирована дедупликация памяти `HistorySnapshot` во всех модулях**
-  - Добавлен метод `Project::current_snapshot(&self)` (`src/model/project.rs`), который обнуляет `layer_rgba` активного слоя в снимке истории (чтобы не дублировать `atlas_rgba`), и все 21 ручной конструктор `HistorySnapshot { ... }` в `src/canvas/renderer.rs` и `src/ui/bottom_dock.rs` переведены на `project.current_snapshot()`.
-- [x] **4. Оптимизировано пиковое потребление памяти и убран `HashMap` в `RotSprite`**
-  - В `rotate_image_rotsprite` (`src/tools/transforms.rs`) удален промежуточный 64-кратный буфер `rotated_up` (обратное преобразование координат сэмплирует напрямую из `upscaled` внутри цикла `8×8`), а `HashMap<[u8; 4], u32>` заменен на стековый массив `[([0u8; 4], 0u8); 64]`.
+- [x] **1. Eliminated Unconditional 60 FPS `atlas_rgba` Cloning in `show_bottom_dock`**
+  - In `Project::ensure_layers_initialized` (`src/model/project.rs`), the active layer's `layer_rgba` buffer is only initialized by cloning `atlas_rgba` when `needs_init == true` (`None` or dimension mismatch), completely eliminating idle allocations during regular UI rendering.
+- [x] **2. Cached Live Preview in `ModifySelectionModal`**
+  - Added `last_modify_selection_preview: Option<(ModifySelectionMode, SelectionModifyShape, i32, bool)>` to `OniAnvilApp` (`src/app.rs`), ensuring mask morphology operations (`expand` / `contract` / `border`) and marching-ants boundary recomputation only execute when modal parameters change.
+- [x] **3. Unified `HistorySnapshot` Memory Deduplication Across All Modules**
+  - Added `Project::current_snapshot(&self)` (`src/model/project.rs`), which sets active layer `layer_rgba = None` in undo snapshots (preventing duplicate storage alongside `atlas_rgba`). All 21 manual `HistorySnapshot { ... }` constructions in `src/canvas/renderer.rs` and `src/ui/bottom_dock.rs` now call `project.current_snapshot()`.
+- [x] **4. Optimized Peak RAM & Removed `HashMap` Overhead in `RotSprite`**
+  - In `rotate_image_rotsprite` (`src/tools/transforms.rs`), removed the intermediate 64x upscale buffer `rotated_up` (coordinate transforms sample directly from `upscaled` in the `8×8` downscale loop), and replaced `HashMap<[u8; 4], u32>` with a stack-allocated `[([0u8; 4], 0u8); 64]` array.
 
-### 11.2. Многослойность, рендеринг и синхронизация состояния
+### 11.2. Multi-Layering, Rendering & State Synchronization
 
-- [x] **5. Исправлена синхронизация GPU-текстур неактивных слоев (`layer_textures`)**
-  - В `Project` добавлен флаг `layers_dirty: bool`, выставляемый при любых многослойных мутациях (`add_layer`, `duplicate_layer`, `delete_layer`, `swap_layers`, `merge_layer_down`, `rebuild_atlas_from_frames`, `restore_snapshot`). В `CanvasRenderer::ensure_texture` (`src/canvas/renderer.rs`) добавлена проверка `project.layers_dirty` и совпадения размеров GPU-текстуры каждого слоя.
-- [x] **6. Исправлен инкрементальный откат `Pixel-Perfect` при включенной симметрии (`Symmetry`), `Batch Mode` и `Custom Brush`**
-  - В `CanvasRenderer::render` (`src/canvas/renderer.rs`) фильтр `Pixel-Perfect` отключается при активной кастомной кисти (`custom_brush.is_some()`), а инкрементальный откат L-уголков восстанавливает из `stroke.base_atlas` все точки `expand_stamp_points` (включая зеркальные оси симметрии) по всем затронутым кадрам (`frames_to_revert` при `batch_mode`).
-- [x] **7. Добавлена поддержка всех слоев и запись в `Undo` при `Global Color Replace` и смене скинов (`Palette Swaps`)**
-  - В `Project` (`src/model/project.rs`) реализованы методы `replace_color_all_layers` и `apply_palette_swap_all_layers`, обновляющие как `atlas_rgba`, так и все неактивные слои (`layer.layer_rgba`) с установкой `layers_dirty = true`. В `src/ui/right_dock.rs` и `src/app.rs` перед глобальной заменой цвета или переключением скина сохраняется снимок в `HistoryStack`.
+- [x] **5. Fixed GPU Texture Synchronization for Inactive Layers (`layer_textures`)**
+  - Added `layers_dirty: bool` to `Project`, set on all layer mutations (`add_layer`, `duplicate_layer`, `delete_layer`, `swap_layers`, `merge_layer_down`, `rebuild_atlas_from_frames`, `restore_snapshot`). In `CanvasRenderer::ensure_texture` (`src/canvas/renderer.rs`), layer textures re-upload whenever `project.layers_dirty` is true or texture dimensions mismatch.
+- [x] **6. Fixed Incremental `Pixel-Perfect` Reverts with `Symmetry`, `Batch Mode`, and `Custom Brush`**
+  - In `CanvasRenderer::render` (`src/canvas/renderer.rs`), disabled `Pixel-Perfect` when a custom brush is active (`custom_brush.is_some()`), and updated incremental L-corner reverts to restore all `expand_stamp_points` (including mirror axes) across all affected frames (`frames_to_revert` in `batch_mode`).
+- [x] **7. Multi-Layer Color Replacement & Undo Recording for `Global Color Replace` and `Palette Swaps`**
+  - Added `Project::replace_color_all_layers` and `Project::apply_palette_swap_all_layers` (`src/model/project.rs`), updating both `atlas_rgba` and all inactive `layer.layer_rgba` buffers while marking `layers_dirty = true`. In `src/ui/right_dock.rs` and `src/app.rs`, undo snapshots are pushed to `doc.history` prior to color/skin changes.
 
-### 11.3. Алгоритмические и геометрические исправления
+### 11.3. Algorithmic & Geometric Corrections
 
-- [x] **8. Устранен разрыв в 1 пиксель при повороте выделений/регионов с разной четностью сторон на 90°**
-  - В `rotate_region_90_cw` и `rotate_selection_90_cw` (`src/tools/transforms.rs`) плавающая точка и `f32::round()` заменены на точную целочисленную индексную арифметику (`offset_x = (w - h) / 2`, `offset_y = (h - w) / 2`), что гарантирует взаимно-однозначное отображение пикселей без пропуска нулевой координаты (покрыто модульным тестом `test_rotate_selection_90_cw_mixed_parity_no_gap`).
+- [x] **8. Eliminated 1-Pixel Gap when Rotating Mixed-Parity Selections/Regions by 90°**
+  - In `rotate_region_90_cw` and `rotate_selection_90_cw` (`src/tools/transforms.rs`), replaced floating-point `.round()` center arithmetic with exact integer index offsets (`offset_x = (w - h) / 2`, `offset_y = (h - w) / 2`), preventing skipped coordinate `0` on odd-by-even regions (verified by unit test `test_rotate_selection_90_cw_mixed_parity_no_gap`).
+
+---
+
+## 12. Stability, Data Loss Prevention & Infrastructure Hardening
+
+Architectural improvements and resolutions for critical data loss risks, autosave edge cases, multi-layer linked frame divergence, and project infrastructure:
+
+### 12.1. Data Loss & Corruption Prevention
+- [x] **Protection Against Silent Overwrite of Corrupted `.onianvil.json` (`src/io/storage.rs`)**
+  - When companion JSON parsing fails, `build_project_from_bytes` now returns `Err(format!("Corrupted companion metadata JSON: {}", e))` instead of silently substituting a blank `1×1` default project. This prevents accidental permanent overwrites on subsequent `Ctrl+S` operations (`test_corrupted_companion_json_returns_error`).
+- [x] **Protection Against Layer Duplication on Corrupted Base64 (`src/io/storage.rs`)**
+  - Layer decoding returns explicit errors on invalid base64 or corrupted PNG streams (`test_corrupted_layer_base64_returns_error`). The active layer is no longer replaced with the flattened composite when layer data is corrupt.
+- [x] **Two-File Atomic Commit with Backup & Rollback (`src/io/storage.rs`)**
+  - When saving `png` + `json` companion files, existing files are first renamed to `.bak`. If any step of writing or renaming temporary files fails, automatic rollback restores originals from backups. Prevents file loss and companion pair mismatch.
+- [x] **Multi-Document Autosave & Safe Recovery Clearing (`src/app.rs`)**
+  - Autosave scans across all open documents and backs up unsaved tabs, ensuring background tabs are preserved even when the user is focused on a clean tab.
+  - `AutosaveService::clear_recovery` is only triggered when all open documents are clean (`documents.iter().all(|d| !d.project.has_unsaved_changes)`).
+- [x] **Full Layer Preservation in Crash Recovery (`src/io/autosave.rs`)**
+  - Prior to autosaving metadata, `embedded_base64` strings are generated for all layers, and the full multi-layer composite is encoded to PNG. On recovery, projects restore with their complete layer hierarchy intact.
+
+### 12.2. Synchronization & Robustness
+- [x] **Multi-Layer Synchronization for Linked Frames (`src/model/project.rs`)**
+  - `Project::sync_linked_frames` precomputes target group frames and synchronizes pixels in `atlas_rgba` as well as all inactive layers (`layer.layer_rgba`), preventing linked frame divergence across layers (`test_sync_linked_frames_multi_layer`).
+- [x] **Project Directory Prioritized in Reference Sketch Search (`src/io/storage.rs`)**
+  - Relative sketch paths are resolved against the project parent directory (`parent.join(rel)`) before falling back to the process CWD.
+- [x] **Image Decoding Limits & Overflow Protection (`src/io/storage.rs`, `src/model/metadata.rs`)**
+  - Added `image::Limits` (max `8192×8192` dimensions and `256 MB` RAM) to `decode_image_bytes` and `decode_png_bytes`.
+  - Converted offset coordinate multiplications in `ProjectMetadata::frame_origin` to `saturating_mul`.
+- [x] **Safe Embedded Locale Parsing (`src/i18n.rs`)**
+  - Replaced `.expect(...)` during fallback `en.json` parsing with `unwrap_or_default()`.
+
+### 12.3. Performance & Infrastructure
+- [x] **Layer-Aware Resolution-Adaptive History Depth (`src/history/command.rs`)**
+  - History depth calculation now accounts for total pixel volume: `pixels = w * h * layers`. The constant `MAX_HISTORY_DEPTH = 100` is directly utilized without dead-code allowances.
+- [x] **Window Title IPC Optimization (`src/app.rs`)**
+  - `send_viewport_cmd(ViewportCommand::Title)` is only invoked when the formatted title string changes (`last_window_title`).
+- [x] **Clean Non-Windows Build Diagnostics (`build.rs`)**
+  - Scoped `target_os` and `target_env` inside `#[cfg(windows)]`, eliminating `unused variable` compiler warnings on Linux and macOS.
+- [x] **CWD-Independent Web Font Unit Tests (`src/web.rs`)**
+  - Web font disk existence tests resolve paths using `env!("CARGO_MANIFEST_DIR")`.
+- [x] **Cargo.toml & GitHub Actions CI (`Cargo.toml`, `.github/workflows/build.yml`)**
+  - Pinned `rust-version = "1.88"`, moved `gen_locales` to `[[example]]`, and configured `[profile.release]` with `lto = "thin"`, `codegen-units = 1`, and `strip = true`.
+  - Added a fast `ci-check` job (`cargo test --all-targets`, `cargo clippy --all-targets -- -D warnings`) to GitHub Actions CI running on every `push` to `main` and pull request.

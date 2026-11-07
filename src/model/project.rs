@@ -1765,29 +1765,70 @@ impl Project {
             }
         }
 
-        let mut changed = false;
+        let mut target_frames = Vec::new();
         for idx in 0..total_frames {
             if idx == source_frame {
                 continue;
             }
             let idx_root = self.get_link_group_root(idx);
             if idx_root == root || (idx == root && self.get_link_group_root(source_frame) == root) {
-                let (dst_ox, dst_oy) = self.metadata.frame_origin(idx);
+                target_frames.push((idx, self.metadata.frame_origin(idx)));
+            }
+        }
+
+        let mut changed = false;
+        for &(_idx, (dst_ox, dst_oy)) in &target_frames {
+            for y in 0..fh {
+                for x in 0..fw {
+                    let dax = dst_ox + x;
+                    let day = dst_oy + y;
+                    if dax < self.atlas_rgba.width() && day < self.atlas_rgba.height() {
+                        let sp = *src_img.get_pixel(x, y);
+                        if *self.atlas_rgba.get_pixel(dax, day) != sp {
+                            self.atlas_rgba.put_pixel(dax, day, sp);
+                            changed = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Sync all non-active layers
+        let active_idx = self.metadata.active_layer.min(self.metadata.layers.len().saturating_sub(1));
+        for (l_idx, layer) in self.metadata.layers.iter_mut().enumerate() {
+            if l_idx == active_idx {
+                continue;
+            }
+            if let Some(ref mut l_img) = layer.layer_rgba {
+                let mut layer_src = RgbaImage::from_pixel(fw, fh, Rgba([0, 0, 0, 0]));
                 for y in 0..fh {
                     for x in 0..fw {
-                        let dax = dst_ox + x;
-                        let day = dst_oy + y;
-                        if dax < self.atlas_rgba.width() && day < self.atlas_rgba.height() {
-                            let sp = *src_img.get_pixel(x, y);
-                            if *self.atlas_rgba.get_pixel(dax, day) != sp {
-                                self.atlas_rgba.put_pixel(dax, day, sp);
-                                changed = true;
+                        let ax = src_ox + x;
+                        let ay = src_oy + y;
+                        if ax < l_img.width() && ay < l_img.height() {
+                            layer_src.put_pixel(x, y, *l_img.get_pixel(ax, ay));
+                        }
+                    }
+                }
+                for &(_idx, (dst_ox, dst_oy)) in &target_frames {
+                    for y in 0..fh {
+                        for x in 0..fw {
+                            let dax = dst_ox + x;
+                            let day = dst_oy + y;
+                            if dax < l_img.width() && day < l_img.height() {
+                                let sp = *layer_src.get_pixel(x, y);
+                                if *l_img.get_pixel(dax, day) != sp {
+                                    l_img.put_pixel(dax, day, sp);
+                                    changed = true;
+                                    self.layers_dirty = true;
+                                }
                             }
                         }
                     }
                 }
             }
         }
+
         changed
     }
 
@@ -2921,5 +2962,43 @@ mod tests {
         assert_eq!(proj.atlas_rgba.get_pixel(1, 1).0, [0, 255, 0, 255]);
         let l0 = proj.metadata.layers[0].layer_rgba.as_ref().unwrap();
         assert_eq!(l0.get_pixel(0, 0).0, [0, 255, 0, 255]);
+    }
+
+    #[test]
+    fn test_sync_linked_frames_multi_layer() {
+        let meta = ProjectMetadata::new_config("multi_link".to_string(), 4, 4, 2, 2, None);
+        let mut proj = Project::new(meta);
+        proj.add_layer("Layer 2".to_string());
+        // Layer 1 is active (Layer 0 is inactive)
+
+        // Link frame 1 to frame 0
+        proj.link_frame_to(1, 0);
+        assert!(proj.is_frame_linked(1));
+        assert!(proj.is_frame_linked(0));
+
+        // Paint yellow on frame 0 of Layer 1 (active)
+        proj.atlas_rgba.put_pixel(0, 0, Rgba([255, 255, 0, 255]));
+
+        // Paint green on frame 0 of Layer 0 (inactive)
+        let l0 = proj.metadata.layers[0].layer_rgba.as_mut().unwrap();
+        l0.put_pixel(1, 1, Rgba([0, 255, 0, 255]));
+
+        // Sync linked frames from frame 0
+        let synced = proj.sync_linked_frames(0);
+        assert!(synced);
+
+        // Frame 1 in Layer 1 (active) must receive yellow at (0, 0)
+        let (f1_ox, f1_oy) = proj.metadata.frame_origin(1);
+        assert_eq!(
+            *proj.atlas_rgba.get_pixel(f1_ox, f1_oy),
+            Rgba([255, 255, 0, 255])
+        );
+
+        // Frame 1 in Layer 0 (inactive) must receive green at (1, 1)
+        let l0 = proj.metadata.layers[0].layer_rgba.as_ref().unwrap();
+        assert_eq!(
+            *l0.get_pixel(f1_ox + 1, f1_oy + 1),
+            Rgba([0, 255, 0, 255])
+        );
     }
 }

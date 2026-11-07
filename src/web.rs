@@ -230,15 +230,16 @@ mod tests {
 
     #[test]
     fn test_web_fonts_files_exist_and_non_empty() {
-        let ka_bytes = std::fs::read("web/fonts/NotoSansGeorgian-Regular.ttf")
+        let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let ka_bytes = std::fs::read(manifest_dir.join("web/fonts/NotoSansGeorgian-Regular.ttf"))
             .expect("web/fonts/NotoSansGeorgian-Regular.ttf must exist");
         assert!(ka_bytes.len() > 10_000);
 
-        let hy_bytes = std::fs::read("web/fonts/NotoSansArmenian-Regular.ttf")
+        let hy_bytes = std::fs::read(manifest_dir.join("web/fonts/NotoSansArmenian-Regular.ttf"))
             .expect("web/fonts/NotoSansArmenian-Regular.ttf must exist");
         assert!(hy_bytes.len() > 10_000);
 
-        let ext_bytes = std::fs::read("web/fonts/NotoSans-Regular.ttf")
+        let ext_bytes = std::fs::read(manifest_dir.join("web/fonts/NotoSans-Regular.ttf"))
             .expect("web/fonts/NotoSans-Regular.ttf must exist");
         assert!(ext_bytes.len() > 10_000);
     }

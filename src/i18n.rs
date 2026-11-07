@@ -465,7 +465,7 @@ impl I18n {
     pub fn new(initial: Language) -> Self {
         let mut en_map: HashMap<String, String> =
             serde_json::from_str(include_str!("../assets/locales/en.json"))
-                .expect("Failed to parse assets/locales/en.json");
+                .unwrap_or_default();
         adapt_locale_map(&mut en_map);
 
         let active_map = if initial == Language::En {

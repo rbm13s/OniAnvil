@@ -122,6 +122,7 @@ pub struct OniAnvilApp {
     pub logo_texture: Option<egui::TextureHandle>,
     pub modal_preview_backup: Option<(usize, image::RgbaImage)>,
     pub modal_selection_preview_backup: Option<(usize, crate::tools::selection::SelectionMask)>,
+    pub last_window_title: String,
 }
 
 impl OniAnvilApp {
@@ -205,6 +206,7 @@ impl OniAnvilApp {
             app_theme: settings.theme,
             status_key: "app.status.ready",
             logo_texture,
+            last_window_title: String::new(),
         }
     }
 
@@ -1326,7 +1328,9 @@ impl OniAnvilApp {
                         }
                         doc.project.has_unsaved_changes = false;
                     }
-                    AutosaveService::clear_recovery(frame.storage_mut());
+                    if self.documents.iter().all(|d| !d.project.has_unsaved_changes) {
+                        AutosaveService::clear_recovery(frame.storage_mut());
+                    }
                     self.status_key = "app.status.project_saved";
                     if let Some(pending) = self.pending_after_save.take() {
                         match pending {
@@ -1499,13 +1503,22 @@ impl eframe::App for OniAnvilApp {
             String::new()
         };
         let window_title = format!("OniAnvil v{}{}", env!("CARGO_PKG_VERSION"), doc_suffix);
-        ctx.send_viewport_cmd(egui::ViewportCommand::Title(window_title));
+        if self.last_window_title != window_title {
+            self.last_window_title = window_title.clone();
+            ctx.send_viewport_cmd(egui::ViewportCommand::Title(window_title));
+        }
 
         self.process_io_events(ctx, frame);
         self.handle_shortcuts(ctx);
 
         let dt = ctx.input(|i| i.stable_dt);
-        if let Some(doc) = self.documents.get(self.active_doc_idx) {
+        let doc_to_autosave = self
+            .documents
+            .get(self.active_doc_idx)
+            .filter(|d| d.project.has_unsaved_changes)
+            .or_else(|| self.documents.iter().find(|d| d.project.has_unsaved_changes));
+
+        if let Some(doc) = doc_to_autosave {
             if self.autosave.tick(dt, &doc.project, frame.storage_mut()) {
                 self.status_key = "app.status.autosaved";
             }
@@ -3233,7 +3246,9 @@ impl eframe::App for OniAnvilApp {
                 }
                 RecoveryAction::Discard => {
                     self.autosave.recovery_candidate = None;
-                    AutosaveService::clear_recovery(frame.storage_mut());
+                    if self.documents.iter().all(|d| !d.project.has_unsaved_changes) {
+                        AutosaveService::clear_recovery(frame.storage_mut());
+                    }
                 }
             }
         }
@@ -3508,6 +3523,7 @@ mod tests {
             app_theme: crate::theme::AppTheme::StudioDark,
             status_key: "app.status.ready",
             logo_texture: None,
+            last_window_title: String::new(),
         };
 
         // Copy entire frame (since no selection)
@@ -3607,6 +3623,7 @@ mod tests {
             app_theme: crate::theme::AppTheme::StudioDark,
             status_key: "app.status.ready",
             logo_texture: None,
+            last_window_title: String::new(),
         };
 
         // Frame 0 is active
@@ -3713,6 +3730,7 @@ mod tests {
             app_theme: crate::theme::AppTheme::StudioDark,
             status_key: "app.status.ready",
             logo_texture: None,
+            last_window_title: String::new(),
         };
 
         // Select the two pixels at (2, 2) and (3, 2)

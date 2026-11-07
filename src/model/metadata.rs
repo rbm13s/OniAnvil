@@ -102,7 +102,10 @@ impl ProjectMetadata {
         let idx = (frame_index as u32).min(self.frame_count.saturating_sub(1));
         let col = idx % cols;
         let row = idx / cols;
-        (col * self.frame_width, row * self.frame_height)
+        (
+            col.saturating_mul(self.frame_width),
+            row.saturating_mul(self.frame_height),
+        )
     }
 
     /// Resolves the `(x, y)` coordinates of action point `ap_idx` on `frame_idx`.

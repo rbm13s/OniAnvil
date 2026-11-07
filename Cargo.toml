@@ -3,6 +3,7 @@ name = "onianvil"
 version = "1.2.1"
 default-run = "onianvil"
 edition = "2021"
+rust-version = "1.88"
 authors = ["OniAnvil Contributors"]
 license = "MIT"
 description = "An open-source, cross-platform pixel sprite and onion-skin animation studio built around game-ready atlases."
@@ -12,7 +13,7 @@ repository = "https://github.com/rbm13s/OniAnvil"
 name = "onianvil"
 path = "src/main.rs"
 
-[[bin]]
+[[example]]
 name = "gen_locales"
 path = "scripts/gen_locales.rs"
 
@@ -48,3 +49,9 @@ web-sys = { version = "0.3", features = ["Window", "Document", "HtmlDocument", "
 
 [target.'cfg(windows)'.build-dependencies]
 winresource = "0.1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true

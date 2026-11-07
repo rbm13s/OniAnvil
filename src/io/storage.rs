@@ -162,15 +162,42 @@ impl IoManager {
         Ok(buf)
     }
 
+    pub const MAX_IMAGE_DIMENSION: u32 = 8192;
+
     pub fn decode_image_bytes(bytes: &[u8]) -> Result<RgbaImage, String> {
-        let img = image::load_from_memory(bytes).map_err(|e| e.to_string())?;
+        let mut reader = image::ImageReader::new(std::io::Cursor::new(bytes))
+            .with_guessed_format()
+            .map_err(|e| e.to_string())?;
+        let mut limits = image::Limits::default();
+        limits.max_image_width = Some(Self::MAX_IMAGE_DIMENSION);
+        limits.max_image_height = Some(Self::MAX_IMAGE_DIMENSION);
+        limits.max_alloc = Some(256 * 1024 * 1024);
+        reader.limits(limits);
+        let img = reader.decode().map_err(|e| e.to_string())?;
         Ok(img.to_rgba8())
     }
 
     pub fn decode_png_bytes(bytes: &[u8]) -> Result<RgbaImage, String> {
-        let img = image::load_from_memory_with_format(bytes, ImageFormat::Png)
-            .or_else(|_| image::load_from_memory(bytes))
-            .map_err(|e| e.to_string())?;
+        let mut reader = image::ImageReader::with_format(std::io::Cursor::new(bytes), ImageFormat::Png);
+        let mut limits = image::Limits::default();
+        limits.max_image_width = Some(Self::MAX_IMAGE_DIMENSION);
+        limits.max_image_height = Some(Self::MAX_IMAGE_DIMENSION);
+        limits.max_alloc = Some(256 * 1024 * 1024);
+        reader.limits(limits);
+        let img = match reader.decode() {
+            Ok(im) => im,
+            Err(_) => {
+                let mut fallback_reader = image::ImageReader::new(std::io::Cursor::new(bytes))
+                    .with_guessed_format()
+                    .map_err(|e| e.to_string())?;
+                let mut fallback_limits = image::Limits::default();
+                fallback_limits.max_image_width = Some(Self::MAX_IMAGE_DIMENSION);
+                fallback_limits.max_image_height = Some(Self::MAX_IMAGE_DIMENSION);
+                fallback_limits.max_alloc = Some(256 * 1024 * 1024);
+                fallback_reader.limits(fallback_limits);
+                fallback_reader.decode().map_err(|e| e.to_string())?
+            }
+        };
         Ok(img.to_rgba8())
     }
 
@@ -191,9 +218,8 @@ impl IoManager {
             .unwrap_or_else(|| "sprite".to_string());
 
         let mut metadata = if let Some(raw_json) = json_bytes {
-            serde_json::from_slice::<ProjectMetadata>(raw_json).unwrap_or_else(|_| {
-                ProjectMetadata::new_config(default_name.clone(), width, height, 1, 1, None)
-            })
+            serde_json::from_slice::<ProjectMetadata>(raw_json)
+                .map_err(|e| format!("Corrupted companion metadata JSON: {}", e))?
         } else {
             ProjectMetadata::new_config(default_name, width, height, 1, 1, None)
         };
@@ -202,13 +228,12 @@ impl IoManager {
         if metadata.layers.len() > 1 {
             for layer in &mut metadata.layers {
                 if let Some(b64) = &layer.embedded_base64 {
-                    if let Ok(decoded_bytes) =
-                        base64::engine::general_purpose::STANDARD.decode(b64.trim())
-                    {
-                        if let Ok(layer_img) = Self::decode_png_bytes(&decoded_bytes) {
-                            layer.layer_rgba = Some(layer_img);
-                        }
-                    }
+                    let decoded_bytes = base64::engine::general_purpose::STANDARD
+                        .decode(b64.trim())
+                        .map_err(|e| format!("Corrupted base64 in layer '{}': {}", layer.name, e))?;
+                    let layer_img = Self::decode_png_bytes(&decoded_bytes)
+                        .map_err(|e| format!("Corrupted PNG in layer '{}': {}", layer.name, e))?;
+                    layer.layer_rgba = Some(layer_img);
                 }
             }
             let active_idx = metadata
@@ -217,6 +242,11 @@ impl IoManager {
             metadata.active_layer = active_idx;
             if let Some(img) = metadata.layers[active_idx].layer_rgba.clone() {
                 active_rgba = img;
+            } else {
+                return Err(format!(
+                    "Active layer '{}' missing embedded pixel buffer",
+                    metadata.layers[active_idx].name
+                ));
             }
         }
 
@@ -248,13 +278,21 @@ impl IoManager {
         if project.sketch_rgba.is_none() {
             if let Some(rel) = &project.metadata.sketch.relative_path {
                 let candidate = PathBuf::from(rel);
-                let resolved = if candidate.is_absolute() || candidate.exists() {
+                let resolved = if candidate.is_absolute() {
+                    Some(candidate)
+                } else if let Some(parent) = file_path.as_ref().and_then(|p| p.parent()) {
+                    let project_rel = parent.join(rel);
+                    if project_rel.exists() {
+                        Some(project_rel)
+                    } else if candidate.exists() {
+                        Some(candidate)
+                    } else {
+                        None
+                    }
+                } else if candidate.exists() {
                     Some(candidate)
                 } else {
-                    file_path
-                        .as_ref()
-                        .and_then(|p| p.parent())
-                        .map(|parent| parent.join(rel))
+                    None
                 };
                 if let Some(sketch_path) = resolved {
                     if let Ok(bytes) = std::fs::read(&sketch_path) {
@@ -651,20 +689,63 @@ impl IoManager {
             return Err(format!("Failed to write temporary metadata JSON: {}", e));
         }
 
-        if let Err(_e) = std::fs::rename(&tmp_png, png_path) {
-            let _ = std::fs::remove_file(png_path);
-            if let Err(e2) = std::fs::rename(&tmp_png, png_path) {
+        let bak_png = png_path.with_extension("png.bak");
+        let bak_json = json_path.with_extension("json.bak");
+        let png_existed = png_path.exists();
+        let json_existed = json_path.exists();
+
+        // 1. Move existing files to .bak
+        if png_existed {
+            let _ = std::fs::remove_file(&bak_png);
+            if let Err(e) = std::fs::rename(png_path, &bak_png) {
                 let _ = std::fs::remove_file(&tmp_png);
                 let _ = std::fs::remove_file(&tmp_json);
-                return Err(format!("Failed to finalize PNG save: {}", e2));
+                return Err(format!("Failed to backup original PNG: {}", e));
             }
         }
-        if let Err(_e) = std::fs::rename(&tmp_json, &json_path) {
-            let _ = std::fs::remove_file(&json_path);
-            if let Err(e2) = std::fs::rename(&tmp_json, &json_path) {
+        if json_existed {
+            let _ = std::fs::remove_file(&bak_json);
+            if let Err(e) = std::fs::rename(&json_path, &bak_json) {
+                if png_existed {
+                    let _ = std::fs::rename(&bak_png, png_path);
+                }
+                let _ = std::fs::remove_file(&tmp_png);
                 let _ = std::fs::remove_file(&tmp_json);
-                return Err(format!("Failed to finalize JSON save: {}", e2));
+                return Err(format!("Failed to backup original JSON: {}", e));
             }
+        }
+
+        // 2. Rename tmp files to final targets
+        if let Err(e) = std::fs::rename(&tmp_png, png_path) {
+            if png_existed {
+                let _ = std::fs::rename(&bak_png, png_path);
+            }
+            if json_existed {
+                let _ = std::fs::rename(&bak_json, &json_path);
+            }
+            let _ = std::fs::remove_file(&tmp_png);
+            let _ = std::fs::remove_file(&tmp_json);
+            return Err(format!("Failed to finalize PNG save: {}", e));
+        }
+
+        if let Err(e) = std::fs::rename(&tmp_json, &json_path) {
+            let _ = std::fs::remove_file(png_path);
+            if png_existed {
+                let _ = std::fs::rename(&bak_png, png_path);
+            }
+            if json_existed {
+                let _ = std::fs::rename(&bak_json, &json_path);
+            }
+            let _ = std::fs::remove_file(&tmp_json);
+            return Err(format!("Failed to finalize JSON save: {}", e));
+        }
+
+        // 3. Both succeeded! Clean up backups.
+        if png_existed {
+            let _ = std::fs::remove_file(&bak_png);
+        }
+        if json_existed {
+            let _ = std::fs::remove_file(&bak_json);
         }
         Ok(())
     }
@@ -1477,5 +1558,35 @@ mod tests {
         assert!(png_path.exists());
         assert!(IoManager::companion_json_path(&png_path).exists());
         let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_corrupted_companion_json_returns_error() {
+        let meta = ProjectMetadata::new_config("hero".to_string(), 16, 16, 1, 1, None);
+        let proj = Project::new(meta);
+        let png_bytes = IoManager::encode_png_bytes(&proj.atlas_rgba).expect("encode png");
+        let broken_json = b"{\"project_name\": \"broken\", non_json_token";
+
+        let res = IoManager::build_project_from_bytes(&png_bytes, Some(broken_json), None);
+        assert!(res.is_err(), "Corrupted JSON must return Err instead of silently replacing with default config");
+    }
+
+    #[test]
+    fn test_corrupted_layer_base64_returns_error() {
+        let mut meta = ProjectMetadata::new_config("multi".to_string(), 16, 16, 1, 1, None);
+        meta.layers.push(crate::model::frame::LayerMeta {
+            name: "Layer 2".to_string(),
+            visible: true,
+            opacity: 1.0,
+            locked: false,
+            layer_rgba: None,
+            embedded_base64: Some("not_valid_base64_!@#$%^&*()".to_string()),
+        });
+        let proj = Project::new(meta.clone());
+        let png_bytes = IoManager::encode_png_bytes(&proj.atlas_rgba).expect("encode png");
+        let json_bytes = serde_json::to_vec(&meta).expect("encode json");
+
+        let res = IoManager::build_project_from_bytes(&png_bytes, Some(&json_bytes), None);
+        assert!(res.is_err(), "Corrupted layer base64 must return Err instead of silently duplicating composite");
     }
 }

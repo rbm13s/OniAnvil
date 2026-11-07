@@ -1,13 +1,13 @@
 use crate::model::metadata::ProjectMetadata;
 use image::RgbaImage;
 
-#[allow(dead_code)]
 pub const MAX_HISTORY_DEPTH: usize = 100;
 
-fn max_depth_for_resolution(w: u32, h: u32) -> usize {
-    let pixels = (w as u64) * (h as u64);
+fn max_depth_for_resolution(w: u32, h: u32, layer_count: usize) -> usize {
+    let layers = layer_count.max(1) as u64;
+    let pixels = (w as u64) * (h as u64) * layers;
     if pixels <= 256 * 256 {
-        100
+        MAX_HISTORY_DEPTH
     } else if pixels <= 512 * 512 {
         60
     } else if pixels <= 1024 * 1024 {
@@ -38,8 +38,11 @@ impl HistoryStack {
     }
 
     pub fn push(&mut self, snapshot: HistorySnapshot) {
-        let max_depth =
-            max_depth_for_resolution(snapshot.atlas_rgba.width(), snapshot.atlas_rgba.height());
+        let max_depth = max_depth_for_resolution(
+            snapshot.atlas_rgba.width(),
+            snapshot.atlas_rgba.height(),
+            snapshot.metadata.layers.len(),
+        );
         while self.undo_stack.len() >= max_depth {
             self.undo_stack.pop_front();
         }
@@ -57,8 +60,11 @@ impl HistoryStack {
 
     pub fn undo(&mut self, current: HistorySnapshot) -> Option<HistorySnapshot> {
         let prev = self.undo_stack.pop_back()?;
-        let max_depth =
-            max_depth_for_resolution(current.atlas_rgba.width(), current.atlas_rgba.height());
+        let max_depth = max_depth_for_resolution(
+            current.atlas_rgba.width(),
+            current.atlas_rgba.height(),
+            current.metadata.layers.len(),
+        );
         while self.redo_stack.len() >= max_depth {
             self.redo_stack.pop_front();
         }
@@ -68,8 +74,11 @@ impl HistoryStack {
 
     pub fn redo(&mut self, current: HistorySnapshot) -> Option<HistorySnapshot> {
         let next = self.redo_stack.pop_back()?;
-        let max_depth =
-            max_depth_for_resolution(current.atlas_rgba.width(), current.atlas_rgba.height());
+        let max_depth = max_depth_for_resolution(
+            current.atlas_rgba.width(),
+            current.atlas_rgba.height(),
+            current.metadata.layers.len(),
+        );
         while self.undo_stack.len() >= max_depth {
             self.undo_stack.pop_front();
         }

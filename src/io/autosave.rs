@@ -1,6 +1,5 @@
 use crate::io::storage::IoManager;
 use crate::model::project::Project;
-#[cfg(target_arch = "wasm32")]
 use base64::Engine as _;
 
 pub const AUTOSAVE_INTERVAL_SEC: f32 = 45.0;
@@ -97,16 +96,38 @@ impl AutosaveService {
             return false;
         }
 
+        // Ensure multi-layer projects embed all layers in base64 before autosaving metadata
+        let mut meta_copy = project.metadata.clone();
+        if meta_copy.layers.len() > 1 {
+            let active_idx = project
+                .metadata
+                .active_layer
+                .min(meta_copy.layers.len().saturating_sub(1));
+            for (idx, layer) in meta_copy.layers.iter_mut().enumerate() {
+                let src_opt = if idx == active_idx {
+                    Some(&project.atlas_rgba)
+                } else {
+                    layer.layer_rgba.as_ref()
+                };
+                if let Some(img) = src_opt {
+                    if let Ok(l_png) = IoManager::encode_png_bytes(img) {
+                        layer.embedded_base64 =
+                            Some(base64::engine::general_purpose::STANDARD.encode(l_png));
+                    }
+                }
+            }
+        }
+
+        let composited = project.composited_atlas_rgba();
+
         #[cfg(not(target_arch = "wasm32"))]
         {
             let _ = storage;
             if let Some((png_path, json_path)) = Self::native_recovery_paths() {
-                let atlas_copy = project.atlas_rgba.clone();
-                let meta_copy = project.metadata.clone();
                 let _ = std::thread::Builder::new()
                     .name("onianvil_autosave".into())
                     .spawn(move || {
-                        if let Ok(png_bytes) = IoManager::encode_png_bytes(&atlas_copy) {
+                        if let Ok(png_bytes) = IoManager::encode_png_bytes(&composited) {
                             let _ = std::fs::write(&png_path, png_bytes);
                         }
                         if let Ok(json_str) = serde_json::to_string(&meta_copy) {
@@ -122,8 +143,8 @@ impl AutosaveService {
         {
             if let Some(store) = storage {
                 if let (Ok(png_bytes), Ok(json_str)) = (
-                    IoManager::encode_png_bytes(&project.atlas_rgba),
-                    serde_json::to_string(&project.metadata),
+                    IoManager::encode_png_bytes(&composited),
+                    serde_json::to_string(&meta_copy),
                 ) {
                     // Guard against localStorage quota overflow (safe limit 3.5 MB)
                     if png_bytes.len() < 3 * 1024 * 1024 && json_str.len() < 1024 * 1024 {
