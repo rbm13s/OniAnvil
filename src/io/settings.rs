@@ -268,6 +268,11 @@ impl AppSettings {
         let _ = self.save();
     }
 
+    pub fn clear_recents(&mut self) {
+        self.recent_projects.clear();
+        let _ = self.save();
+    }
+
     pub fn remove_recent(&mut self, path: &Path) {
         self.recent_projects.retain(|p| p != path);
         let _ = self.save();
@@ -319,6 +324,16 @@ mod tests {
         settings.add_recent_color([5, 10, 20, 255]);
         assert_eq!(settings.recent_colors[0], [5, 10, 20, 255]);
         assert_eq!(settings.recent_colors.len(), 10);
+    }
+
+    #[test]
+    fn test_app_settings_clear_recents() {
+        let mut settings = AppSettings::default();
+        settings.recent_projects.push(PathBuf::from("proj1.png"));
+        settings.recent_projects.push(PathBuf::from("proj2.png"));
+        assert_eq!(settings.recent_projects.len(), 2);
+        settings.clear_recents();
+        assert!(settings.recent_projects.is_empty());
     }
 
     #[test]

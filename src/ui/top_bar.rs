@@ -13,6 +13,8 @@ use egui::{Color32, Panel, Ui};
 pub struct TopBarActions {
     pub open_new_project_wizard: bool,
     pub trigger_open_project: bool,
+    pub trigger_open_recent: Option<std::path::PathBuf>,
+    pub trigger_clear_recent: bool,
     pub trigger_close_project: bool,
     pub trigger_open_slicer: bool,
     pub trigger_import_frame_sequence: bool,
@@ -72,6 +74,7 @@ pub fn show_top_bars(
     show_bottom_dock: &mut bool,
     update_info: Option<&UpdateInfo>,
     current_theme: &mut AppTheme,
+    recent_projects: &[std::path::PathBuf],
 ) -> TopBarActions {
     let mut actions = TopBarActions::default();
     let has_doc = active_doc.is_some();
@@ -104,6 +107,29 @@ pub fn show_top_bars(
                     actions.trigger_open_project = true;
                     ui.close();
                 }
+                ui.menu_button(format!("{FA_FOLDER} {}", i18n.tr("menu.file.open_recent")), |ui| {
+                    if recent_projects.is_empty() {
+                        ui.add_enabled(false, egui::Button::new(i18n.tr("menu.file.no_recent")));
+                    } else {
+                        for (idx, rpath) in recent_projects.iter().take(10).enumerate() {
+                            let file_name = rpath
+                                .file_name()
+                                .and_then(|n| n.to_str())
+                                .unwrap_or("project");
+                            let path_str = rpath.display().to_string();
+                            let label = format!("{}. {file_name}", idx + 1);
+                            if ui.button(label).on_hover_text(&path_str).clicked() {
+                                actions.trigger_open_recent = Some(rpath.clone());
+                                ui.close();
+                            }
+                        }
+                        ui.separator();
+                        if ui.button(format!("{FA_TRASH} {}", i18n.tr("menu.file.clear_recent"))).clicked() {
+                            actions.trigger_clear_recent = true;
+                            ui.close();
+                        }
+                    }
+                });
                 if ui.button(format!("{FA_PLAY} {}", i18n.tr("menu.file.open_demo"))).clicked() {
                     actions.open_demo_project = true;
                     ui.close();

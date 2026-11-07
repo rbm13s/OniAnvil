@@ -220,6 +220,28 @@ impl OniAnvilApp {
         self.active_doc_idx = self.documents.len() - 1;
     }
 
+    pub fn open_recent_project(&mut self, path: std::path::PathBuf) {
+        if let Some(existing_idx) = self.documents.iter().position(|d| d.project.file_path.as_ref() == Some(&path)) {
+            self.active_doc_idx = existing_idx;
+            self.status_key = "app.status.project_loaded";
+            return;
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            match IoManager::load_from_native_path(&path) {
+                Ok(loaded) => {
+                    self.open_project_doc(loaded);
+                    self.status_key = "app.status.project_loaded";
+                }
+                Err(e) => {
+                    log::warn!("Failed to load recent project {:?}: {}", path, e);
+                    self.settings.remove_recent(&path);
+                    self.status_key = "app.status.load_error";
+                }
+            }
+        }
+    }
+
     pub fn request_close_doc(&mut self, idx: usize) {
         if idx >= self.documents.len() {
             return;
@@ -1568,6 +1590,7 @@ impl eframe::App for OniAnvilApp {
             &mut self.show_bottom_dock,
             update_info.as_ref(),
             &mut self.app_theme,
+            &self.settings.recent_projects,
         );
 
         // Row 3: Project Tabs Bar immediately below contextual options bar (when documents are open)
@@ -1815,6 +1838,12 @@ impl eframe::App for OniAnvilApp {
         }
         if top_actions.trigger_open_project {
             self.io.trigger_open_dialog(ctx.clone());
+        }
+        if let Some(path) = top_actions.trigger_open_recent {
+            self.open_recent_project(path);
+        }
+        if top_actions.trigger_clear_recent {
+            self.settings.clear_recents();
         }
         if top_actions.trigger_close_project && !self.documents.is_empty() {
             self.request_close_doc(self.active_doc_idx);
@@ -2068,20 +2097,8 @@ impl eframe::App for OniAnvilApp {
                             }
                         }
                     }
-                    StartScreenAction::OpenRecent(_path) => {
-                        #[cfg(not(target_arch = "wasm32"))]
-                        {
-                            match IoManager::load_from_native_path(&_path) {
-                                Ok(loaded) => {
-                                    self.open_project_doc(loaded);
-                                    self.status_key = "app.status.project_loaded";
-                                }
-                                Err(_) => {
-                                    self.settings.remove_recent(&_path);
-                                    self.status_key = "app.status.load_error";
-                                }
-                            }
-                        }
+                    StartScreenAction::OpenRecent(path) => {
+                        self.open_recent_project(path);
                     }
                     StartScreenAction::RemoveRecent(path) => {
                         self.pending_delete_recent = Some(path);
