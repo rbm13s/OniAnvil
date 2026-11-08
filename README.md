@@ -230,7 +230,7 @@ Most existing sprite editors treat animation as a stack of disconnected image fi
 <br/><br/>
 
 ### 12. 35 Authentic Retro & Modern Themes
-*Includes Studio Dark, Studio Light, CRT Amber/Green/Cyan phosphors, retro consoles (PlayStation 1, Game Boy, SNES, Dreamcast, Genesis), and designer themes.*
+*Includes DaisyUI-style visual color dot swatches, compact scrollable dropdown, Studio Dark, Studio Light, CRT Amber/Green/Cyan phosphors, refined retro consoles (PlayStation 1, Game Boy, SNES, Dreamcast, Genesis), and designer themes.*
 <p align="center">
   <img src="docs/screenshots/themes.png" alt="Themes Menu" width="300" />
   &nbsp;&nbsp;
@@ -241,7 +241,8 @@ Most existing sprite editors treat animation as a stack of disconnected image fi
 
 <br/><br/>
 
-### 13. Menu System & In-App Keyboard Help
+### 13. Menu System, Recent Projects & In-App Keyboard Help
+*Quick access to recently opened projects via `File -> Open Recent` (up to 10 entries with 1-click clear), comprehensive submenus, and instant keyboard reference modal.*
 <p align="center">
   <img src="docs/screenshots/file_menu.png" alt="File Menu" width="180" />
   <img src="docs/screenshots/edit_menu.png" alt="Edit Menu" width="180" />
@@ -251,6 +252,22 @@ Most existing sprite editors treat animation as a stack of disconnected image fi
 </p>
 <p align="center">
   <img src="docs/screenshots/help.png" alt="Keyboard Shortcuts Help Modal" width="700" />
+</p>
+
+<br/><br/>
+
+### 14. 9-Grid Canvas Resize (Anchor Pinning)
+*Interactive 9-point directional anchor grid (<kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>C</kbd>) to expand or crop canvas dimensions with pixel content pinned to any quadrant or center.*
+<p align="center">
+  <img src="docs/screenshots/canvas_size.png" alt="9-Grid Canvas Resize Modal" width="550" />
+</p>
+
+<br/><br/>
+
+### 15. Animation Inbetweening & Motion Synthesis
+*Synthesize intermediate inbetween frames using 4 specialized motion algorithms (Pixel Flow vector displacement, Coherent Motion cluster tracking, Dither Morphing, Cross Dissolve) with live playback preview.*
+<p align="center">
+  <img src="docs/screenshots/Generate_Inbetween_Frames_experimental.png" alt="Inbetweening Generator Modal" width="700" />
 </p>
 
 </div>
@@ -371,8 +388,33 @@ All image effects include a real-time **Live Preview** checkbox that previews mo
 ### 10. 35 Ergonomic Themes, Draggable Dialogs & Multilingual Localization
 
 - **Curated Themes**: Studio Dark, Studio Light, Pitch Black, Cyberpunk Neon, Synthwave, Nord Frost, Dracula, Tokyo Night, Catppuccin Mocha, Gruvbox Dark, Monokai Pro, Solarized Dark, Solarized Light, Amber CRT, Green CRT, Cyan CRT, Retro Consoles (Game Boy, Game Boy Light, Super Game Boy, NES/Famicom, SNES, Genesis/Mega Drive, PlayStation 1, PlayStation 2, Dreamcast), and Retro Computers (C64, ZX Spectrum, Amiga Workbench, Atari ST, MSX, Apple II, DOS CGA, Mac Classic, Windows 98) with full high-contrast optimization.
+- **DaisyUI Swatches & Compact Selector**: 4-color dot swatches in the theme dropdown menu with a compact scrollable list.
 - **Draggable Modals**: All popup windows and tool settings dialogs can be freely dragged across the canvas by their title bars.
 - **37 Languages**: Comprehensive native UI localization across 37 languages with 100% dictionary key parity.
+
+### 11. 9-Grid Canvas Resize & Anchor Pinning
+
+Resize canvas dimensions or frame resolutions with precision directional anchoring:
+- **Interactive 9-Point Anchor Grid**: Pin existing pixel art to Top-Left, Top-Center, Top-Right, Middle-Left, Center, Middle-Right, Bottom-Left, Bottom-Center, or Bottom-Right.
+- **Smart Expansion & Trimming**: Expanding dimensions pads transparent margins symmetrically around the anchor, while reducing dimensions crops content predictably without distorting coordinates.
+- **Hotkeys**: Press <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>C</kbd> (or <kbd>Command (⌘)</kbd> + <kbd>Option (⌥)</kbd> + <kbd>C</kbd> on macOS) to instantly summon the resize modal.
+
+### 12. Frame Inbetweening & Motion Interpolation (Experimental)
+
+Generate smooth sub-frame animations between keyframes directly on the timeline:
+- **4 Motion Algorithms**:
+  - **Pixel Flow (Displacement)**: Motion vector field tracking pixel trajectories between adjacent frames.
+  - **Coherent Motion**: Rigid cluster tracking maintaining solid shapes and outlines during movement.
+  - **Dither Morph**: Bayer matrix dither transition between source and target color states.
+  - **Cross Dissolve**: Smooth alpha transparency cross-fading.
+- **Direction Modes**: Bidirectional (Balance), Forward (Motion / Contraction), and Reverse (Explosions / Growth).
+- **Scope & Duration Controls**: Choose between all layers (preserving layer separation) or active layer only. Supports auto-looping back to frame 1 and splitting frame durations proportionally.
+- **Embedded Animation Preview**: Real-time interactive playback scrubbing window with custom preview FPS and frame indicator.
+
+### 13. Recent Projects History & Workflow Ergonomics
+
+- **File → Open Recent**: Quick access to the last 10 opened `.cf` and `.png` projects.
+- **Automatic Pruning**: Detects moved or deleted files and provides a one-click "Clear Recent Projects" action.
 
 ---
 
@@ -407,6 +449,7 @@ All image effects include a real-time **Live Preview** checkbox that previews mo
 | <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>D</kbd> / <kbd>Esc</kbd> | **Deselect** | Clear active selection mask |
 | <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>Shift</kbd> + <kbd>I</kbd> | **Invert Selection** | Invert active selection mask |
 | <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd> | **Duplicate Frame** | Duplicate active frame in timeline |
+| <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>Alt</kbd> + <kbd>C</kbd> | **Canvas Resize** | Open 9-Grid canvas resize and anchor pinning modal |
 | <kbd>Space</kbd> | **Play / Pause** | Toggle animation playback in timeline |
 | <kbd>Shift</kbd> + <kbd>R</kbd> | **Replace Color** | Open Color Replace modal with live preview |
 | <kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>U</kbd> | **Color Adjust** | Open HSV Hue / Saturation / Contrast modal |
@@ -427,12 +470,12 @@ All image effects include a real-time **Live Preview** checkbox that previews mo
 
 Download pre-compiled, self-contained binaries from **[GitHub Releases](https://github.com/rbm13s/OniAnvil/releases/latest)** or install via **[itch.io](https://rbm13s.itch.io/onianvil)**:
 
-- **Windows**: Download `OniAnvil-1.2.1-windows-x86_64.zip`, extract, and double-click `OniAnvil.exe`.
-- **Linux**: Download `OniAnvil-1.2.1-linux-x86_64.tar.gz` (portable) or install the `onianvil_1.2.1_amd64.deb` Debian/Ubuntu package:
+- **Windows**: Download `OniAnvil-1.3.0-windows-x86_64.zip`, extract, and double-click `OniAnvil.exe`.
+- **Linux**: Download `OniAnvil-1.3.0-linux-x86_64.tar.gz` (portable) or install the `onianvil_1.3.0_amd64.deb` Debian/Ubuntu package:
   ```bash
-  sudo dpkg -i onianvil_1.2.1_amd64.deb
+  sudo dpkg -i onianvil_1.3.0_amd64.deb
   ```
-- **macOS**: Download `OniAnvil-1.2.1-macos-universal.zip`, extract, and drag `OniAnvil.app` to your Applications folder. Universal binary runs natively on both Apple Silicon (M1/M2/M3/M4) and Intel Macs.
+- **macOS**: Download `OniAnvil-1.3.0-macos-universal.zip`, extract, and drag `OniAnvil.app` to your Applications folder. Universal binary runs natively on both Apple Silicon (M1/M2/M3/M4) and Intel Macs.
 - **Web**: Run directly in your browser without installing anything: **[Launch WebAssembly App](https://rbm13s.github.io/OniAnvil/app/)**.
   > [!WARNING]
   > The WebAssembly (browser) build has an **Experimental** status. Due to browser sandbox constraints, WebGL/WebGPU differences, and clipboard limitations, you may encounter minor graphical glitches or performance bottlenecks compared to the native desktop version. For production work, native desktop builds are strongly recommended.

@@ -29,7 +29,7 @@
       <a href="ru.html" class="brand">
         <img src="assets/icon_256x256.jpg" alt="Логотип OniAnvil">
         <span>OniAnvil</span>
-        <span class="badge-ver">v1.1.1</span>
+        <span class="badge-ver">v1.3.0</span>
       </a>
 
       <nav class="main-nav">
@@ -218,6 +218,38 @@
           <h3 class="card-title">Нативный десктоп и WebAssembly</h3>
           <p class="card-body">
             Написан на чистом Rust для бескомпромиссной отзывчивости на Windows, Linux и macOS. Также доступна веб-версия через WebAssembly (носит статус экспериментальной, возможны специфичные для браузера баги).
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">⚓</div>
+          <h3 class="card-title">Изменение размера холста по 9 точкам</h3>
+          <p class="card-body">
+            Кадрирование и расширение холста с интерактивной 9-точечной сеткой якорей (<kbd>Ctrl+Alt+C</kbd>) и привязкой рисунка к любому углу или центру.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">🪄</div>
+          <h3 class="card-title">Генерация промежуточных кадров (Inbetweening)</h3>
+          <p class="card-body">
+            Синтез плавных фаз движения по 4 алгоритмам (Pixel Flow, Coherent Motion, Dither Morph, Cross Dissolve) с интерактивным окном предпросмотра.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">🎨</div>
+          <h3 class="card-title">Маркеры DaisyUI и компактное меню тем</h3>
+          <p class="card-body">
+            Четырёхцветные маркеры палитры тем в стиле DaisyUI, компактное меню с прокруткой и выверенные аутентичные цвета консолей (SNES, PS1, Dreamcast, Win98).
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">📂</div>
+          <h3 class="card-title">История недавних проектов</h3>
+          <p class="card-body">
+            Быстрый повторный доступ к проектам через <code>Файл &rarr; Недавние проекты</code> (до 10 файлов) и очистка истории в один клик.
           </p>
         </div>
       </div>
@@ -749,6 +781,14 @@
             <div class="caption">Выбор встроенных исторических палитр при создании проекта (PICO-8, Game Boy, NES, C64).</div>
           </div>
           <div class="gallery-item">
+            <img src="screenshots/canvas_size.png" alt="Изменение размера холста по 9 точкам">
+            <div class="caption">Окно изменения размера холста по 9 точкам привязки (<kbd>Ctrl+Alt+C</kbd>).</div>
+          </div>
+          <div class="gallery-item">
+            <img src="screenshots/Generate_Inbetween_Frames_experimental.png" alt="Генерация промежуточных кадров">
+            <div class="caption">Генерация промежуточных кадров (Inbetweening) с 4 алгоритмами и плеером.</div>
+          </div>
+          <div class="gallery-item">
             <img src="screenshots/help.png" alt="Окно справки и горячих клавиш">
             <div class="caption">Интерактивное окно помощи с полным списком клавиатурных сокращений и документацией.</div>
           </div>
@@ -859,6 +899,11 @@
             <td><kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd></td>
             <td>Буфер обмена</td>
             <td>Копирование, вырезание и вставка пикселей между кадрами</td>
+          </tr>
+          <tr>
+            <td><kbd>Ctrl</kbd> / <kbd>Command (⌘)</kbd> + <kbd>Alt</kbd> + <kbd>C</kbd></td>
+            <td>Размер холста</td>
+            <td>Окно изменения размера холста по 9 точкам привязки</td>
           </tr>
           <tr>
             <td><kbd>Space</kbd></td>

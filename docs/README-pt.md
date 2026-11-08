@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 <img src="assets/icon_256x256.jpg" alt="OniAnvil Logo" width="128" height="128" style="border-radius: 24px;" />
 
@@ -116,7 +116,10 @@ Estação de trabalho pixel art multiplataforma de alto desempenho escrita em Ru
 7. **Palette Management & Skins**: Day/Night variants, team colors, and GPL/HEX palette import/export.
 8. **Sheet Slicer & 9-Slice UI**: Auto-detect sprite boundaries and configure 9-slice scalable UI margins.
 9. **Game Engine Ready Export**: Scaled PNGs with extruded borders, animated GIFs, and JSON metadata (Godot, Bevy, Raylib).
-10. **35 Retro & Modern Themes**: CRT Amber, CRT Green, Famicom, Mega Drive, Game Boy, PSX, and sleek studio dark/light themes.
+10. **35 Retro & Modern Themes**: CRT Amber, CRT Green, Famicom, Mega Drive, Game Boy, PSX, and sleek studio dark/light themes with DaisyUI color dot swatches and compact scrollable menu.
+11. **9-Grid Canvas Resize**: Interactive 9-point directional anchor grid (Ctrl+Alt+C) to expand or crop canvas dimensions with pixel content pinned to any quadrant or center.
+12. **Animation Inbetweening (Experimental)**: Synthesize intermediate inbetween frames using 4 motion algorithms (Pixel Flow displacement, Coherent Motion, Dither Morphing, Cross Dissolve) with live playback preview.
+13. **Recent Projects History**: Quick access to recent .cf and .png projects from File -> Open Recent with 1-click clearing.
 
 ---
 
@@ -157,9 +160,9 @@ Estação de trabalho pixel art multiplataforma de alto desempenho escrita em Ru
 ## Getting Started
 
 ### Standalone Binaries
-- **Windows**: Download `OniAnvil-1.2.1-windows-x86_64.zip`, extract, and launch `onianvil.exe`.
-- **Linux**: Download `OniAnvil-1.2.1-linux-x86_64.tar.gz` (portable) or install `onianvil_1.2.1_amd64.deb`.
-- **macOS**: Download `OniAnvil-1.2.1-macos-universal.zip`, extract, and drag `OniAnvil.app` to Applications.
+- **Windows**: Download `OniAnvil-1.3.0-windows-x86_64.zip`, extract, and launch `onianvil.exe`.
+- **Linux**: Download `OniAnvil-1.3.0-linux-x86_64.tar.gz` (portable) or install `onianvil_1.3.0_amd64.deb`.
+- **macOS**: Download `OniAnvil-1.3.0-macos-universal.zip`, extract, and drag `OniAnvil.app` to Applications.
 - **Web**: Run directly in your browser without installing anything: **[Launch WebAssembly App](https://rbm13s.github.io/OniAnvil/app/?lang=pt)**.
   > [!WARNING]
   > The WebAssembly (browser) build has an **Experimental** status. Due to browser sandbox constraints, WebGL/WebGPU differences, and clipboard limitations, you may encounter minor graphical glitches or performance bottlenecks. For production work, native desktop builds are strongly recommended.
