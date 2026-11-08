@@ -425,6 +425,13 @@ jobs:
             butler push "$LINUX_ASSET" rbm13s/onianvil:linux --userversion "$USER_VER"
           fi
 
+          # 2b. Linux Debian (.deb) package
+          DEB_ASSET=$(ls release-assets/onianvil_*_amd64.deb 2>/dev/null | head -n 1)
+          if [ -n "$DEB_ASSET" ] && [ -f "$DEB_ASSET" ]; then
+            echo "Pushing Debian package: $DEB_ASSET"
+            butler push "$DEB_ASSET" rbm13s/onianvil:linux-deb --userversion "$USER_VER"
+          fi
+
           # 3. macOS Universal
           MAC_ASSET=$(ls release-assets/OniAnvil-*-macos-universal.zip 2>/dev/null | head -n 1)
           if [ -n "$MAC_ASSET" ] && [ -f "$MAC_ASSET" ]; then
